@@ -165,6 +165,8 @@ let ise_array2 evd f v1 v2 =
   if lv1 = Array.length v2 then allrec evd (pred lv1)
   else (evd,false)
 
+let use_eta = ref true
+
 let rec evar_conv_x ts env evd pbty term1 term2 =
   let term1 = whd_head_evar evd term1 in
   let term2 = whd_head_evar evd term2 in
@@ -425,7 +427,7 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
 	ise_try evd [f3; f4]
 
     (* Eta-expansion *)
-    | Rigid c1, _ when isLambda c1 ->
+    | Rigid c1, _ when !use_eta && isLambda c1 ->
 	assert (l1 = []);
 	let (na,c1,c'1) = destLambda c1 in
         let c = nf_evar evd c1 in
@@ -434,7 +436,7 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
 	let appr2 = (lift 1 term2, List.map (lift 1) l2 @ [mkRel 1]) in
 	evar_eqappr_x ts env' evd CONV appr1 appr2
 
-    | _, Rigid c2 when isLambda c2 ->
+    | _, Rigid c2 when !use_eta && isLambda c2 ->
 	assert (l2 = []);
 	let (na,c2,c'2) = destLambda c2 in
         let c = nf_evar evd c2 in
@@ -849,22 +851,26 @@ let consider_remaining_unif_problems ?(ts=full_transparent_state) env evd =
 
 (* Main entry points *)
 
-let the_conv_x ?(ts=full_transparent_state) env t1 t2 evd =
+let the_conv_x ?(eta=true) ?(ts=full_transparent_state) env t1 t2 evd =
+  use_eta := eta;
   match evar_conv_x ts env evd CONV  t1 t2 with
       (evd',true) -> evd'
     | _ -> raise Reduction.NotConvertible
 
 let the_conv_x_leq ?(ts=full_transparent_state) env t1 t2 evd =
+  use_eta := true;
   match evar_conv_x ts env evd CUMUL t1 t2 with
       (evd', true) -> evd'
     | _ -> raise Reduction.NotConvertible
 
 let e_conv ?(ts=full_transparent_state) env evdref t1 t2 =
+  use_eta := true;
   match evar_conv_x ts env !evdref CONV t1 t2 with
       (evd',true) -> evdref := evd'; true
     | _ -> false
 
 let e_cumul ?(ts=full_transparent_state) env evdref t1 t2 =
+  use_eta := true;
   match evar_conv_x ts env !evdref CUMUL t1 t2 with
       (evd',true) -> evdref := evd'; true
     | _ -> false
