@@ -51,7 +51,9 @@ config/coq_config.ml
 config/Info-*.plist
 dev/ocamldebug-coq
 plugins/micromega/csdpcert
+plugins/micromega/csdpcert.exe
 kernel/byterun/dllcoqrun.so
+kernel/byterun/dllcoqrun.dll
 coqdoc.sty
 csdp.cache
 test-suite/lia.cache
