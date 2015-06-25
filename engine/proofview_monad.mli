@@ -36,6 +36,11 @@ module Trace : sig
   (** [leaf] creates an empty tag with name [a]. *)
   val leaf : 'a -> 'a incr -> 'a incr
 
+  val adjust_opened_to_match : ?before_close:('a -> 'a incr -> 'a incr)
+                               -> ?after_open:('a -> 'a incr -> 'a incr)
+                               -> ('a -> 'a -> bool)
+                               -> 'a list -> 'a incr -> 'a incr
+
 end
 
 (** {6 State types} *)
@@ -45,17 +50,27 @@ end
 type lazy_msg = unit -> Pp.std_ppcmds
 
 (** Info trace. *)
-module Info : sig
+module InfoTrace : sig
 
-  (** The type of the tags for [info]. *)
+  (** A type of unique identifiers for comparing equality of tags *)
+  type tag_with_id
+
+  (** The type of the tags for [info]/[trace]. *)
   type tag =
     | Msg of lazy_msg (** A simple message *)
     | Tactic of lazy_msg (** A tactic call *)
+    | Zero (** A failure of the enclosing tag; not used for [info] *)
     | Dispatch  (** A call to [tclDISPATCH]/[tclEXTEND] *)
     | DBranch  (** A special marker to delimit individual branch of a dispatch. *)
 
-  type state = tag Trace.incr
-  type tree = tag Trace.forest
+  val new_tag : tag -> tag_with_id
+
+  type state = tag_with_id Trace.incr
+  type tree = tag_with_id Trace.forest
+
+  (** Keeps track of the list of open tags, so we can adjust for
+      backtracking *)
+  type debug_logical_state = tag_with_id list
 
   val print : tree -> Pp.std_ppcmds
 
@@ -73,7 +88,8 @@ type proofview = { solution : Evd.evar_map; comb : Goal.goal list }
 (** {6 Instantiation of the logic monad} *)
 
 module P : sig
-  type s = proofview * Environ.env
+  type s = { proof_state : proofview * Environ.env;
+             opened_tags : InfoTrace.debug_logical_state }
 
   (** Status (safe/unsafe) * shelved goals * given up *)
   type w = bool * Evar.t list * Evar.t list
@@ -81,12 +97,21 @@ module P : sig
   val wunit : w
   val wprod : w -> w -> w
 
-  (** Recording info trace (true) or not. *)
-  type e = bool
+  (** Recording info and debug traces (true) or not. *)
+  type e = { record_info : bool ; record_debug : bool }
 
-  type u = Info.state
+  val do_record_none : e
+  val do_record_info : e
+  val do_record_debug : e
+
+  type u = InfoTrace.state
 
   val uunit : u
+
+  type nls = InfoTrace.state
+
+  val nlsunit : nls
+
 end
 
 module Logical : module type of Logic_monad.Logical(P)
@@ -130,15 +155,18 @@ module Shelf : Writer with type t = Evar.t list
 module Giveup : Writer with type t = Evar.t list
 
 (** Lens and utilies pertaining to the info trace *)
-module InfoL : sig
+module InfoTraceL : sig
   (** [record_trace t] behaves like [t] and compute its [info] trace. *)
-  val record_trace : 'a Logical.t -> 'a Logical.t
+  val record_info_trace : 'a Logical.t -> 'a Logical.t
+  val record_debug_trace : 'a Logical.t -> 'a Logical.t
 
-  val update : (Info.state -> Info.state) -> unit Logical.t
-  val opn : Info.tag -> unit Logical.t
-  val close : unit Logical.t
-  val leaf : Info.tag -> unit Logical.t
+  val update : (InfoTrace.state -> InfoTrace.state) -> unit Logical.t
+  val leaf : InfoTrace.tag -> unit Logical.t
+
+  (** after backtracking or failure, we need to update the tags to
+      close things that we skipped *)
+  val sync_tags : P.s -> unit Logical.t
 
   (** [tag a t] opens tag [a] runs [t] then closes the tag. *)
-  val tag : Info.tag -> 'a Logical.t -> 'a Logical.t
+  val tag : InfoTrace.tag -> 'a Logical.t -> 'a Logical.t
 end

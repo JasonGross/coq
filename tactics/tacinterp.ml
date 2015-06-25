@@ -567,7 +567,7 @@ let interp_gen kind ist allow_patvar flags env sigma (c,ce) =
   (* spiwack: to avoid unnecessary modifications of tacinterp, as this
      function already use effect, I call [run] hoping it doesn't mess
      up with any assumption. *)
-  Proofview.NonLogical.run (db_constr (curr_debug ist) env c);
+  ignore(Proofview.NonLogical.run (db_constr (curr_debug ist) env c) Proofview_monad.P.nlsunit);
   (evd,c)
 
 let constr_flags = {
@@ -755,8 +755,8 @@ let interp_may_eval f ist env sigma = function
        (* spiwack: to avoid unnecessary modifications of tacinterp, as this
           function already use effect, I call [run] hoping it doesn't mess
           up with any assumption. *)
-       Proofview.NonLogical.run (debugging_exception_step ist false (fst reraise) (fun () ->
-         str"interpretation of term " ++ pr_glob_constr_env env (fst c)));
+       ignore(Proofview.NonLogical.run (debugging_exception_step ist false (fst reraise) (fun () ->
+         str"interpretation of term " ++ pr_glob_constr_env env (fst c))) Proofview_monad.P.nlsunit);
        iraise reraise
 
 (* Interprets a constr expression possibly to first evaluate *)
@@ -769,14 +769,14 @@ let interp_constr_may_eval ist env sigma c =
       (* spiwack: to avoid unnecessary modifications of tacinterp, as this
           function already use effect, I call [run] hoping it doesn't mess
           up with any assumption. *)
-       Proofview.NonLogical.run (debugging_exception_step ist false (fst reraise) (fun () -> str"evaluation of term"));
+       ignore(Proofview.NonLogical.run (debugging_exception_step ist false (fst reraise) (fun () -> str"evaluation of term")) Proofview_monad.P.nlsunit);
       iraise reraise
   in
   begin
     (* spiwack: to avoid unnecessary modifications of tacinterp, as this
        function already use effect, I call [run] hoping it doesn't mess
        up with any assumption. *)
-    Proofview.NonLogical.run (db_constr (curr_debug ist) env csr);
+    ignore(Proofview.NonLogical.run (db_constr (curr_debug ist) env csr) Proofview_monad.P.nlsunit);
     sigma , csr
   end
 

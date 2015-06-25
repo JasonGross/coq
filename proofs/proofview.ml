@@ -47,7 +47,6 @@ let compact el { comb; solution } =
   msg_info (Pp.str (Printf.sprintf "Evars: %d -> %d\n" size new_size));
   new_el, { comb; solution = new_solution }
 
-
 (** {6 Starting and querying a proof view} *)
 
 type telescope =
@@ -227,12 +226,13 @@ type +'a tactic = 'a Proof.t
 (** Applies a tactic to the current proofview. *)
 let apply env t sp =
   let open Logic_monad in
-  let ans = Proof.repr (Proof.run t false (sp,env)) in
-  let ans = Logic_monad.NonLogical.run ans in
+  let open Proofview_monad.P in
+  let ans = Proof.repr (Proof.run t do_record_none { proof_state = (sp,env) ; opened_tags = [] }) in
+  let (ans, debug) = Logic_monad.NonLogical.run ans nlsunit in
   match ans with
   | Nil (e, info) -> iraise (TacticFailure e, info)
-  | Cons ((r, (state, _), status, info), _) ->
-    r, state, status, Trace.to_tree info
+  | Cons ((r, { proof_state = (state, _) ; opened_tags = opened_tags }, status, info_trace), _) ->
+    r, state, status, Trace.to_tree info_trace, Trace.to_tree debug
 
 
 
@@ -271,7 +271,9 @@ let tclZERO ?info e =
     the successes of [t1] have been depleted and it failed with [e],
     then it behaves as [t2 e]. In other words, [tclOR] inserts a
     backtracking point. *)
-let tclOR = Proof.plus
+let tclOR t1 t2 =
+  let open Proof in
+  Proof.plus t1 (fun e -> get >>= InfoTraceL.sync_tags >> t2 e)
 
 (** [tclORELSE t1 t2] is equal to [t1] if [t1] has at least one
     success or [t2 e] if [t1] fails with [e]. It is analogous to
@@ -281,8 +283,12 @@ let tclORELSE t1 t2 =
   let open Logic_monad in
   let open Proof in
   split t1 >>= function
-    | Nil e -> t2 e
-    | Cons (a,t1') -> plus (return a) t1'
+    | Nil e -> get >>= InfoTraceL.sync_tags >> t2 e
+    | Cons (a,t1') ->
+        (* jgross: I don't think we need an [InfoTraceL.sync_tags] here,
+           because it should be built into the alternate successes
+           given by the tactic [t1'] *)
+        plus (return a) t1'
 
 (** [tclIFCATCH a s f] is a generalisation of {!tclORELSE}: if [a]
     succeeds at least once then it behaves as [tclBIND a s] otherwise,
@@ -291,8 +297,12 @@ let tclIFCATCH a s f =
   let open Logic_monad in
   let open Proof in
   split a >>= function
-    | Nil e -> f e
-    | Cons (x,a') -> plus (s x) (fun e -> (a' e) >>= fun x' -> (s x'))
+    | Nil e -> get >>= InfoTraceL.sync_tags >> f e
+    | Cons (x,a') ->
+        (* jgross: Again, I don't think we need an
+           [InfoTraceL.sync_tags] here, because it should be built
+           into the alternate successes given by the tactic [a'] *)
+        plus (s x) (fun e -> (a' e) >>= fun x' -> (s x'))
 
 (** [tclONCE t] behave like [t] except it has at most one success:
     [tclONCE t] stops after the first success of [t]. If [t] fails
@@ -503,9 +513,9 @@ let tclDISPATCHGEN0 join tacs =
       Proof.map join ans
 
 let tclDISPATCHGEN join tacs =
-  let branch t = InfoL.tag (Info.DBranch) t in
+  let branch t = InfoTraceL.tag (InfoTrace.DBranch) t in
   let tacs = CList.map branch tacs in
-  InfoL.tag (Info.Dispatch) (tclDISPATCHGEN0 join tacs)
+  InfoTraceL.tag (InfoTrace.Dispatch) (tclDISPATCHGEN0 join tacs)
 
 let tclDISPATCH tacs = tclDISPATCHGEN Pervasives.ignore tacs
 
@@ -562,10 +572,8 @@ let tclINDEPENDENT tac =
   | [] -> tclUNIT ()
   | [_] -> tac
   | _ ->
-      let tac = InfoL.tag (Info.DBranch) tac in
-      InfoL.tag (Info.Dispatch) (iter_goal (fun _ -> tac))
-
-
+      let tac = InfoTraceL.tag (InfoTrace.DBranch) tac in
+      InfoTraceL.tag (InfoTrace.Dispatch) (iter_goal (fun _ -> tac))
 
 (** {7 Goal manipulation} *)
 
@@ -574,7 +582,7 @@ let shelve =
   let open Proof in
   Comb.get >>= fun initial ->
   Comb.set [] >>
-  InfoL.leaf (Info.Tactic (fun () -> Pp.str"shelve")) >>
+  InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.str"shelve")) >>
   Shelf.put initial
 
 
@@ -613,7 +621,7 @@ let shelve_unifiable =
   Pv.get >>= fun initial ->
   let (u,n) = partition_unifiable initial.solution initial.comb in
   Comb.set n >>
-  InfoL.leaf (Info.Tactic (fun () -> Pp.str"shelve_unifiable")) >>
+  InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.str"shelve_unifiable")) >>
   Shelf.put u
 
 (** [guard_no_unifiable] fails with error [UnresolvedBindings] if some
@@ -648,7 +656,7 @@ let goodmod p m =
 
 let cycle n =
   let open Proof in
-  InfoL.leaf (Info.Tactic (fun () -> Pp.(str"cycle"++spc()++int n))) >>
+  InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.(str"cycle"++spc()++int n))) >>
   Comb.modify begin fun initial ->
     let l = CList.length initial in
     let n' = goodmod n l in
@@ -658,7 +666,7 @@ let cycle n =
 
 let swap i j =
   let open Proof in
-  InfoL.leaf (Info.Tactic (fun () -> Pp.(str"swap"++spc()++int i++spc()++int j))) >>
+  InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.(str"swap"++spc()++int i++spc()++int j))) >>
   Comb.modify begin fun initial ->
     let l = CList.length initial in
     let i = if i>0 then i-1 else i and j = if j>0 then j-1 else j in
@@ -673,7 +681,7 @@ let swap i j =
 
 let revgoals =
   let open Proof in
-  InfoL.leaf (Info.Tactic (fun () -> Pp.str"revgoals")) >>
+  InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.str"revgoals")) >>
   Comb.modify CList.rev
 
 let numgoals =
@@ -712,7 +720,7 @@ let give_up =
   Comb.get >>= fun initial ->
   Comb.set [] >>
   mark_as_unsafe >>
-  InfoL.leaf (Info.Tactic (fun () -> Pp.str"give_up")) >>
+  InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.str"give_up")) >>
   Giveup.put initial
 
 
@@ -943,13 +951,13 @@ module Goal = struct
     gmake_with info env sigma goal , sigma
 
   let nf_enter f =
-    InfoL.tag (Info.Dispatch) begin
+    InfoTraceL.tag (InfoTrace.Dispatch) begin
     iter_goal begin fun goal ->
       Env.get >>= fun env ->
       tclEVARMAP >>= fun sigma ->
       try
         let (gl, sigma) = nf_gmake env sigma goal in
-        tclTHEN (Unsafe.tclEVARS sigma) (InfoL.tag (Info.DBranch) (f gl))
+        tclTHEN (Unsafe.tclEVARS sigma) (InfoTraceL.tag (InfoTrace.DBranch) (f gl))
       with e when catchable_exception e ->
         let (e, info) = Errors.push e in
         tclZERO ~info e
@@ -967,8 +975,8 @@ module Goal = struct
     gmake_with info env sigma goal
 
   let enter f =
-    let f gl = InfoL.tag (Info.DBranch) (f gl) in
-    InfoL.tag (Info.Dispatch) begin
+    let f gl = InfoTraceL.tag (InfoTrace.DBranch) (f gl) in
+    InfoTraceL.tag (InfoTrace.Dispatch) begin
     iter_goal begin fun goal ->
       Env.get >>= fun env ->
       tclEVARMAP >>= fun sigma ->
@@ -1057,7 +1065,7 @@ struct
     let comb = undefined sigma (CList.rev evs) in
     let sigma = CList.fold_left Unsafe.mark_as_goal_evm sigma comb in
     let open Proof in
-    InfoL.leaf (Info.Tactic (fun () -> Pp.(str"refine"++spc()++ Hook.get pr_constrv env sigma c))) >>
+    InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.(str"refine"++spc()++ Hook.get pr_constrv env sigma c))) >>
     Pv.set { solution = sigma; comb; }
   end
 
@@ -1085,14 +1093,18 @@ end
 
 module Trace = struct
 
-  let record_info_trace = InfoL.record_trace
+  let record_info_trace = InfoTraceL.record_info_trace
 
-  let log m = InfoL.leaf (Info.Msg m)
-  let name_tactic m t = InfoL.tag (Info.Tactic m) t
+  let record_debug_trace = InfoTraceL.record_debug_trace
 
-  let pr_info ?(lvl=0) info =
+  let log m =
+    let open Logical in
+    InfoTraceL.leaf (InfoTrace.Msg m)
+  let name_tactic m t = InfoTraceL.tag (InfoTrace.Tactic m) t
+
+  let pr_trace ?(lvl=0) info =
     assert (lvl >= 0);
-    Info.(print (collapse lvl info))
+    InfoTrace.(print (collapse lvl info))
 
 end
 
@@ -1136,7 +1148,7 @@ module V82 = struct
       let (goalss,evd) = Evd.Monad.List.map tac initgoals initevd in
       let sgs = CList.flatten goalss in
       let sgs = undefined evd sgs in
-      InfoL.leaf (Info.Tactic (fun () -> Pp.str"<unknown>")) >>
+      InfoTraceL.leaf (InfoTrace.Tactic (fun () -> Pp.str"<unknown>")) >>
       Pv.set { solution = evd; comb = sgs; }
     with e when catchable_exception e ->
       let (e, info) = Errors.push e in
@@ -1195,7 +1207,7 @@ module V82 = struct
   let of_tactic t gls =
     try
       let init = { solution = gls.Evd.sigma ; comb = [gls.Evd.it] } in
-      let (_,final,_,_) = apply (GoalV82.env gls.Evd.sigma gls.Evd.it) t init in
+      let (_,final,_,_,_) = apply (GoalV82.env gls.Evd.sigma gls.Evd.it) t init in
       { Evd.sigma = final.solution ; it = final.comb }
     with Logic_monad.TacticFailure e as src ->
       let (_, info) = Errors.push src in

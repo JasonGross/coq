@@ -1484,7 +1484,7 @@ end = struct (* {{{ *)
   let vernac_interp cancel nworkers safe_id id { verbose; loc; expr = e } =
     let e, etac, time, fail =
       let rec find time fail = function
-        | VernacSolve(_,_,re,b) -> re, b, time, fail
+        | VernacSolve(_,_,_,re,b) -> re, b, time, fail
         | VernacTime [_,e] | VernacRedirect (_,[_,e]) -> find true fail e
         | VernacFail e -> find time true e
         | _ -> errorlabstrm "Stm" (str"unsupported") in find false false e in
@@ -1500,7 +1500,7 @@ end = struct (* {{{ *)
             ~name:(Printf.sprintf "subgoal %d" i)
             (State.exn_on id ~valid:safe_id) in
         let t_ast =
-          { verbose;loc;expr = VernacSolve(SelectNth i,None,e,etac) } in
+          { verbose;loc;expr = VernacSolve(SelectNth i,None,None,e,etac) } in
         let t_name = Goal.uid g in
         TaskQueue.enqueue_task queue
           ({ t_state = safe_id; t_state_fb = id;
