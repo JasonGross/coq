@@ -41,41 +41,49 @@ exception TacticFailure of exn
     operations and require little documentation. *)
 module NonLogical : sig
 
-  include Monad.S
+  type (+'a, 'nls) t
+  val return : 'a -> ('a, 'nls) t
+  val (>>=) : ('a, 'nls) t -> ('a -> ('b, 'nls) t) -> ('b, 'nls) t
+  val (>>) : (unit, 'nls) t -> ('a, 'nls) t -> ('a, 'nls) t
+  val map : ('a -> 'b) -> ('a, 'nls) t -> ('b, 'nls) t
 
-  val ignore : 'a t -> unit t
+  val set : 'nls -> (unit, 'nls) t
+  val get : ('nls, 'nls) t
+  val modify : ('nls -> 'nls) -> (unit, 'nls) t
+
+  val ignore : ('a, 'nls) t -> (unit, 'nls) t
 
   type 'a ref
 
-  val ref : 'a -> 'a ref t
+  val ref : 'a -> ('a ref, 'nls) t
   (** [Pervasives.(:=)] *)
-  val (:=) : 'a ref -> 'a -> unit t
+  val (:=) : 'a ref -> 'a -> (unit, 'nls) t
   (** [Pervasives.(!)] *)
-  val (!) : 'a ref -> 'a t
+  val (!) : 'a ref -> ('a, 'nls) t
 
-  val read_line : string t
-  val print_char : char -> unit t
+  val read_line : (string, 'nls) t
+  val print_char : char -> (unit, 'nls) t
 
   (** Loggers. The buffer is also flushed. *)
-  val print_debug : Pp.std_ppcmds -> unit t
-  val print_warning : Pp.std_ppcmds -> unit t
-  val print_notice : Pp.std_ppcmds -> unit t
-  val print_info : Pp.std_ppcmds -> unit t
-  val print_error : Pp.std_ppcmds -> unit t
+  val print_debug : Pp.std_ppcmds -> (unit, 'nls) t
+  val print_warning : Pp.std_ppcmds -> (unit, 'nls) t
+  val print_notice : Pp.std_ppcmds -> (unit, 'nls) t
+  val print_info : Pp.std_ppcmds -> (unit, 'nls) t
+  val print_error : Pp.std_ppcmds -> (unit, 'nls) t
 
   (** [Pervasives.raise]. Except that exceptions are wrapped with
       {!Exception}. *)
-  val raise : ?info:Exninfo.info -> exn -> 'a t
+  val raise : ?info:Exninfo.info -> exn -> ('a, 'nls) t
   (** [try ... with ...] but restricted to {!Exception}. *)
-  val catch : 'a t -> (Exninfo.iexn -> 'a t) -> 'a t
-  val timeout : int -> 'a t -> 'a t
+  val catch : ('a, 'nls) t -> (Exninfo.iexn -> ('a, 'nls) t) -> ('a, 'nls) t
+  val timeout : int -> ('a, 'nls) t -> ('a, 'nls) t
 
   (** Construct a monadified side-effect. Exceptions raised by the argument are
       wrapped with {!Exception}. *)
-  val make : (unit -> 'a) -> 'a t
+  val make : (unit -> 'a) -> ('a, 'nls) t
 
   (** [run] performs effects. *)
-  val run : 'a t -> 'a
+  val run : ('a, 'nls) t -> 'nls -> 'a * 'nls
 
 end
 
@@ -108,40 +116,40 @@ type ('a, 'b, 'e) list_view =
 
 module BackState : sig
 
-  type (+'a, -'i, +'o, 'e) t
-  val return : 'a -> ('a, 's, 's, 'e) t
-  val (>>=) : ('a, 'i, 'm, 'e) t -> ('a -> ('b, 'm, 'o, 'e) t) -> ('b, 'i, 'o, 'e) t
-  val (>>) : (unit, 'i, 'm, 'e) t -> ('b, 'm, 'o, 'e) t -> ('b, 'i, 'o, 'e) t
-  val map : ('a -> 'b) -> ('a, 'i, 'o, 'e) t -> ('b, 'i, 'o, 'e) t
+  type (+'a, 'nls, -'i, +'o, 'e) t
+  val return : 'a -> ('a, 'nls, 'io, 'io, 'e) t
+  val (>>=) : ('a, 'nls, 'i, 'm, 'e) t -> ('a -> ('b, 'nls, 'm, 'o, 'e) t) -> ('b, 'nls, 'i, 'o, 'e) t
+  val (>>) : (unit, 'nls, 'i, 'm, 'e) t -> ('b, 'nls, 'm, 'o, 'e) t -> ('b, 'nls, 'i, 'o, 'e) t
+  val map : ('a -> 'b) -> ('a, 'nls, 'i, 'o, 'e) t -> ('b, 'nls, 'i, 'o, 'e) t
 
-  val ignore : ('a, 'i, 'o, 'e) t -> (unit, 'i, 'o, 'e) t
+  val ignore : ('a, 'nls, 'i, 'o, 'e) t -> (unit, 'nls, 'i, 'o, 'e) t
 
-  val set : 'o -> (unit, 'i, 'o, 'e) t
-  val get : ('s, 's, 's, 'e) t
-  val modify : ('i -> 'o) -> (unit, 'i, 'o, 'e) t
+  val set : 'o -> (unit, 'nls, 'i, 'o, 'e) t
+  val get : ('s, 'nls, 's, 's, 'e) t
+  val modify : ('i -> 'o) -> (unit, 'nls, 'i, 'o, 'e) t
 
-  val interleave : ('e1 -> 'e2) -> ('e2 -> 'e1) -> ('a, 'i, 'o, 'e1) t ->
-    ('a, 'i, 'o, 'e2) t
+  val interleave : ('e1 -> 'e2) -> ('e2 -> 'e1) -> ('a, 'nls, 'i, 'o, 'e1) t ->
+    ('a, 'nls, 'i, 'o, 'e2) t
   (** [interleave src dst m] adapts the exceptional content of the monad
       according to the functions [src] and [dst]. To ensure a meaningful result,
       those functions must form a retraction, i.e. [dst (src e1) = e1] for all
       [e1]. This is typically the case when the type ['e1] is [unit]. *)
 
-  val zero : 'e -> ('a, 'i, 'o, 'e) t
-  val plus : ('a, 'i, 'o, 'e) t -> ('e -> ('a, 'i, 'o, 'e) t) -> ('a, 'i, 'o, 'e) t
+  val zero : 'e -> ('a, 'nls, 'i, 'o, 'e) t
+  val plus : ('a, 'nls, 'i, 'o, 'e) t -> ('e -> ('a, 'nls, 'i, 'o, 'e) t) -> ('a, 'nls, 'i, 'o, 'e) t
 
-  val split : ('a, 's, 's, 'e) t ->
-    (('a, ('a, 'i, 's, 'e) t, 'e) list_view, 's, 's, 'e) t
+  val split : ('a, 'nls, 's, 's, 'e) t ->
+    (('a, ('a, 'nls, 'i, 's, 'e) t, 'e) list_view, 'nls, 's, 's, 'e) t
 
-  val once : ('a, 'i, 'o, 'e) t -> ('a, 'i, 'o, 'e) t
-  val break : ('e -> 'e option) -> ('a, 'i, 'o, 'e) t -> ('a, 'i, 'o, 'e) t
-  val lift : 'a NonLogical.t -> ('a, 's, 's, 'e) t
+  val once : ('a, 'nls, 'i, 'o, 'e) t -> ('a, 'nls, 'i, 'o, 'e) t
+  val break : ('e -> 'e option) -> ('a, 'nls, 'i, 'o, 'e) t -> ('a, 'nls, 'i, 'o, 'e) t
+  val lift : ('a, 'nls) NonLogical.t -> ('a, 'nls, 's, 's, 'e) t
 
-  type ('a, 'e) reified
+  type ('a, 'nls, 'e) reified
 
-  val repr : ('a, 'e) reified -> ('a, ('a, 'e) reified, 'e) list_view NonLogical.t
+  val repr : ('a, 'nls, 'e) reified -> (('a, ('a, 'nls, 'e) reified, 'e) list_view, 'nls) NonLogical.t
 
-  val run : ('a, 'i, 'o, 'e) t -> 'i -> ('a * 'o, 'e) reified
+  val run : ('a, 'nls, 'i, 'o, 'e) t -> 'i -> ('a * 'o, 'nls, 'e) reified
 
 end
 
@@ -168,6 +176,12 @@ module type Param = sig
   (** [u] must be pointed. *)
   val uunit : u
 
+  (** Non-logical update-only state. Essentially a writer on [u->u]. *)
+  type nls
+
+  (** [nls] must be pointed. *)
+  val nlsunit : nls
+
 end
 
 module Logical (P:Param) : sig
@@ -190,11 +204,11 @@ module Logical (P:Param) : sig
   val once : 'a t -> 'a t
   val break : (Exninfo.iexn -> Exninfo.iexn option) -> 'a t -> 'a t
 
-  val lift : 'a NonLogical.t -> 'a t
+  val lift : ('a, P.nls) NonLogical.t -> 'a t
 
-  type 'a reified = ('a, Exninfo.iexn) BackState.reified
+  type 'a reified = ('a, P.nls, Exninfo.iexn) BackState.reified
 
-  val repr : 'a reified -> ('a, 'a reified, Exninfo.iexn) list_view NonLogical.t
+  val repr : 'a reified -> (('a, 'a reified, Exninfo.iexn) list_view, P.nls) NonLogical.t
 
   val run : 'a t -> P.e -> P.s -> ('a * P.s * P.w * P.u) reified
 
@@ -207,8 +221,10 @@ module Logical (P:Param) : sig
       sstate : P.s;
     }
 
-    val make : ('a, state, state, Exninfo.iexn) BackState.t -> 'a t
-    val repr : 'a t -> ('a, state, state, Exninfo.iexn) BackState.t
+    type nonlogical_state = P.nls
+
+    val make : ('a, nonlogical_state, state, state, Exninfo.iexn) BackState.t -> 'a t
+    val repr : 'a t -> ('a, nonlogical_state, state, state, Exninfo.iexn) BackState.t
 
   end
 

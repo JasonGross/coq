@@ -154,6 +154,11 @@ GEXTEND Gram
     ] ]
   ;
 
+  trace_command:
+    [ [ IDENT "Info" ; n=natural -> (Some n, None)
+      | IDENT "Trace" ; n=natural -> (None, Some n) ] ]
+  ;
+
   subgoal_command:
     [ [ c = query_command; "." ->
                   begin function
@@ -162,12 +167,15 @@ GEXTEND Gram
                     | _ ->
                         VernacError (UserError ("",str"Typing and evaluation commands, cannot be used with the \"all:\" selector."))
                   end
-      | info = OPT [IDENT "Info";n=natural -> n];
+      | trace = OPT [trace_command];
         tac = Tactic.tactic;
         use_dft_tac = [ "." -> false | "..." -> true ] ->
         (fun g ->
+            let (info, debug) = match trace with
+                                | None | Some (None, None) -> (None, None)
+                                | Some (info, debug) -> (info, debug) in
             let g = Option.default (Proof_global.get_default_goal_selector ()) g in
-            VernacSolve(g,info,tac,use_dft_tac)) ] ]
+            VernacSolve(g,info,debug,tac,use_dft_tac)) ] ]
   ;
   located_vernac:
     [ [ v = vernac -> !@loc, v ] ]

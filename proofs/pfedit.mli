@@ -133,7 +133,7 @@ val get_universe_binders : unit -> universe_binders option
     tac] applies [tac] to all subgoals. *)
 
 val solve : ?with_end_tac:unit Proofview.tactic ->
-      Vernacexpr.goal_selector -> int option -> unit Proofview.tactic ->
+      Vernacexpr.goal_selector -> int option -> int option -> unit Proofview.tactic ->
       Proof.proof -> Proof.proof*bool
 
 (** [by tac] applies tactic [tac] to the 1st subgoal of the current

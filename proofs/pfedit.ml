@@ -32,7 +32,7 @@ let start_proof (id : Id.t) ?pl str sigma hyps c ?init_tac terminator =
   let env = Global.env () in
   ignore (Proof_global.with_current_proof (fun _ p ->
     match init_tac with
-    | None -> p,(true,[])
+    | None -> p,(true,[],[])
     | Some tac -> Proof.run_tactic env tac p))
 
 let cook_this_proof p =
@@ -92,14 +92,15 @@ let current_proof_statement () =
     | (id,([concl],strength)) -> id,strength,concl
     | _ -> Errors.anomaly ~label:"Pfedit.current_proof_statement" (Pp.str "more than one statement")
 
-let solve ?with_end_tac gi info_lvl tac pr =
+let solve ?with_end_tac gi info_lvl debug_lvl tac pr =
   try
     let tac = match with_end_tac with
       | None -> tac
       | Some etac -> Proofview.tclTHEN tac etac in
-    let tac = match info_lvl with
-      | None -> tac
-      | Some _ -> Proofview.Trace.record_info_trace tac
+    let tac = match info_lvl, debug_lvl with
+      | _, Some _ -> Proofview.Trace.record_debug_trace tac
+      | Some _, _ -> Proofview.Trace.record_info_trace tac
+      | None, None -> tac
     in
     let tac = match gi with
       | Vernacexpr.SelectNth i -> Proofview.tclFOCUS i i tac
@@ -108,11 +109,12 @@ let solve ?with_end_tac gi info_lvl tac pr =
       | Vernacexpr.SelectAllParallel ->
           Errors.anomaly(str"SelectAllParallel not handled by Stm")
     in
-    let (p,(status,info)) = Proof.run_tactic (Global.env ()) tac pr in
+    let (p,(status,info,debug)) = Proof.run_tactic (Global.env ()) tac pr in
     let () =
-      match info_lvl with
-      | None -> ()
-      | Some i -> Pp.msg_info (hov 0 (Proofview.Trace.pr_info ~lvl:i info))
+      match info_lvl, debug_lvl with
+      | None, None -> ()
+      | _, Some i -> Pp.msg_info (hov 0 (Proofview.Trace.pr_trace ~lvl:i debug))
+      | Some i, _ -> Pp.msg_info (hov 0 (Proofview.Trace.pr_trace ~lvl:i info))
     in
     (p,status)
   with
@@ -123,7 +125,7 @@ let solve ?with_end_tac gi info_lvl tac pr =
 	                            Errors.errorlabstrm "" msg
         | _ -> assert false
 
-let by tac = Proof_global.with_current_proof (fun _ -> solve (Vernacexpr.SelectNth 1) None tac)
+let by tac = Proof_global.with_current_proof (fun _ -> solve (Vernacexpr.SelectNth 1) None None tac)
 
 let instantiate_nth_evar_com n com =
   Proof_global.simple_with_current_proof (fun _ p -> Proof.V82.instantiate_evar n com p)

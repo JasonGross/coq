@@ -43,6 +43,30 @@ module Trace = struct
     | [] -> assert false
   let leaf a s = close (opn a s)
 
+  let rec opened_matches (beq : 'a -> 'a -> bool) should_be_opened actually_opened =
+    match should_be_opened, actually_opened with
+    | [], [] -> true
+    | [], _ -> false
+    | _, [] -> false
+    | so::sos, Seq(ao, _)::aos -> beq so ao && opened_matches beq sos aos
+
+  (** Check if should_be_opened is the same as opened.  If so, return
+      the incr as-is.  If no, close and open tags as necessary to make
+      them match. *)
+  let rec adjust_opened_to_match (beq : 'a -> 'a -> bool) should_be_opened { head ; opened } =
+    if opened_matches beq should_be_opened opened then
+      { head ; opened }
+    else if List.length should_be_opened < List.length opened then
+      adjust_opened_to_match beq should_be_opened (close { head ; opened })
+    else if List.length should_be_opened > List.length opened then
+      match should_be_opened with
+      | t::ts -> adjust_opened_to_match beq ts (opn t { head ; opened })
+      | [] -> assert false
+    else
+      match should_be_opened with
+      | t::ts -> opn t (adjust_opened_to_match beq ts (close { head ; opened }))
+      | [] -> assert false
+
   (** Returning a forest. It is the responsibility of the library
       builder to close all the tags. *)
   (* spiwack: I may want to close the tags instead, to deal with
@@ -66,19 +90,35 @@ type lazy_msg = unit -> Pp.std_ppcmds
 let pr_lazy_msg msg = msg ()
 
 (** Info trace. *)
-module Info = struct
+module InfoTrace = struct
 
   (** The type of the tags for [info]. *)
   type tag =
     | Msg of lazy_msg (** A simple message *)
     | Tactic of lazy_msg (** A tactic call *)
+    | Zero (** A failure of the enclosing tag; used only for debug *)
     | Dispatch  (** A call to [tclDISPATCH]/[tclEXTEND] *)
     | DBranch  (** A special marker to delimit individual branch of a dispatch. *)
+
+  let (=) tag0 tag1 =
+    match tag0, tag1 with
+    | Msg msg0, Msg msg1 -> Pervasives.(=) msg0 msg1 (* FIXME? *)
+    | Msg _, _ -> false
+    | Tactic msg0, Tactic msg1 -> Pervasives.(=) msg0 msg1 (* FIXME? *)
+    | Tactic _, _ -> false
+    | Zero, Zero -> true
+    | Zero, _ -> false
+    | Dispatch, Dispatch -> true
+    | Dispatch, _ -> false
+    | DBranch, DBranch -> true
+    | DBranch, _ -> false
 
   type state = tag Trace.incr
   type tree = tag Trace.forest
 
-
+  (** Keeps track of the list of open tags, so we can adjust for
+      backtracking *)
+  type debug_logical_state = tag list
 
   let pr_in_comments m = Pp.(str"(* "++pr_lazy_msg m++str" *)")
 
@@ -115,6 +155,8 @@ module Info = struct
     | Seq (Tactic m,_) ->
         let tail = if with_sep then Pp.str";" else Pp.mt () in
         Pp.(pr_lazy_msg m ++ tail)
+    | Seq (Zero,_) ->
+        Pp.(Pp.str"(* failed *)" ++ Pp.mt ())
     | Seq (Dispatch,brs) ->
         let tail = if with_sep then Pp.str";" else Pp.mt () in
         Pp.(pr_dispatch brs++tail)
@@ -142,6 +184,7 @@ module Info = struct
     | 0 , t -> [t]
     | _ , (Seq(Tactic _,[]) as t) -> [t]
     | n , Seq(Tactic _,f) -> collapse (pred n) f
+    | n , Seq(Zero,brs) -> [Seq(Zero, (collapse n brs))]
     | n , Seq(Dispatch,brs) -> [Seq(Dispatch, (collapse n brs))]
     | n , Seq(DBranch,br) -> [Seq(DBranch, (collapse n br))]
     | _ , (Seq(Msg _,_) as t) -> [t]
@@ -163,10 +206,15 @@ type proofview = {
 (** Parameters of the logic monads *)
 module P = struct
 
-  type s = proofview * Environ.env
+  type s = { proof_state : proofview * Environ.env;
+             opened_tags : InfoTrace.debug_logical_state }
 
-  (** Recording info trace (true) or not. *)
-  type e = bool
+  (** Recording info and debug traces (true) or not. *)
+  type e = { record_info : bool ; record_debug : bool }
+
+  let do_record_none : e = { record_info = false ; record_debug = false }
+  let do_record_info : e = { record_info = true ; record_debug = false }
+  let do_record_debug : e = { record_info = false ; record_debug = true }
 
   (** Status (safe/unsafe) * shelved goals * given up *)
   type w = bool * Evar.t list
@@ -174,9 +222,13 @@ module P = struct
   let wunit = true , []
   let wprod (b1, g1) (b2, g2) = b1 && b2 , g1@g2
 
-  type u = Info.state
+  type u = InfoTrace.state
 
   let uunit = Trace.empty_incr
+
+  type nls = InfoTrace.state
+
+  let nlsunit = Trace.empty_incr
 
 end
 
@@ -198,9 +250,11 @@ module type Writer = sig
 end
 
 module Pv : State with type t := proofview = struct
-  let get = Logical.(map fst get)
-  let set p = Logical.modify (fun (_,e) -> (p,e))
-  let modify f= Logical.modify (fun (p,e) -> (f p,e))
+  let get = Logical.(map (fun { P.proof_state = (p,_) } -> p) get)
+  let set p = Logical.modify (fun { P.proof_state = (_,e) ; P.opened_tags = opened_tags } ->
+                               { P.proof_state = (p,e) ; opened_tags = opened_tags })
+  let modify  f= Logical.modify (fun { P.proof_state = (p,e) ; P.opened_tags = opened_tags } ->
+                                  { P.proof_state = (f p,e) ; opened_tags = opened_tags })
 end
 
 module Solution : State with type t := Evd.evar_map = struct
@@ -218,9 +272,11 @@ module Comb : State with type t = Evar.t list = struct
 end
 
 module Env : State with type t := Environ.env = struct
-  let get = Logical.(map snd get)
-  let set e = Logical.modify (fun (p,_) -> (p,e))
-  let modify f = Logical.modify (fun (p,e) -> (p,f e))
+  let get = Logical.(map (fun { P.proof_state = (_,e) } -> e) get)
+  let set e = Logical.modify (fun { P.proof_state = (p,_) ; P.opened_tags = opened_tags } ->
+                               { P.proof_state = (p,e) ; opened_tags = opened_tags })
+  let modify f = Logical.modify (fun { P.proof_state = (p,e) ; P.opened_tags = opened_tags } ->
+                                  { P.proof_state = (p,f e) ; opened_tags = opened_tags })
 end
 
 module Status : Writer with type t := bool = struct
@@ -241,30 +297,65 @@ module Giveup : Writer with type t = Evar.t list = struct
   let put gs = Logical.put (true, gs)
 end
 
-(** Lens and utilies pertaining to the info trace *)
-module InfoL = struct
+(** Lens and utilies pertaining to the info and debug traces *)
+module InfoTraceL = struct
   let recording = Logical.current
-  let if_recording t =
+
+  let raw_if_recording t_info t_debug r =
+    let open P in
     let open Logical in
-    recording >>= fun r ->
-    if r then t else return ()
+    match r.record_info, r.record_debug with
+    | true, true -> t_info >> t_debug
+    | true, false -> t_info
+    | false, true -> t_debug
+    | false, false -> return ()
 
-  let record_trace t = Logical.local true t
+  let if_recording t_info t_debug =
+    let open Logical in
+    recording >>= raw_if_recording t_info t_debug
 
-  let raw_update = Logical.update
-  let update f = if_recording (raw_update f)
-  let opn a = update (Trace.opn a)
-  let close = update Trace.close
+  let record_info_trace t =
+    Logical.local P.do_record_info t
+
+  let record_debug_trace t =
+    Logical.local P.do_record_debug t
+
+  let raw_update f f_tags =
+    let open P in
+    let open Logical in
+    raw_if_recording
+      (Logical.update f)
+      (Logical.lift (Logic_monad.NonLogical.modify f) >>
+       Logical.modify (fun { proof_state ; opened_tags } ->
+                        { proof_state = proof_state ; opened_tags = f_tags opened_tags }))
+
+  let update f =
+    let open Logical in
+    recording >>= raw_update f (fun x -> x)
+
   let leaf a = update (Trace.leaf a)
 
+  (** after backtracking or failure, we need to update the tags to
+      close things that we skipped *)
+  let sync_tags =
+    let open P in
+    let open Logical in
+    fun { proof_state ; opened_tags } ->
+      if_recording
+        (return ())
+        (Logical.lift
+          (Logic_monad.NonLogical.modify
+            (Trace.adjust_opened_to_match InfoTrace.(=) opened_tags)))
+
   let tag a t =
+    let open P in
     let open Logical in
     recording >>= fun r ->
-    if r then begin
-      raw_update (Trace.opn a) >>
-      t >>= fun a ->
-      raw_update Trace.close >>
-      return a
+    if r.record_info || r.record_debug then begin
+      raw_update (Trace.opn a) (fun opened_tags -> a::opened_tags) r >>
+      t >>= fun ret ->
+      raw_update Trace.close (function | x::xs -> xs | [] -> assert false) r >>
+      return ret
     end else
       t
 end

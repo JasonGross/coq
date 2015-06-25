@@ -138,7 +138,7 @@ let daimon_tac gls =
   {it=[];sigma=sig_sig gls;}
 
 let daimon_instr env p =
-  let (p,(status,_)) =
+  let (p,(status,_,_)) =
     Proof.run_tactic env begin
       Proofview.tclINDEPENDENT Proofview.give_up
     end p
@@ -1523,4 +1523,3 @@ let identify_transitivity_lemma c =
   let p2=pop lp2 in
   let p3=pop lp3 in
 *)
-

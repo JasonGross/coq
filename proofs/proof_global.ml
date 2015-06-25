@@ -277,7 +277,7 @@ let set_used_variables l =
     match entry with
     | (x,None,_) ->
        if Id.Set.mem x all_safe then orig
-       else (ctx, all_safe, (Loc.ghost,x)::to_clear) 
+       else (ctx, all_safe, (Loc.ghost,x)::to_clear)
     | (x,Some bo, ty) as decl ->
        if Id.Set.mem x all_safe then orig else
        let vars = Id.Set.union (vars_of env bo) (vars_of env ty) in
@@ -354,7 +354,7 @@ let close_proof ~keep_body_ucst_separate ?feedback_id ~now fpl =
           let ctx = restrict_universe_context ctx used_univs in
           let univs = Univ.ContextSet.to_context ctx in
           (univs, typ), ((body, Univ.ContextSet.empty), eff)
-      in 
+      in
        fun t p -> Future.split2 (Future.chain ~pure:true p (make_body t))
     else
       fun t p ->
@@ -419,7 +419,7 @@ let return_proof ?(allow_partial=false) () =
   (** ppedrot: FIXME, this is surely wrong. There is no reason to duplicate
       side-effects... This may explain why one need to uniquize side-effects
       thereafter... *)
-  let proofs = 
+  let proofs =
     List.map (fun (c, _) -> (Evarutil.nf_evars_universes evd c, eff)) initial_goals in
     proofs, Evd.evar_universe_context evd
 
@@ -695,7 +695,7 @@ module V82 = struct
 end
 
 type state = pstate list
-        
+
 let freeze ~marshallable =
   match marshallable with
   | `Yes ->
@@ -712,5 +712,5 @@ let update_global_env () =
   with_current_proof (fun _ p ->
      Proof.in_proof p (fun sigma ->
        let tac = Proofview.Unsafe.tclEVARS (Evd.update_sigma_env sigma (Global.env ())) in
-       let (p,(status,info)) = Proof.run_tactic (Global.env ()) tac p in
+       let (p,(status,info_trace,debug_trace)) = Proof.run_tactic (Global.env ()) tac p in
          (p, ())))
