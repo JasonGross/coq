@@ -57,58 +57,69 @@ struct
      Documentation of this behaviour can be found at:
      https://ocaml.janestreet.com/?q=node/30 *)
 
-  include Monad.Make(struct
-    type 'a t = unit -> 'a
+  type ('a, 'nls) t = 'nls Pervasives.ref -> 'a
 
-    let return a = (); fun () -> a
-    let (>>=) a k = (); fun () -> k (a ()) ()
-    let (>>) a k = (); fun () -> a (); k ()
-    let map f a = (); fun () -> f (a ())
-  end)
+  let return a = (); fun _ -> a
+  let (>>=) a k = (); fun st -> k (a st) st
+  let (>>) a k = (); fun st -> a st; k st
+  let map f a = (); fun st -> f (a st)
+
+  let set (nlsstate : 'nls) =
+    fun st -> st := nlsstate
+
+  let get =
+    fun st -> !st
+
+  let modify (f : 'nls -> 'nls) =
+    fun st -> st := f !st
 
   type 'a ref = 'a Pervasives.ref
 
-  let ignore a = (); fun () -> ignore (a ())
+  let ignore a = (); fun st -> ignore (a st)
 
-  let ref a = (); fun () -> Pervasives.ref a
+  let ref a = (); fun _ -> Pervasives.ref a
 
   (** [Pervasives.(:=)] *)
-  let (:=) r a = (); fun () -> r := a
+  let (:=) r a = (); fun _ -> r := a
 
   (** [Pervasives.(!)] *)
-  let (!) = fun r -> (); fun () -> ! r
+  let (!) = fun r -> (); fun _ -> ! r
 
   (** [Pervasives.raise]. Except that exceptions are wrapped with
       {!Exception}. *)
-  let raise ?info = fun e -> (); fun () -> Exninfo.raise ?info (Exception e)
+  let raise ?info = fun e -> (); fun _ -> Exninfo.raise ?info (Exception e)
 
   (** [try ... with ...] but restricted to {!Exception}. *)
   let catch = fun s h -> ();
-    fun () -> try s ()
+    fun st -> try s st
       with Exception e as src ->
         let (src, info) = Errors.push src in
-        h (e, info) ()
+        h (e, info) st
 
-  let read_line = fun () -> try Pervasives.read_line () with e ->
+  let read_line = fun _ -> try Pervasives.read_line () with e ->
     let (e, info) = Errors.push e in raise ~info e ()
 
-  let print_char = fun c -> (); fun () -> print_char c
+  let print_char = fun c -> (); fun _ -> print_char c
 
   (** {!Pp.pp}. The buffer is also flushed. *)
-  let print = fun s -> (); fun () -> try Pp.msg_info s; Pp.pp_flush () with e ->
+  let print = fun s -> (); fun _ -> try Pp.msg_info s; Pp.pp_flush () with e ->
     let (e, info) = Errors.push e in raise ~info e ()
 
-  let timeout = fun n t -> (); fun () ->
-    Control.timeout n t (Exception Timeout)
+  let timeout = fun n (t : ('a, 's) t) -> (); fun (st : 's Pervasives.ref) ->
+    Control.timeout n (fun () -> t st) (Exception Timeout)
 
-  let make f = (); fun () ->
+  let make f = (); fun _ ->
     try f ()
     with e when Errors.noncritical e ->
       let (e, info) = Errors.push e in
       Util.iraise (Exception e, info)
 
-  let run = fun x ->
-    try x () with Exception e as src ->
+  let run = fun x st_val ->
+    let st = Pervasives.ref st_val in
+    try
+      let ret = x st in
+      (ret, st.contents)
+    with Exception e as src ->
       let (src, info) = Errors.push src in
       Util.iraise (e, info)
 end
@@ -173,10 +184,10 @@ struct
       version is significantly simpler), [plus] is concatenation, and
       [split] is pattern-matching. *)
 
-  type ('a, 'i, 'o, 'e) t =
-      { iolist : 'r. 'i -> ('e -> 'r NonLogical.t) ->
-                     ('a -> 'o -> ('e -> 'r NonLogical.t) -> 'r NonLogical.t) ->
-                     'r NonLogical.t }
+  type ('a, 'nls, 'i, 'o, 'e) t =
+      { iolist : 'r. 'i -> ('e -> ('r, 'nls) NonLogical.t) ->
+                     ('a -> 'o -> ('e -> ('r, 'nls) NonLogical.t) -> ('r, 'nls) NonLogical.t) ->
+                     ('r, 'nls) NonLogical.t }
 
   let return x =
     { iolist = fun s nil cons -> cons x s nil }
@@ -235,9 +246,9 @@ struct
 
   (** For [reflect] and [split] see the "Backtracking, Interleaving,
       and Terminating Monad Transformers" paper.  *)
-  type ('a, 'e) reified = ('a, ('a, 'e) reified, 'e) list_view NonLogical.t
+  type ('a, 'nls, 'e) reified = (('a, ('a, 'nls, 'e) reified, 'e) list_view, 'nls) NonLogical.t
 
-  let rec reflect (m : ('a * 'o, 'e) reified) =
+  let rec reflect (m : ('a * 'o, 'nls, 'e) reified) =
     { iolist = fun s0 nil cons ->
       let next = function
       | Nil e -> nil e
@@ -246,7 +257,7 @@ struct
       NonLogical.(m >>= next)
     }
 
-  let split m : ((_, _, _) list_view, _, _, _) t =
+  let split m : ((_, _, _) list_view, _, _, _, _) t =
     let rnil e = NonLogical.return (Nil e) in
     let rcons p s l = NonLogical.return (Cons ((p, s), l)) in
     { iolist = fun s nil cons ->
@@ -290,6 +301,12 @@ module type Param = sig
   (** [u] must be pointed. *)
   val uunit : u
 
+  (** Non-logical update-only state. Essentially a writer on [u->u]. *)
+  type nls
+
+  (** [nls] must be pointed. *)
+  val nlsunit : nls
+
 end
 
 
@@ -304,8 +321,10 @@ struct
       rstate : P.e;
       ustate : P.u;
       wstate : P.w;
-      sstate : P.s;
+      sstate : P.s
     }
+
+    type nonlogical_state = P.nls
 
     let make m = m
     let repr m = m
@@ -315,16 +334,18 @@ struct
 
   type state = Unsafe.state
 
+  type nonlogical_state = Unsafe.nonlogical_state
+
   type iexn = Exninfo.iexn
 
-  type 'a reified = ('a, iexn) BackState.reified
+  type 'a reified = ('a, nonlogical_state, iexn) BackState.reified
 
   (** Inherited from Backstate *)
 
   open BackState
 
   include Monad.Make(struct
-    type 'a t = ('a, state, state, iexn) BackState.t
+    type 'a t = ('a, nonlogical_state, state, state, iexn) BackState.t
     let return = BackState.return
     let (>>=) = BackState.(>>=)
     let (>>) = BackState.(>>)

@@ -149,7 +149,8 @@ type +'a tactic
 val apply : Environ.env -> 'a tactic -> proofview -> 'a
                                                    * proofview
                                                    * (bool*Goal.goal list*Goal.goal list)
-                                                   * Proofview_monad.Info.tree
+                                                   * Proofview_monad.InfoTrace.tree
+                                                   * Proofview_monad.InfoTrace.tree
 
 (** {7 Monadic primitives} *)
 
@@ -410,8 +411,9 @@ end
 module UnsafeRepr :
 sig
   type state = Proofview_monad.Logical.Unsafe.state
-  val repr : 'a tactic -> ('a, state, state, iexn) Logic_monad.BackState.t
-  val make : ('a, state, state, iexn) Logic_monad.BackState.t -> 'a tactic
+  type nonlogical_state = Proofview_monad.Logical.Unsafe.nonlogical_state
+  val repr : 'a tactic -> ('a, nonlogical_state, state, state, iexn) Logic_monad.BackState.t
+  val make : ('a, nonlogical_state, state, state, iexn) Logic_monad.BackState.t -> 'a tactic
 end
 
 (** {7 Notations} *)
@@ -518,10 +520,14 @@ module Trace : sig
       is stored. *)
   val record_info_trace : 'a tactic -> 'a tactic
 
+  (** [record_debug_trace t] behaves like [t] except the [debug] trace
+      is stored. *)
+  val record_debug_trace : 'a tactic -> 'a tactic
+
   val log : Proofview_monad.lazy_msg -> unit tactic
   val name_tactic : Proofview_monad.lazy_msg -> 'a tactic -> 'a tactic
 
-  val pr_info : ?lvl:int -> Proofview_monad.Info.tree -> Pp.std_ppcmds
+  val pr_trace : ?lvl:int -> Proofview_monad.InfoTrace.tree -> Pp.std_ppcmds
 
 end
 
@@ -534,7 +540,7 @@ end
 module NonLogical : module type of Logic_monad.NonLogical
 
 (** [tclLIFT c] is a tactic which behaves exactly as [c]. *)
-val tclLIFT : 'a NonLogical.t -> 'a tactic
+val tclLIFT : ('a, Proofview_monad.P.nls) NonLogical.t -> 'a tactic
 
 
 (**/**)

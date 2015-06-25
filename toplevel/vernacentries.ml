@@ -820,6 +820,7 @@ let focus_command_cond = Proof.no_cond command_focus
 
 
 let print_info_trace = ref None
+let print_debug_trace = ref None
 
 let _ = let open Goptions in declare_int_option {
   optsync = true;
@@ -830,15 +831,25 @@ let _ = let open Goptions in declare_int_option {
   optwrite = fun n -> print_info_trace := n;
 }
 
-let vernac_solve n info tcom b =
+let _ = let open Goptions in declare_int_option {
+  optsync = true;
+  optdepr = false;
+  optname = "print debug trace";
+  optkey = ["Trace" ; "Level"];
+  optread = (fun () -> !print_debug_trace);
+  optwrite = fun n -> print_debug_trace := n;
+}
+
+let vernac_solve n info debug tcom b =
   if not (refining ()) then
     error "Unknown command of the non proof-editing mode.";
   let status = Proof_global.with_current_proof (fun etac p ->
     let with_end_tac = if b then Some etac else None in
     let global = match n with SelectAll -> true | _ -> false in
     let info = Option.append info !print_info_trace in
+    let debug = Option.append debug !print_debug_trace in
     let (p,status) =
-      solve n info (Tacinterp.hide_interp global tcom None) ?with_end_tac p
+      solve n info debug (Tacinterp.hide_interp global tcom None) ?with_end_tac p
     in
     (* in case a strict subtree was completed,
        go back to the top of the prooftree *)
@@ -887,7 +898,7 @@ let vernac_set_used_variables e =
        else (all_safe, (Loc.ghost,x) :: rest) in
   let _,to_clear = Environ.fold_named_context aux env ~init:(closure_l,[]) in
   vernac_solve
-    SelectAll None Tacexpr.(TacAtom (Loc.ghost,TacClear(false,to_clear))) false
+    SelectAll None None Tacexpr.(TacAtom (Loc.ghost,TacClear(false,to_clear))) false
 
 
 (*****************************)
@@ -1928,7 +1939,7 @@ let interp ?proof locality poly c =
   | VernacDeclareClass id -> vernac_declare_class id
 
   (* Solving *)
-  | VernacSolve (n,info,tac,b) -> vernac_solve n info tac b
+  | VernacSolve (n,info,debug,tac,b) -> vernac_solve n info debug tac b
   | VernacSolveExistential (n,c) -> vernac_solve_existential n c
 
   (* Auxiliary file and library management *)
