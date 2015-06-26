@@ -49,6 +49,64 @@ end
     print. But we don't want to compute the result. *)
 type lazy_msg = unit -> Pp.std_ppcmds
 
+module TacticInstrumentation : sig
+
+  (** The type of the tags for tactic instrumentation. *)
+  type tag =
+    | Msg of lazy_msg (** A simple message *)
+    | Tactic of lazy_msg (** A tactic call *)
+
+  (** Tactic instrumentation *)
+  module type TacticInstrumentationPlugin = sig
+    (** A type of state that is associated to proof states, and restored
+        on backtracking *)
+    type logical_state
+
+    (** A type of state that is more global, and not reverted on
+        backtracking *)
+    type backtracking_aware_state
+
+    (** A type for identifying the tags, so that we can correlate the
+        entering and leaving of tactics *)
+    type tag_id
+
+    (** Currently, should the hooks be called by default on every
+        tactic invocation?  This allows global flags to control the
+        instrumentation. *)
+    val record_by_default : unit -> bool
+
+    (** Call these functions on entering a tactic.  The nonlogical
+        updater is called first, and should return an id to be
+        associated to this tag. *)
+    val on_enter_nonlogical : tag -> logical_state -> backtracking_aware_state -> backtracking_aware_state * tag_id
+    val on_enter_logical : tag * tag_id -> logical_state -> logical_state
+
+    (** Call these functions on leaving a tactic.  The nonlogical
+        updater is called first, and should return an id to be
+        associated to this tag. *)
+    val on_leave_nonlogical : tag * tag_id -> logical_state -> backtracking_aware_state -> backtracking_aware_state
+    val on_leave_logical : tag * tag_id -> logical_state -> logical_state
+
+    (** When backtracking happens, call this function; the plugin is
+        responsible for keeping track of where the engine backtracked
+        to, based on the difference between the logical state and the
+        backtracking_aware_state. *)
+    val on_reenter : logical_state -> backtracking_aware_state -> backtracking_aware_state
+
+    (** The values that are passed to the first on_enters *)
+    val get_initial_backtracking_aware_state : unit -> backtracking_aware_state
+    val get_initial_logical_state : unit -> backtracking_aware_state
+
+    (** A hook for updating any necessary global state once a tactic finishes. *)
+    val on_tactic_finished : ~tactic_succeed:bool -> backtracking_aware_state -> unit
+  end
+
+  module Make (P : TacticInstrumentationPlugin) : sig
+    val register : unit -> unit
+    val unregister : unit -> unit
+  end
+end
+
 (** Info trace. *)
 module InfoTrace : sig
 
