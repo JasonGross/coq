@@ -152,8 +152,14 @@ module InfoTrace = struct
 
   let unbranch = function
     | Trace.Seq ((DBranch,_),brs) -> brs
-    | _ -> assert false
-
+    | Trace.Seq ((Zero,_),brs) -> brs
+    | Trace.Seq ((t,_),_) ->
+        match t with
+        | DBranch -> assert false
+        | Msg msg -> Errors.anomaly (Pp.str "Trace can only unbranch branches; a Msg is not a DBranch")
+        | Tactic msg -> Errors.anomaly (Pp.str "Trace can only unbranch branches; a Tactic is not a DBranch")
+        | Zero -> Errors.anomaly (Pp.str "Trace can only unbranch branches; a Zero is not a DBranch")
+        | Dispatch -> Errors.anomaly (Pp.str "Trace can only unbranch branches; a Dispatch is not a DBranch")
 
   let is_empty_branch = let open Trace in function
     | Seq((DBranch,_),[]) -> true
