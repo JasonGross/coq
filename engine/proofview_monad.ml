@@ -52,20 +52,30 @@ module Trace = struct
 
   (** Check if should_be_opened is the same as opened.  If so, return
       the incr as-is.  If no, close and open tags as necessary to make
-      them match. *)
-  let rec adjust_opened_to_match (beq : 'a -> 'a -> bool) should_be_opened { head ; opened } =
-    if opened_matches beq should_be_opened opened then
-      { head ; opened }
-    else if List.length should_be_opened < List.length opened then
-      adjust_opened_to_match beq should_be_opened (close { head ; opened })
-    else if List.length should_be_opened > List.length opened then
-      match should_be_opened with
-      | t::ts -> adjust_opened_to_match beq ts (opn t { head ; opened })
-      | [] -> assert false
-    else
-      match should_be_opened with
-      | t::ts -> opn t (adjust_opened_to_match beq ts (close { head ; opened }))
-      | [] -> assert false
+      them match.
+
+      Note: We give [(type a)] and the type signatures explicitly
+      because it makes debugging the OCaml code easier. *)
+  let adjust_opened_to_match (type a)
+                             ?(before_close = fun _ x -> x)
+                             ?(after_open = fun _ x -> x)
+                             (beq : a -> a -> bool) =
+    let rec adjust (should_be_opened : a list) ({ head ; opened } : a incr) =
+      if opened_matches beq should_be_opened opened then
+        { head ; opened }
+      else if List.length should_be_opened < List.length opened then
+        match opened with
+        | Seq(t, _)::_ -> adjust should_be_opened (close (before_close t { head ; opened }))
+        | [] -> assert false (* if List.length x < List.length y, y is non-empty *)
+      else if List.length should_be_opened > List.length opened then
+        match should_be_opened with
+        | t::ts -> adjust ts (after_open t (opn t { head ; opened }))
+        | [] -> assert false
+      else
+        match should_be_opened, opened with
+        | t::ts, Seq(t', _)::ts' -> after_open t (opn t (adjust ts (close (before_close t' { head ; opened }))))
+        | [], _ | _, [] -> assert false
+    in adjust
 
   (** Returning a forest. It is the responsibility of the library
       builder to close all the tags. *)
@@ -92,6 +102,18 @@ let pr_lazy_msg msg = msg ()
 (** Info trace. *)
 module InfoTrace = struct
 
+  module Gensym = struct
+    type t = int
+
+    let (=) : t -> t -> bool = Int.equal
+
+    let last_id = Pervasives.ref 0
+
+    let fresh_id () : t =
+      last_id := !last_id + 1;
+      !last_id
+  end
+
   (** The type of the tags for [info]. *)
   type tag =
     | Msg of lazy_msg (** A simple message *)
@@ -100,8 +122,14 @@ module InfoTrace = struct
     | Dispatch  (** A call to [tclDISPATCH]/[tclEXTEND] *)
     | DBranch  (** A special marker to delimit individual branch of a dispatch. *)
 
-  let (=) tag0 tag1 =
-    match tag0, tag1 with
+  type tag_with_id = tag * Gensym.t
+
+  let new_tag t =
+    (t, Gensym.fresh_id ())
+
+  let (=) (tag0, tag0_id) (tag1, tag1_id) =
+    Gensym.(=) tag0_id tag1_id
+    (*match tag0, tag1 with
     | Msg msg0, Msg msg1 -> Pervasives.(=) msg0 msg1 (* FIXME? *)
     | Msg _, _ -> false
     | Tactic msg0, Tactic msg1 -> Pervasives.(=) msg0 msg1 (* FIXME? *)
@@ -111,36 +139,36 @@ module InfoTrace = struct
     | Dispatch, Dispatch -> true
     | Dispatch, _ -> false
     | DBranch, DBranch -> true
-    | DBranch, _ -> false
+    | DBranch, _ -> false*)
 
-  type state = tag Trace.incr
-  type tree = tag Trace.forest
+  type state = tag_with_id Trace.incr
+  type tree = tag_with_id Trace.forest
 
   (** Keeps track of the list of open tags, so we can adjust for
       backtracking *)
-  type debug_logical_state = tag list
+  type debug_logical_state = tag_with_id list
 
   let pr_in_comments m = Pp.(str"(* "++pr_lazy_msg m++str" *)")
 
   let unbranch = function
-    | Trace.Seq (DBranch,brs) -> brs
+    | Trace.Seq ((DBranch,_),brs) -> brs
     | _ -> assert false
 
 
   let is_empty_branch = let open Trace in function
-    | Seq(DBranch,[]) -> true
+    | Seq((DBranch,_),[]) -> true
     | _ -> false
 
   (** Dispatch with empty branches are (supposed to be) equivalent to
       [idtac] which need not appear, so they are removed from the
       trace. *)
-  let dispatch brs =
+  let dispatch id brs =
     let open Trace in
     if CList.for_all is_empty_branch brs then None
-    else Some (Seq(Dispatch,brs))
+    else Some (Seq((Dispatch,id),brs))
 
   let constr = let open Trace in function
-    | Dispatch -> dispatch
+    | (Dispatch,id) -> dispatch id
     | t -> fun br -> Some (Seq(t,br))
 
   let rec compress_tree = let open Trace in function
@@ -156,16 +184,16 @@ module InfoTrace = struct
   (** [with_sep] is [true] when [Tactic m] must be printed with a
       trailing semi-colon. *)
   let rec pr_tree with_sep = let open Trace in function
-    | Seq (Msg m,[]) -> pr_in_comments m
-    | Seq (Tactic m,_) ->
+    | Seq ((Msg m,_),[]) -> pr_in_comments m
+    | Seq ((Tactic m,_),_) ->
         let tail = if with_sep then Pp.str";" else Pp.mt () in
         Pp.(pr_lazy_msg m ++ tail)
-    | Seq (Zero,_) ->
+    | Seq ((Zero,_),_) ->
         Pp.(Pp.str"(* failed *)" ++ Pp.mt ())
-    | Seq (Dispatch,brs) ->
+    | Seq ((Dispatch,_),brs) ->
         let tail = if with_sep then Pp.str";" else Pp.mt () in
         Pp.(pr_dispatch brs++tail)
-    | Seq (Msg _,_::_) | Seq (DBranch,_) -> assert false
+    | Seq ((Msg _,_),_::_) | Seq ((DBranch,_),_) -> assert false
   and pr_dispatch brs =
     let open Pp in
     let brs = List.map unbranch brs in
@@ -187,12 +215,12 @@ module InfoTrace = struct
     let open Trace in
     match n , t with
     | 0 , t -> [t]
-    | _ , (Seq(Tactic _,[]) as t) -> [t]
-    | n , Seq(Tactic _,f) -> collapse (pred n) f
-    | n , Seq(Zero,brs) -> [Seq(Zero, (collapse n brs))]
-    | n , Seq(Dispatch,brs) -> [Seq(Dispatch, (collapse n brs))]
-    | n , Seq(DBranch,br) -> [Seq(DBranch, (collapse n br))]
-    | _ , (Seq(Msg _,_) as t) -> [t]
+    | _ , (Seq((Tactic _,_),[]) as t) -> [t]
+    | n , Seq((Tactic _,_),f) -> collapse (pred n) f
+    | n , Seq(((Zero,_) as t), brs)
+    | n,  Seq(((Dispatch,_) as t), brs)
+    | n,  Seq(((DBranch,_) as t), brs) -> [Seq(t, (collapse n brs))]
+    | _ , (Seq((Msg _,_),_) as t) -> [t]
   and collapse n f =
     CList.map_append (collapse_tree n) f
 end
@@ -333,28 +361,32 @@ module InfoTraceL = struct
     let open Logical in
     recording >>= raw_update f (fun x -> x)
 
-  let leaf a = update (Trace.leaf a)
+  let leaf a = update (Trace.leaf (InfoTrace.new_tag a))
 
   (** after backtracking or failure, we need to update the tags to
       close things that we skipped *)
   let sync_tags =
     let open P in
     let open Logical in
+    let before_close = (fun _ -> Trace.leaf (InfoTrace.new_tag InfoTrace.Zero)) in
     fun { proof_state ; opened_tags } ->
       if_recording
         (return ())
         (Logical.lift
           (Logic_monad.NonLogical.modify
-            (Trace.adjust_opened_to_match InfoTrace.(=) opened_tags)))
+            (Trace.adjust_opened_to_match ~before_close:before_close InfoTrace.(=) opened_tags)))
 
   let tag a t =
     let open P in
     let open Logical in
+    let a = InfoTrace.new_tag a in
     recording >>= fun r ->
     if r.record_info || r.record_debug then begin
-      raw_update (Trace.opn a) (fun opened_tags -> a::opened_tags) r >>
+      raw_update (Trace.opn a)
+                 (fun opened_tags -> a::opened_tags) r >>
       t >>= fun ret ->
-      raw_update Trace.close (function | x::xs -> xs | [] -> assert false) r >>
+      raw_update Trace.close
+                 (function | x::xs -> xs | [] -> assert false) r >>
       return ret
     end else
       t

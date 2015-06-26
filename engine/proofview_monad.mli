@@ -33,10 +33,13 @@ module Trace : sig
       the user to close all the tags. *)
   val close : 'a incr -> 'a incr
 
-  val adjust_opened_to_match : ('a -> 'a -> bool) -> 'a list -> 'a incr -> 'a incr
-
   (** [leaf] creates an empty tag with name [a]. *)
   val leaf : 'a -> 'a incr -> 'a incr
+
+  val adjust_opened_to_match : ?before_close:('a -> 'a incr -> 'a incr)
+                               -> ?after_open:('a -> 'a incr -> 'a incr)
+                               -> ('a -> 'a -> bool)
+                               -> 'a list -> 'a incr -> 'a incr
 
 end
 
@@ -49,6 +52,9 @@ type lazy_msg = unit -> Pp.std_ppcmds
 (** Info trace. *)
 module InfoTrace : sig
 
+  (** A type of unique identifiers for comparing equality of tags *)
+  type tag_with_id
+
   (** The type of the tags for [info]/[trace]. *)
   type tag =
     | Msg of lazy_msg (** A simple message *)
@@ -57,12 +63,14 @@ module InfoTrace : sig
     | Dispatch  (** A call to [tclDISPATCH]/[tclEXTEND] *)
     | DBranch  (** A special marker to delimit individual branch of a dispatch. *)
 
-  type state = tag Trace.incr
-  type tree = tag Trace.forest
+  val new_tag : tag -> tag_with_id
+
+  type state = tag_with_id Trace.incr
+  type tree = tag_with_id Trace.forest
 
   (** Keeps track of the list of open tags, so we can adjust for
       backtracking *)
-  type debug_logical_state = tag list
+  type debug_logical_state = tag_with_id list
 
   val print : tree -> Pp.std_ppcmds
 
