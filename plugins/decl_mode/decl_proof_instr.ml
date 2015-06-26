@@ -156,7 +156,7 @@ let do_daimon () =
 
 (* post-instruction focus management *)
 
-let goto_current_focus () = 
+let goto_current_focus () =
   Decl_mode.unfocus ()
 
 (* spiwack: used to catch errors indicating lack of "focusing command"
@@ -186,7 +186,7 @@ let close_block bt pts =
 	if Proof.is_done pts then
 	  get_top_stack pts
 	else
-	  get_stack pts 
+	  get_stack pts
       in
       match bt,stack with
 	B_claim, Claim::_ | B_focus, Focus_claim::_ | B_proof, [] ->
@@ -484,7 +484,7 @@ let just_tac _then cut info gls0 =
 	error "\"then\" and \"hence\" require at least one previous fact"
     else []
   in
-  let items_tac gls = 
+  let items_tac gls =
     match cut.cut_by with
 	None -> tclIDTAC gls
       | Some items -> prepare_goal (last_item@items) gls in
@@ -1135,9 +1135,9 @@ let case_tac params pat_info hyps gls0 =
       | _ -> anomaly (Pp.str "wrong place for cases") in
   let clause = build_dep_clause params pat_info per_info hyps gls0 in
   let ninfo1 = {pm_stack=Suppose_case::info.pm_stack} in
-  let nek = 
-    register_dep_subcase (id,(List.length params,List.length hyps)) 
-      (pf_env gls0) per_info pat_info.pat_pat ek in  
+  let nek =
+    register_dep_subcase (id,(List.length params,List.length hyps))
+      (pf_env gls0) per_info pat_info.pat_pat ek in
   let ninfo2 = {pm_stack=Per(et,per_info,nek,id::old_clauses)::rest} in
     tclTHENS (Proofview.V82.of_tactic (assert_postpone id clause))
       [tclTHENLIST
@@ -1209,18 +1209,18 @@ let rec execute_cases fix_name per_info tacnext args objs nhrec tree gls =
     | Skip_patt (_,t),skipped::next_objs ->
 	let args0 = push_arg skipped args in
 	  execute_cases fix_name per_info tacnext args0 next_objs nhrec t gls
-    | End_patt (id,(nparams,nhyps)),[] -> 
+    | End_patt (id,(nparams,nhyps)),[] ->
 	begin
 	  match Id.List.assoc id args with
-	      [None,br_args] -> 
-		let all_metas = 
+	      [None,br_args] ->
+		let all_metas =
 		  List.init (nparams + nhyps) (fun n -> mkMeta (succ n))  in
 		let param_metas,hyp_metas = List.chop nparams all_metas in
 		  tclTHEN
 		    (tclDO nhrec (Proofview.V82.of_tactic introf))
-		    (tacnext 
+		    (tacnext
 		       (applist (mkVar id,
-				 List.append param_metas 
+				 List.append param_metas
 				   (List.rev_append br_args hyp_metas)))) gls
 	    | _ -> anomaly (Pp.str "wrong stack size")
 	end
@@ -1350,8 +1350,8 @@ let end_tac et2 gls =
 		 Proofview.V82.of_tactic (simple_induct (AnonHyp (succ (List.length pi.per_args))));
 		 default_justification (List.map mkVar clauses)]
 	  | ET_Case_analysis,EK_dep tree ->
-		 execute_cases Anonymous pi 
-		   (fun c -> tclTHENLIST 
+		 execute_cases Anonymous pi
+		   (fun c -> tclTHENLIST
 		      [my_refine c;
 		       clear clauses;
 		       justification (Proofview.V82.of_tactic assumption)])

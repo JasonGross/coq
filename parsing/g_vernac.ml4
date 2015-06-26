@@ -588,7 +588,7 @@ GEXTEND Gram
       | "Type"; "*" -> SsFwdClose (SsSingl (!@loc, Id.of_string "Type")) ]]
   ;
   ssexpr:
-    [ "35" 
+    [ "35"
       [ "-"; e = ssexpr -> SsCompl e ]
     | "50"
       [ e1 = ssexpr; "-"; e2 = ssexpr->SsSubstr(e1,e2)
@@ -599,7 +599,7 @@ GEXTEND Gram
           starredidentreflist_to_expr l
       | "("; only_starredidentrefs; l = LIST0 starredidentref; ")"; "*" ->
           SsFwdClose(starredidentreflist_to_expr l)
-      | "("; e = ssexpr; ")"-> e 
+      | "("; e = ssexpr; ")"-> e
       | "("; e = ssexpr; ")"; "*" -> SsFwdClose e ] ]
   ;
 END
@@ -674,7 +674,7 @@ GEXTEND Gram
       | IDENT "Existing"; IDENT "Class"; is = global -> VernacDeclareClass is
 
       (* Arguments *)
-      | IDENT "Arguments"; qid = smart_global; 
+      | IDENT "Arguments"; qid = smart_global;
         impl = LIST1 [ l = LIST0
         [ item = argument_spec ->
             let id, r, s = item in [`Id (id,r,s,false,false)]
@@ -736,7 +736,7 @@ GEXTEND Gram
           test_plural_form_types bl;
            VernacReserve bl
 
-      | IDENT "Generalizable"; 
+      | IDENT "Generalizable";
 	   gen = [IDENT "All"; IDENT "Variables" -> Some []
 	     | IDENT "No"; IDENT "Variables" -> None
 	     | ["Variable" | IDENT "Variables"];
@@ -893,7 +893,7 @@ GEXTEND Gram
       | IDENT "Remove"; table = IDENT; field = IDENT; v= LIST1 option_ref_value
         -> VernacRemoveOption ([table;field], v)
       | IDENT "Remove"; table = IDENT; v = LIST1 option_ref_value ->
-	  VernacRemoveOption ([table], v) ]] 
+	  VernacRemoveOption ([table], v) ]]
   ;
   query_command: (* TODO: rapprocher Eval et Check *)
     [ [ IDENT "Eval"; r = Tactic.red_expr; "in"; c = lconstr ->

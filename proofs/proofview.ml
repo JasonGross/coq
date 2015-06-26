@@ -129,7 +129,7 @@ let focus_context f = f
     i]. *)
 let focus_sublist i j l =
   let (left,sub_right) = CList.goto (i-1) l in
-  let (sub, right) = 
+  let (sub, right) =
     try CList.chop (j-i+1) sub_right
     with Failure _ -> raise CList.IndexOutOfRange
   in
@@ -452,7 +452,7 @@ let fold_left2_goal i s l =
   let err =
     return () >>= fun () -> (* Delay the computation of list lengths. *)
     tclZERO (SizeMismatch (CList.length initial.comb,CList.length l))
-  in 
+  in
   Proof.List.fold_left2 err begin fun ((r,subgoals) as cur) goal a ->
     Solution.get >>= fun step ->
     match advance step goal with
@@ -488,7 +488,7 @@ let fold_left2_goal i s l =
 let tclDISPATCHGEN0 join tacs =
   match tacs with
   | [] ->
-      begin 
+      begin
         let open Proof in
         Comb.get >>= function
         | [] -> tclUNIT (join [])
@@ -751,7 +751,7 @@ module Progress = struct
     let open Environ in
     let c1 = named_context_of_val ctx1 and c2 = named_context_of_val ctx2 in
     let eq_named_declaration (i1, c1, t1) (i2, c2, t2) =
-      Names.Id.equal i1 i2 && Option.equal (eq_constr sigma1 sigma2) c1 c2 
+      Names.Id.equal i1 i2 && Option.equal (eq_constr sigma1 sigma2) c1 c2
       && (eq_constr sigma1 sigma2) t1 t2
     in List.equal eq_named_declaration c1 c2
 
@@ -888,7 +888,7 @@ module Unsafe = struct
   let tclEVARSADVANCE evd =
     Pv.modify (fun ps -> { ps with solution = evd; comb = undefined evd ps.comb })
 
-  let tclEVARUNIVCONTEXT ctx = 
+  let tclEVARUNIVCONTEXT ctx =
     Pv.modify (fun ps -> { ps with solution = Evd.set_universe_context ps.solution ctx })
 
   let reset_future_goals p =
@@ -948,7 +948,7 @@ module Goal = struct
   let raw_concl { concl=concl } = concl
 
 
-  let gmake_with info env sigma goal = 
+  let gmake_with info env sigma goal =
     { env = Environ.reset_with_named_context (Evd.evar_filtered_hyps info) env ;
       sigma = sigma ;
       concl = Evd.evar_concl info ;
@@ -1205,7 +1205,7 @@ module V82 = struct
     let open Proof in
     Pv.get >>= fun ps ->
     try
-      let tac gl evd = 
+      let tac gl evd =
         let glsigma  =
           tac { Evd.it = gl ; sigma = evd; }  in
         let sigma = glsigma.Evd.sigma in
@@ -1234,7 +1234,7 @@ module V82 = struct
     let (goals,evd) = Evd.Monad.List.map map ps.comb ps.solution in
     { ps with solution = evd; comb = goals; }
     end
-      
+
   let has_unresolved_evar pv =
     Evd.has_undefined pv.solution
 
@@ -1243,10 +1243,10 @@ module V82 = struct
     let undef = Evd.undefined_map pv.solution in
     let goals = CList.rev_map fst (Evar.Map.bindings undef) in
     { pv with comb = goals }
-      
-    
 
-  (* Returns the open goals of the proofview together with the evar_map to 
+
+
+  (* Returns the open goals of the proofview together with the evar_map to
      interpret them. *)
   let goals { comb = comb ; solution = solution; } =
    { Evd.it = comb ; sigma = solution }

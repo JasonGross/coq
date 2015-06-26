@@ -112,7 +112,7 @@ type ml_tactic_entry = {
 (** Composite types *)
 
 (** In globalize tactics, we need to keep the initial [constr_expr] to recompute
-   in the environment by the effective calls to Intro, Inversion, etc 
+   in the environment by the effective calls to Intro, Inversion, etc
    The [constr_expr] field is [None] in TacDef though *)
 type glob_constr_and_expr = Glob_term.glob_constr * constr_expr option
 

@@ -102,7 +102,7 @@ let vernac_interp ?proof id ?route { verbose; loc; expr } =
 
 (* Wrapper for Vernac.parse_sentence to set the feedback id *)
 let vernac_parse ?newtip ?route eid s =
-  let feedback_id = 
+  let feedback_id =
     if Option.is_empty newtip then Feedback.Edit eid
     else Feedback.State (Option.get newtip) in
   set_id_for_feedback ?route feedback_id;
@@ -291,7 +291,7 @@ module VCS : sig
   (* cuts from start -> stop, raising Expired if some nodes are not there *)
   val slice : start:id -> stop:id -> vcs
   val nodes_in_slice : start:id -> stop:id -> Stateid.t list
-  
+
   val create_cluster : id list -> qed:id -> start:id -> unit
   val cluster_of : id -> (id * id) option
   val delete_cluster_of : id -> unit
@@ -330,7 +330,7 @@ end = struct (* {{{ *)
       | Noop -> " "
       | Alias (id,_) -> sprintf "Alias(%s)" (Stateid.to_string id)
       | Qed { qast } -> string_of_ppcmds (pr_ast qast) in
-    let is_green id = 
+    let is_green id =
       match get_info vcs id with
       | Some { state = Some _ } -> true
       | _ -> false in
@@ -476,7 +476,7 @@ end = struct (* {{{ *)
       let id = new_node () in
       merge id ~ours:(Sideff t) ~into:b Branch.master)
     (List.filter (fun b -> not (Branch.equal b Branch.master)) (branches ()))
-  
+
   let visit id = Vcs_aux.visit !vcs id
 
   let nodes_in_slice ~start ~stop =
@@ -538,7 +538,7 @@ end = struct (* {{{ *)
     val command : now:bool -> (unit -> unit) -> unit
 
   end = struct
-    
+
     let m = Mutex.create ()
     let c = Condition.create ()
     let job = ref None
@@ -586,7 +586,7 @@ let state_of_id id =
 
 (****** A cache: fills in the nodes of the VCS document with their value ******)
 module State : sig
-  
+
   (** The function is from unit, so it uses the current state to define
       a new one.  I.e. one may been to install the right state before
       defining a new one.
@@ -634,7 +634,7 @@ end = struct (* {{{ *)
   let () = Future.set_freeze
     (fun () -> Obj.magic (freeze_global_state `No, !cur_id))
     (fun t -> let s,i = Obj.magic t in unfreeze_global_state s; cur_id := i)
-  
+
   type frozen_state = state
   type proof_part =
     Proof_global.state * Summary.frozen_bits (* only meta counters *)
@@ -657,7 +657,7 @@ end = struct (* {{{ *)
     else
       try match VCS.get_info id with
         | { state = Some _ } -> true
-        | _ -> false 
+        | _ -> false
       with VCS.Expired -> false
 
   let install_cached id =
@@ -682,7 +682,7 @@ end = struct (* {{{ *)
            try
             let prev = (VCS.visit id).next in
             if is_cached prev
-            then { s with proof = 
+            then { s with proof =
               Proof_global.copy_terminators
                 ~src:(get_cached prev).proof ~tgt:s.proof }
             else s
@@ -822,7 +822,7 @@ end = struct (* {{{ *)
         match f acc (id, vcs, ids, tactic, undo) with
         | `Stop x -> x
         | `Cont acc -> next acc
- 
+
   let back_safe () =
     let id =
       fold_until (fun n (id,_,_,_,_) ->
@@ -863,7 +863,7 @@ end = struct (* {{{ *)
           let m = match e with VernacUndoTo m -> m | _ -> 0 in
           let id = VCS.get_branch_pos (VCS.current_branch ()) in
           let vcs =
-            match (VCS.get_info id).vcs_backup with 
+            match (VCS.get_info id).vcs_backup with
             | None, _ -> anomaly(str"Backtrack: tip with no vcs_backup")
             | Some vcs, _ -> vcs in
           let cb, _ =
@@ -919,7 +919,7 @@ let record_pb_time proof_name loc time =
     Aux_file.record_in_aux_at Loc.ghost proof_name proof_build_time;
     hints := Aux_file.set !hints Loc.ghost proof_name proof_build_time
   end
- 
+
 exception RemoteException of std_ppcmds
 let _ = Errors.register_handler (function
   | RemoteException ppcmd -> ppcmd
@@ -929,7 +929,7 @@ let _ = Errors.register_handler (function
 (******************************************************************************)
 
 module rec ProofTask : sig
- 
+
   type competence = Stateid.t list
   type task_build_proof = {
     t_exn_info : Stateid.t * Stateid.t;
@@ -961,7 +961,7 @@ module rec ProofTask : sig
       Proof_global.closed_proof_output Future.computation
 
   (* If set, only tasks overlapping with this list are processed *)
-  val set_perspective : Stateid.t list -> unit  
+  val set_perspective : Stateid.t list -> unit
 
 end = struct (* {{{ *)
 
@@ -986,7 +986,7 @@ end = struct (* {{{ *)
   type request =
   | ReqBuildProof of (Future.UUID.t,VCS.vcs) Stateid.request * bool * competence
   | ReqStates of Stateid.t list
-  
+
   type error = {
     e_error_at    : Stateid.t;
     e_safe_id     : Stateid.t;
@@ -1119,13 +1119,13 @@ end = struct (* {{{ *)
         prerr_endline (string_of_ppcmds e_msg);
         let e_safe_states = List.filter State.is_cached my_states in
         RespError { e_error_at; e_safe_id; e_msg; e_safe_states }
-  
+
   let perform_states query =
     if query = [] then [] else
     let is_tac = function
       | VernacSolve _ | VernacFocus _ | VernacUnfocus | VernacBullet _ -> true
       | _ -> false in
-    let initial = 
+    let initial =
       let rec aux id =
         try match VCS.visit id with { next } -> aux next
         with VCS.Expired -> id in
@@ -1138,7 +1138,7 @@ end = struct (* {{{ *)
           then Some (prev, State.get_cached prev, step)
           else None
         with VCS.Expired -> None in
-      let this = 
+      let this =
         if State.is_cached id then Some (State.get_cached id) else None in
       match prev, this with
       | _, None -> None
@@ -1184,7 +1184,7 @@ and Slaves : sig
 
   (* blocking function that waits for the task queue to be empty *)
   val wait_all_done : unit -> unit
-  
+
   (* initialize the whole machinery (optional) *)
   val init : unit -> unit
 
@@ -1206,7 +1206,7 @@ and Slaves : sig
 end = struct (* {{{ *)
 
   module TaskQueue = AsyncTaskQueue.MakeQueue(ProofTask)
-  
+
   let queue = ref None
 
   let init () =
@@ -1255,8 +1255,8 @@ end = struct (* {{{ *)
       | Some (_, cur) ->
           match VCS.visit cur with
           | { step = `Cmd { cast = { loc } } }
-          | { step = `Fork (( { loc }, _, _, _), _) } 
-          | { step = `Qed ( { qast = { loc } }, _) } 
+          | { step = `Fork (( { loc }, _, _, _), _) }
+          | { step = `Qed ( { qast = { loc } }, _) }
           | { step = `Sideff (`Ast ( { loc }, _)) } ->
               let start, stop = Loc.unloc loc in
               pperrnl (
@@ -1305,7 +1305,7 @@ end = struct (* {{{ *)
         u.(bucket) <- uc;
         p.(bucket) <- pr;
         u, Univ.ContextSet.union cst extra, false
-  
+
   let check_task name l i =
     match check_task_aux "" name l i with
     | `OK _ | `OK_ADMITTED -> true
@@ -1355,7 +1355,7 @@ end = struct (* {{{ *)
         f, cancel_switch
       end else
         ProofTask.build_proof_here ~drop_pt t_exn_info loc stop, cancel_switch
-    else 
+    else
       let f, t_assign = Future.create_delegate ~name:pname (State.exn_on id ~valid) in
       let t_uuid = Future.uuid f in
       feedback (Feedback.InProgress 1);
@@ -1398,14 +1398,14 @@ and TacTask : sig
     t_ast      : ast;
     t_goal     : Goal.goal;
     t_kill     : unit -> unit;
-    t_name     : string }  
+    t_name     : string }
 
   include AsyncTaskQueue.Task with type task := task
 
 end = struct (* {{{ *)
 
   type output = Constr.constr * Evd.evar_universe_context
-  
+
   let forward_feedback msg = Hooks.(call forward_feedback msg)
 
   type task = {
@@ -1415,7 +1415,7 @@ end = struct (* {{{ *)
     t_ast      : ast;
     t_goal     : Goal.goal;
     t_kill     : unit -> unit;
-    t_name     : string }  
+    t_name     : string }
 
   type request = {
     r_state    : Stateid.t;
@@ -1446,7 +1446,7 @@ end = struct (* {{{ *)
       r_goal     = t_goal;
       r_name     = t_name }
     with VCS.Expired -> None
-          
+
   let use_response _ { t_assign; t_state; t_state_fb; t_kill } resp =
     match resp with
     | RespBuiltSubProof o -> t_assign (`Val o); `Stay ((),[])
@@ -1456,7 +1456,7 @@ end = struct (* {{{ *)
         t_assign (`Exn e);
         t_kill ();
         `Stay ((),[])
-                    
+
   let on_marshal_error err { t_name } =
     pr_err ("Fatal marshal error: " ^ t_name );
     flush_all (); exit 1
@@ -1464,7 +1464,7 @@ end = struct (* {{{ *)
   let on_task_cancellation_or_expiration_or_slave_death = function
     | Some { t_kill } -> t_kill ()
     | _ -> ()
- 
+
   let perform { r_state = id; r_state_fb; r_document = vcs; r_ast; r_goal } =
     Option.iter VCS.restore vcs;
     try
@@ -1498,7 +1498,7 @@ end = struct (* {{{ *)
 
   let name_of_task { t_name } = t_name
   let name_of_request { r_name } = r_name
-  
+
 end (* }}} *)
 
 and Partac : sig
@@ -1507,7 +1507,7 @@ and Partac : sig
     cancel_switch -> int -> Stateid.t -> Stateid.t -> ast -> unit
 
 end = struct (* {{{ *)
-    
+
   module TaskQueue = AsyncTaskQueue.MakeQueue(TacTask)
 
   let vernac_interp cancel nworkers safe_id id { verbose; loc; expr = e } =
@@ -1558,7 +1558,7 @@ end = struct (* {{{ *)
           else (* One has failed and cancelled the others, but not this one *)
             re_sig [g] sigma) in
       Proof.run_tactic (Global.env()) assign_tac p)))) ())
-  
+
 end (* }}} *)
 
 and QueryTask : sig
@@ -1567,10 +1567,10 @@ and QueryTask : sig
   include AsyncTaskQueue.Task with type task := task
 
 end = struct (* {{{ *)
-  
+
   type task =
     { t_where : Stateid.t; t_for : Stateid.t ; t_what : ast }
-  
+
   type request =
     { r_where : Stateid.t ; r_for : Stateid.t ; r_what : ast; r_doc : VCS.vcs }
   type response = unit
@@ -1587,7 +1587,7 @@ end = struct (* {{{ *)
       r_doc   = VCS.slice ~start:t_where ~stop:t_where;
       r_what  = t_what }
     with VCS.Expired -> None
-  
+
   let use_response _ _ _ = `End
 
   let on_marshal_error _ _ =
@@ -1595,7 +1595,7 @@ end = struct (* {{{ *)
     flush_all (); exit 1
 
   let on_task_cancellation_or_expiration_or_slave_death _ = ()
-  
+
   let forward_feedback msg = Hooks.(call forward_feedback msg)
 
   let perform { r_where; r_doc; r_what; r_for } =
@@ -1604,18 +1604,18 @@ end = struct (* {{{ *)
     Reach.known_state ~cache:`No r_where;
     try
       vernac_interp r_for { r_what with verbose = true };
-      feedback ~state_id:r_for Feedback.Processed     
+      feedback ~state_id:r_for Feedback.Processed
     with e when Errors.noncritical e ->
       let e = Errors.push e in
       let msg = string_of_ppcmds (iprint e) in
       feedback ~state_id:r_for (Feedback.ErrorMsg (Loc.ghost, msg))
-    
+
   let name_of_task { t_what } = string_of_ppcmds (pr_ast t_what)
   let name_of_request { r_what } = string_of_ppcmds (pr_ast r_what)
 
 end (* }}} *)
 
-and Query : sig 
+and Query : sig
 
   val init : unit -> unit
   val vernac_interp : cancel_switch -> Stateid.t ->  Stateid.t -> ast -> unit
@@ -1870,7 +1870,7 @@ let known_state ?(redefine_qed=false) ~cache id =
                 end;
                 Proof_global.discard_all ()
               ), (if redefine_qed then `No else `Yes), true
-          | `Sync (name, _, `Immediate) -> (fun () -> 
+          | `Sync (name, _, `Immediate) -> (fun () ->
                 reach eop; vernac_interp id x; Proof_global.discard_all ()
               ), `Yes, true
           | `Sync (name, pua, reason) -> (fun () ->
@@ -2058,7 +2058,7 @@ let handle_failure (e, info) vcs tty =
       VCS.print ();
       if tty && interactive () = `Yes then begin
         (* Hopefully the 1 to last state is valid *)
-        Backtrack.back_safe (); 
+        Backtrack.back_safe ();
         VCS.checkout_shallowest_proof_branch ();
       end;
       VCS.print ();
@@ -2098,7 +2098,7 @@ let process_transaction ?(newtip=Stateid.fresh ()) ~tty verbose c (loc, expr) =
     let rc = begin
       prerr_endline ("  classified as: " ^ string_of_vernac_classification c);
       match c with
-      (* PG stuff *)    
+      (* PG stuff *)
       | VtStm(VtPG,false), VtNow -> vernac_interp Stateid.dummy x; `Ok
       | VtStm(VtPG,_), _ -> anomaly(str "PG command in script or VtLater")
       (* Joining various parts of the document *)
@@ -2111,7 +2111,7 @@ let process_transaction ?(newtip=Stateid.fresh ()) ~tty verbose c (loc, expr) =
       | VtStm ((VtObserve _ | VtFinish | VtJoinDocument
                 |VtPrintDag |VtWait),_), VtLater ->
           anomaly(str"classifier: join actions cannot be classified as VtLater")
-      
+
       (* Back *)
       | VtStm (VtBack oid, true), w ->
           let id = VCS.new_node ~id:newtip () in
@@ -2207,7 +2207,7 @@ let process_transaction ?(newtip=Stateid.fresh ()) ~tty verbose c (loc, expr) =
           VCS.checkout_shallowest_proof_branch ();
           Backtrack.record (); if w == VtNow then finish ();
           rc
-          
+
       (* Side effect on all branches *)
       | VtUnknown, _ when expr = VernacToplevelControl Drop ->
           vernac_interp (VCS.get_branch_pos head) x; `Ok
@@ -2251,7 +2251,7 @@ let process_transaction ?(newtip=Stateid.fresh ()) ~tty verbose c (loc, expr) =
           anomaly(str"classifier: VtUnknown must imply VtNow")
     end in
     (* Proof General *)
-    begin match v with 
+    begin match v with
       | VernacStm (PGLast _) ->
         if not (VCS.Branch.equal head VCS.Branch.master) then
           vernac_interp Stateid.dummy
@@ -2270,9 +2270,9 @@ let print_ast id =
   try
     match VCS.visit id with
     | { step = `Cmd { cast = { loc; expr } } }
-    | { step = `Fork (({ loc; expr }, _, _, _), _) } 
+    | { step = `Fork (({ loc; expr }, _, _, _), _) }
     | { step = `Qed ({ qast = { loc; expr } }, _) } ->
-        let xml = 
+        let xml =
           try Texmacspp.tmpp expr loc
           with e -> Xml_datatype.PCData ("ERROR " ^ Printexc.to_string e) in
         xml;
@@ -2511,7 +2511,7 @@ let get_script prf =
          find ((x.expr, (VCS.get_info id).n_goals)::acc) view.next
     | `Sideff (`Id id)  -> find acc id
     | `Cmd {cast = x; ctac} when ctac -> (* skip non-tactics *)
-         find ((x.expr, (VCS.get_info id).n_goals)::acc) view.next 
+         find ((x.expr, (VCS.get_info id).n_goals)::acc) view.next
     | `Cmd _ -> find acc view.next
     | `Alias (id,_) -> find acc id
     | `Fork _ -> find acc view.next
