@@ -148,7 +148,7 @@ GEXTEND Gram
 
   trace_command:
     [ [ IDENT "Info" ; n=natural -> (Some n, None)
-      | IDENT "Trace" ; n=natural -> (None, Some n) ] ]
+      (*| IDENT "Trace" ; n=natural -> (None, Some n)*) ] ]
   ;
 
   subgoal_command:

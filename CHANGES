@@ -4,8 +4,6 @@ Changes from V8.5beta2 to ...
 Vernacular commands
 
 - New command "Redirect" to redirect the output of a command to a file.
-- A new "Trace" command replaces the "debug" tactical discontinued in
-  v8.4. It is like "Info", but also displays backtracking.
 
 Tactics
 
@@ -35,6 +33,9 @@ API
   * Tacmach.pf_type_of -> pf_unsafe_type_of
   * A new safe pf_type_of function.
   All uses of unsafe_* functions should be eventually eliminated.
+- Internals to support a "Trace" command replaces the "debug" tactical
+  discontinued in v8.4. It is like "Info", but also displays
+  backtracking.
 
 
 Tools
