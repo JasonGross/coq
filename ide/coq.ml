@@ -300,7 +300,7 @@ let handle_intermediate_message handle xml =
   let level = message.Pp.message_level in
   let content = message.Pp.message_content in
   let logger = match handle.waiting_for with
-    | Some (_, l) -> l 
+    | Some (_, l) -> l
     | None -> function
         | Pp.Error -> Minilib.log ~level:`ERROR
         | Pp.Info -> Minilib.log ~level:`INFO

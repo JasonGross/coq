@@ -65,7 +65,7 @@ let get_nth_V82_goal i =
   try
           { it=(List.nth goals (i-1)) ; sigma=sigma; }
   with Failure _ -> raise NoSuchGoal
-    
+
 let get_goal_context_gen i =
   try
 let { it=goal ; sigma=sigma; } =  get_nth_V82_goal i in
@@ -89,7 +89,7 @@ let current_proof_statement () =
     | _ -> Errors.anomaly ~label:"Pfedit.current_proof_statement" (Pp.str "more than one statement")
 
 let solve ?with_end_tac gi info_lvl tac pr =
-  try 
+  try
     let tac = match with_end_tac with
       | None -> tac
       | Some etac -> Proofview.tclTHEN tac etac in
@@ -121,7 +121,7 @@ let solve ?with_end_tac gi info_lvl tac pr =
 
 let by tac = Proof_global.with_current_proof (fun _ -> solve (Vernacexpr.SelectNth 1) None tac)
 
-let instantiate_nth_evar_com n com = 
+let instantiate_nth_evar_com n com =
   Proof_global.simple_with_current_proof (fun _ p -> Proof.V82.instantiate_evar n com p)
 
 
@@ -210,7 +210,7 @@ let solve_by_implicit_tactic env sigma evk =
 	(Environ.named_context env) ->
       let tac = Proofview.tclTHEN tac (Proofview.tclEXTEND [] (Proofview.tclZERO (Errors.UserError ("",Pp.str"Proof is not complete."))) []) in
       (try
-        let (ans, _, _) = 
+        let (ans, _, _) =
 	  build_by_tactic env (Evd.evar_universe_context sigma) evi.evar_concl tac in
         ans
        with e when Logic.catchable_exception e -> raise Exit)

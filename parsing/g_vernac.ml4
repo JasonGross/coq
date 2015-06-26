@@ -96,12 +96,12 @@ GEXTEND Gram
       | IDENT "Stm"; IDENT "Command"; v = vernac_aux -> VernacStm (Command v)
       | IDENT "Stm"; IDENT "PGLast"; v = vernac_aux -> VernacStm (PGLast v)
 
-      | v = vernac_poly -> v ] 
+      | v = vernac_poly -> v ]
     ]
   ;
-  vernac_poly: 
+  vernac_poly:
     [ [ IDENT "Polymorphic"; v = vernac_aux -> VernacPolymorphic (true, v)
-      | IDENT "Monomorphic"; v = vernac_aux -> VernacPolymorphic (false, v) 
+      | IDENT "Monomorphic"; v = vernac_aux -> VernacPolymorphic (false, v)
       | v = vernac_aux -> v ]
     ]
   ;
@@ -146,7 +146,7 @@ GEXTEND Gram
     ] ]
   ;
 
-  subgoal_command: 
+  subgoal_command:
     [ [ c = query_command; "." ->
                   begin function
                     | Some (SelectNth g) -> c (Some g)
@@ -560,7 +560,7 @@ GEXTEND Gram
       | e = section_subset_expr -> SsExpr e ] ]
   ;
   section_subset_expr:
-    [ "35" 
+    [ "35"
       [ "-"; e = section_subset_expr -> SsCompl e ]
     | "50"
       [ e1 = section_subset_expr; "-"; e2 = section_subset_expr->SsSubstr(e1,e2)
@@ -642,7 +642,7 @@ GEXTEND Gram
       | IDENT "Existing"; IDENT "Class"; is = global -> VernacDeclareClass is
 
       (* Arguments *)
-      | IDENT "Arguments"; qid = smart_global; 
+      | IDENT "Arguments"; qid = smart_global;
         impl = LIST1 [ l = LIST0
         [ item = argument_spec ->
             let id, r, s = item in [`Id (id,r,s,false,false)]
@@ -704,7 +704,7 @@ GEXTEND Gram
           test_plurial_form_types bl;
            VernacReserve bl
 
-      | IDENT "Generalizable"; 
+      | IDENT "Generalizable";
 	   gen = [IDENT "All"; IDENT "Variables" -> Some []
 	     | IDENT "No"; IDENT "Variables" -> None
 	     | ["Variable" | IDENT "Variables"];
@@ -861,7 +861,7 @@ GEXTEND Gram
       | IDENT "Remove"; table = IDENT; field = IDENT; v= LIST1 option_ref_value
         -> VernacRemoveOption ([table;field], v)
       | IDENT "Remove"; table = IDENT; v = LIST1 option_ref_value ->
-	  VernacRemoveOption ([table], v) ]] 
+	  VernacRemoveOption ([table], v) ]]
   ;
   query_command: (* TODO: rapprocher Eval et Check *)
     [ [ IDENT "Eval"; r = Tactic.red_expr; "in"; c = lconstr ->

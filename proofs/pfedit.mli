@@ -150,11 +150,11 @@ val instantiate_nth_evar_com : int -> Constrexpr.constr_expr -> unit
 
 val build_constant_by_tactic :
   Id.t -> Evd.evar_universe_context -> named_context_val -> ?goal_kind:goal_kind ->
-  types -> unit Proofview.tactic -> 
+  types -> unit Proofview.tactic ->
   Entries.definition_entry * bool * Evd.evar_universe_context
 
-val build_by_tactic : env -> Evd.evar_universe_context -> ?poly:polymorphic -> 
-  types -> unit Proofview.tactic -> 
+val build_by_tactic : env -> Evd.evar_universe_context -> ?poly:polymorphic ->
+  types -> unit Proofview.tactic ->
   constr * bool * Evd.evar_universe_context
 
 val refine_by_tactic : env -> Evd.evar_map -> types -> unit Proofview.tactic ->
