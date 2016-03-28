@@ -122,3 +122,6 @@ val msg_warn : string -> unit
 val msg_debug : std_ppcmds -> unit
 
 val string_of_ppcmds : std_ppcmds -> string
+
+val utf8_length : string -> int
+val utf8_sub : string -> int -> int -> string

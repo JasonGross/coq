@@ -15,6 +15,7 @@ Equality
 Contradiction
 Inv
 Leminv
+Profile_ltac
 Tacinterp
 Evar_tactics
 Autorewrite

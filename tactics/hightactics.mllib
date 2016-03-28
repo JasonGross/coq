@@ -6,3 +6,4 @@ Class_tactics
 Rewrite
 Tauto
 Eqdecide
+Profile_ltac_tactics

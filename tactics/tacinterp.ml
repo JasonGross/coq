@@ -277,7 +277,7 @@ let lookup_genarg_subst  id = let (_,_,f) = lookup_genarg id in f
 
 let push_trace (loc,ck) = function
   | (n,loc',ck')::trl when ck=ck' -> (n+1,loc,ck)::trl
-  | trl -> (1,loc,ck)::trl
+  | trl -> Profile_ltac.entered_call(); (1,loc,ck)::trl
 
 let propagate_trace ist loc id = function
   | VFun (_,lfun,it,b) ->
@@ -1793,7 +1793,9 @@ and eval_tactic ist = function
 	  catch_error (push_trace(dloc,call)ist.trace)
 	    (interp_atomic ist gl) t	in
 	(* catch error in the evaluation *)
-	catch_error (push_trace(loc,call)ist.trace) tac gl
+	let trace = push_trace(loc,call)ist.trace in
+	Profile_ltac.do_profile "eval_tactic:2" trace (fun()->
+	  catch_error trace tac gl)
   | TacFun _ | TacLetIn _ -> assert false
   | TacMatchGoal _ | TacMatch _ -> assert false
   | TacId s -> fun gl ->
@@ -1945,7 +1947,7 @@ and tactic_of_value ist vle g =
   | VRTactic res -> res
   | VFun (trace,lfun,[],t) ->
       let tac = eval_tactic {ist with lfun=lfun; trace=trace} t in
-      catch_error trace tac g
+    Profile_ltac.do_profile "tactic_of_value" trace (fun()-> catch_error trace tac g)
   | (VFun _|VRec _) -> error "A fully applied tactic is expected."
   | VConstr _ -> errorlabstrm "" (str"Value is a term. Expected a tactic.")
   | VConstr_context _ ->
@@ -1962,7 +1964,7 @@ and eval_with_fail ist is_lazy goal tac =
     (match v with
     | VFun (trace,lfun,[],t) when not is_lazy ->
 	let tac = eval_tactic {ist with lfun=lfun; trace=trace} t in
-	VRTactic (catch_error trace tac { goal with sigma=sigma })
+	VRTactic (Profile_ltac.do_profile "eval_with_fail" trace (fun() -> catch_error trace tac { goal with sigma=sigma }))
     | a -> a)
   with
     | FailError (0,s) | Loc.Exc_located(_, FailError (0,s))
