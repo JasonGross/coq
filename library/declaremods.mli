@@ -119,6 +119,9 @@ val end_library :
 (** set a function to be executed at end_library *)
 val set_end_library_hook : (unit -> unit) -> unit
 
+(** append a function to be executed at end_library *)
+val append_end_library_hook : (unit -> unit) -> unit
+
 (** [really_import_module mp] opens the module [mp] (in a Caml sense).
    It modifies Nametab and performs the [open_object] function for
    every object of the module. *)
