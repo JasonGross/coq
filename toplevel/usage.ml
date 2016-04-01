@@ -72,7 +72,7 @@ let print_usage_channel co command =
 \n  -quality               improve the legibility of the proof terms produced by\
 \n                         some tactics\
 \n  -time                  display the time taken by each command\
-\n  -profile               display the time taken by each (sub)tactic\
+\n  -profileltac           display the time taken by each (sub)tactic\
 \n  -h, --help             print this list of options\
 \n"
 

@@ -242,7 +242,7 @@ let parse_args arglist =
 
     | "-time" :: rem -> Vernac.time := true; parse rem
 
-    | "-profile" :: rem -> Profile_ltac.set_profiling true; Profile_ltac.set_display_profile_at_close true; parse rem
+    | "-profileltac" :: rem -> Profile_ltac.set_profiling true; Profile_ltac.set_display_profile_at_close true; parse rem
 
     | "-compat" :: v :: rem ->
         Flags.compat_version := get_compat_version v; parse rem
