@@ -39,12 +39,27 @@ let cst_filter f csts =
 
 let is_ax _ cb = not (constant_has_body cb)
 
+let is_pr_false _ cb =
+  match cb.const_type with
+  | RegularArity (Prod (_, Sort _, Rel 1)) -> true
+  | _ -> false
+
 let pr_ax csts =
   let axs = cst_filter is_ax csts in
   if axs = [] then
     str "Axioms: <none>"
   else
     hv 2 (str "Axioms:" ++ fnl() ++ prlist_with_sep fnl Indtypes.prcon axs)
+
+let pr_false csts =
+  let falses = cst_filter is_pr_false csts in
+  let axioms = cst_filter is_ax csts in
+  if falses = [] then
+    str "No proofs of False"
+  else if axioms = [] then
+    hv 2 (str "Bad proofs of False:" ++ fnl() ++ prlist_with_sep fnl Indtypes.prcon falses)
+  else
+    hv 2 (str "Proofs of False:" ++ fnl() ++ prlist_with_sep fnl Indtypes.prcon falses)
 
 let print_context env =
   if !output_context then begin
@@ -58,6 +73,7 @@ let print_context env =
       (fnl() ++ str"CONTEXT SUMMARY" ++ fnl() ++
       str"===============" ++ fnl() ++ fnl() ++
       str "* " ++ hov 0 (pr_engt engt ++ fnl()) ++ fnl() ++
+      str "* " ++ hov 0 (pr_false csts) ++ fnl() ++
       str "* " ++ hov 0 (pr_ax csts) ++
       fnl()))
   end
