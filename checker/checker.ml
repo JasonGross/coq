@@ -46,13 +46,16 @@ let path_of_string s =
 let ( / ) = Filename.concat
 
 let get_version_date () =
-  try
-    let ch = open_in (Envars.coqlib () / "revision") in
-    let ver = input_line ch in
-    let rev = input_line ch in
-    let () = close_in ch in
-    (ver,rev)
-  with _ -> (Coq_config.version,Coq_config.date)
+  if not !boot then
+    try
+      let ch = open_in (Envars.coqlib () / "revision") in
+      let ver = input_line ch in
+      let rev = input_line ch in
+      let () = close_in ch in
+      (ver,rev)
+    with _ -> (Coq_config.version,Coq_config.date)
+  else
+    (Coq_config.version,Coq_config.date)
 
 let print_header () =
   let (ver,rev) = (get_version_date ()) in
@@ -108,24 +111,26 @@ let set_rec_include d p =
 
 (* Initializes the LoadPath *)
 let init_load_path () =
-  let coqlib = Envars.coqlib () in
-  let user_contrib = coqlib/"user-contrib" in
-  let xdg_dirs = Envars.xdg_dirs in
-  let coqpath = Envars.coqpath in
-  let plugins = coqlib/"plugins" in
-  (* NOTE: These directories are searched from last to first *)
-  (* first standard library *)
-  add_rec_path ~unix_path:(coqlib/"theories") ~coq_root:(Names.DirPath.make[coq_root]);
-  (* then plugins *)
-  add_rec_path ~unix_path:plugins ~coq_root:(Names.DirPath.make [coq_root]);
-  (* then user-contrib *)
-  if Sys.file_exists user_contrib then
-    add_rec_path ~unix_path:user_contrib ~coq_root:Check.default_root_prefix;
-  (* then directories in XDG_DATA_DIRS and XDG_DATA_HOME *)
-  List.iter (fun s -> add_rec_path ~unix_path:s ~coq_root:Check.default_root_prefix)
-    (xdg_dirs ~warn:(fun x -> msg_warning (str x)));
-  (* then directories in COQPATH *)
-  List.iter (fun s -> add_rec_path ~unix_path:s ~coq_root:Check.default_root_prefix) coqpath;
+  if not !boot then begin
+    let coqlib = Envars.coqlib () in
+    let user_contrib = coqlib/"user-contrib" in
+    let xdg_dirs = Envars.xdg_dirs in
+    let coqpath = Envars.coqpath in
+    let plugins = coqlib/"plugins" in
+    (* NOTE: These directories are searched from last to first *)
+    (* first standard library *)
+    add_rec_path ~unix_path:(coqlib/"theories") ~coq_root:(Names.DirPath.make[coq_root]);
+    (* then plugins *)
+    add_rec_path ~unix_path:plugins ~coq_root:(Names.DirPath.make [coq_root]);
+    (* then user-contrib *)
+    if Sys.file_exists user_contrib then
+      add_rec_path ~unix_path:user_contrib ~coq_root:Check.default_root_prefix;
+    (* then directories in XDG_DATA_DIRS and XDG_DATA_HOME *)
+    List.iter (fun s -> add_rec_path ~unix_path:s ~coq_root:Check.default_root_prefix)
+      (xdg_dirs ~warn:(fun x -> msg_warning (str x)));
+    (* then directories in COQPATH *)
+    List.iter (fun s -> add_rec_path ~unix_path:s ~coq_root:Check.default_root_prefix) coqpath;
+  end;
   (* then current directory *)
   add_path ~unix_path:"." ~coq_root:Check.default_root_prefix;
   (* additional loadpath, given with -I -include -R options *)
@@ -326,7 +331,7 @@ let parse_args argv =
       set_type_in_type (); parse rem
 
     | "-coqlib" :: s :: rem ->
-      if not (exists_dir s) then 
+      if not (exists_dir s) then
 	fatal_error (str "Directory '" ++ str s ++ str "' does not exist") false;
       Flags.coqlib := s;
       Flags.coqlib_spec := true;
