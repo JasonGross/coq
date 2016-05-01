@@ -247,18 +247,20 @@ let rec visit v o pos =
     children;
   Printf.printf "-------------\n";
   Printf.printf ("# %!");
-  let l = read_line () in
+  Array.iteri (fun il _ ->
+  (*let l = read_line () in*)
   try
-    if l = "u" then let info = pop () in visit info.typ info.obj info.pos
+    (*if l = "u" then let info = pop () in visit info.typ info.obj info.pos
     else if l = "x" then (Printf.printf "\nGoodbye!\n\n";exit 0)
-    else
-      let v',o',pos' = children.(int_of_string l) in
+    else*)
+      let v',o',pos' = children.(il(*int_of_string l*)) in
       push (get_name v) v o pos;
       visit v' o' pos'
   with
   | Failure "empty stack" -> ()
   | Failure "forbidden" -> let info = pop () in visit info.typ info.obj info.pos
-  | Failure _ | Invalid_argument _ -> visit v o pos
+  | Failure _ | Invalid_argument _ -> visit v o pos)
+  children;
 
 end
 
@@ -323,7 +325,7 @@ let visit_vo f =
   in
   let module Repr = (val repr : S) in
   let module Visit = Visit(Repr) in
-  while true do
+  (*while true do*)
     let ch = open_in_bin f in
     let magic = input_binary_int ch in
     Printf.printf "File format: %d\n%!" magic;
@@ -342,13 +344,15 @@ let visit_vo f =
       Printf.printf "  %d: %s, starting at byte %d (size %iw)\n" i name pos size)
       segments;
     Printf.printf "# %!";
-    let l = read_line () in
-    let seg = int_of_string l in
+    Array.iteri (fun seg _ ->
+(*    let l = read_line () in
+    let seg = int_of_string l in*)
     seek_in ch segments.(seg).pos;
     let o = Repr.input ch in
     let () = Visit.init () in
-    Visit.visit segments.(seg).typ o []
-  done
+    Visit.visit segments.(seg).typ o [])
+    segments
+  (*done*)
 
 let main =
   if not !Sys.interactive then
