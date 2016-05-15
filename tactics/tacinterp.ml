@@ -1136,6 +1136,7 @@ and eval_tactic ist tac : unit Proofview.tactic = match tac with
   | TacAtom (loc,t) ->
       let call = LtacAtomCall t in
       push_trace(loc,call) ist >>= fun trace ->
+      assert(List.length trace <= 1);
       Profile_ltac.do_profile "eval_tactic:2" trace
         (catch_error_tac trace (interp_atomic ist t))
   | TacFun _ | TacLetIn _ -> assert false
