@@ -6,31 +6,31 @@ let tclSET_PROFILING b = fun gl ->
    set_profiling b; Tacticals.tclIDTAC gl
 
 TACTIC EXTEND start_profiling
-  | [ "start" "profiling" ] -> [ tclSET_PROFILING true  ]
+  | [ "start" "ltac" "profiling" ] -> [ tclSET_PROFILING true  ]
 END
 
 TACTIC EXTEND stop_profiling
-  | [ "stop" "profiling" ] ->  [ tclSET_PROFILING false ]
+  | [ "stop" "ltac" "profiling" ] ->  [ tclSET_PROFILING false ]
 END;;
 
+let _ =
+  Goptions.declare_bool_option
+    { optsync  = true;
+      optdepr  = false;
+      optname  = "Ltac Profiling";
+      optkey   = ["Ltac"; "Profiling"];
+      optread  = get_profiling;
+      optwrite = set_profiling }
 
-VERNAC COMMAND EXTEND StartProfiling
- [ "Start" "Profiling" ] -> [ reset_profile(); set_profiling true ]
+VERNAC COMMAND EXTEND ResetLtacProfiling
+ [ "Reset" "Ltac" "Profile" ] -> [ reset_profile() ]
 END
 
-VERNAC COMMAND EXTEND StopProfiling
- [ "Stop" "Profiling" ] -> [ set_profiling false ]
- END
-
-VERNAC COMMAND EXTEND ResetProfiling
- [ "Reset" "Profile" ] -> [ reset_profile() ]
-END
-
-VERNAC COMMAND EXTEND ShowProfile
- [ "Show" "Profile" ] -> [ print_results() ]
+VERNAC COMMAND EXTEND ShowLtacProfile
+ [ "Show" "Ltac" "Profile" ] -> [ print_results() ]
 END
 
 
-VERNAC COMMAND EXTEND ShowProfileTactic
- [ "Show" "Profile" string(s) ] -> [ print_results_tactic s ]
+VERNAC COMMAND EXTEND ShowLtacProfileTactic
+ [ "Show" "Ltac" "Profile" string(s) ] -> [ print_results_tactic s ]
 END

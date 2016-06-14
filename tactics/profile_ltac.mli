@@ -2,6 +2,8 @@ val do_profile : string -> ('a * 'b * Proof_type.ltac_call_kind) list -> (unit -
 
 val set_profiling : bool -> unit
 
+val get_profiling : unit -> bool
+
 val set_display_profile_at_close : bool -> unit
 
 val entered_call : unit -> unit
