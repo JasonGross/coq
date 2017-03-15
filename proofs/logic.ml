@@ -58,6 +58,7 @@ let is_unification_error = function
 | _ -> false
 
 let catchable_exception = function
+  | Errors.UserError(Some "noignore",_) -> false
   | Errors.UserError _ | TypeError _
   | RefinerError _ | Indrec.RecursionSchemeError _
   | Nametab.GlobalizationError _

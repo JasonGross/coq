@@ -299,7 +299,8 @@ let ltac_interp_name { ltac_idents ; ltac_genargs } = function
       try Name (Id.Map.find id ltac_idents)
       with Not_found ->
         if Id.Map.mem id ltac_genargs then
-          errorlabstrm "" (str"Ltac variable"++spc()++ pr_id id ++
+          errorlabstrm "noignore"
+                          (str"Ltac variable"++spc()++ pr_id id ++
                            spc()++str"is not bound to an identifier."++spc()++
                            str"It cannot be used in a binder.")
         else n
