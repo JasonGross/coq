@@ -308,6 +308,52 @@ function build_prep {
 }
 
 # ------------------------------------------------------------------------------
+# Prepare a module build from a local directory
+# - check if build is already done (name.finished file exists) - if so return 1
+# - create name.started
+# - create build folder
+# - get source from directory name and copy to build folder
+# - cd to build folder
+# - create bin_special subfolder and add it to $PATH
+# - remember things for build_post
+#
+# Parameters
+# $1 source directory
+# $2 module name
+# ------------------------------------------------------------------------------
+
+function build_prep_local {
+  name=$2
+  tmpdir=`mktemp -d`
+
+  # Check if build is already done
+  if [ ! -f flagfiles/$name.finished ] ; then
+    BUILD_PACKAGE_NAME=$name
+    BUILD_OLDPATH=$PATH
+    BUILD_OLDPWD=`pwd`
+    LOGTARGET=$name
+
+    touch flagfiles/$name.started
+
+    # go through tmpdir in case $name is a subdirectory of $1
+    cp -a $1 $tmpdir
+    cp -a $tmpdir $name
+    rm -rf $tmpdir
+
+    cd $name
+
+    # Create a folder and add it to path, where we can put special binaries
+    # The path is restored in build_post
+    mkdir bin_special
+    PATH=`pwd`/bin_special:$PATH
+
+    return 0
+  else
+    return 1
+  fi
+}
+
+# ------------------------------------------------------------------------------
 # Finalize a module build
 # - create name.finished
 # - go back to base folder
@@ -1046,6 +1092,7 @@ function make_coq {
   if
     case $COQ_VERSION in
       git-*) build_prep https://github.com/coq/coq/archive ${COQ_VERSION##git-} zip 1 coq-${COQ_VERSION} ;;
+      local) build_prep_local . coq-${COQ_VERSION} ;;
       *)     build_prep https://coq.inria.fr/distrib/V$COQ_VERSION/files coq-$COQ_VERSION tar.gz ;;
     esac
   then

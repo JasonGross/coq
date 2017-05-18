@@ -5,4 +5,4 @@ init:
   - 'echo System architecture: %PLATFORM%'
 
 build_script:
-  - 'dev/build/windows/MakeCoq_MinGW.bat'
+  - 'dev/build/windows/MakeCoq_local_git_installer.bat'
