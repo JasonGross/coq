@@ -16,5 +16,6 @@ install:
   - 'appveyor DownloadFile http://cygwin.com/setup-%CYG_ARCH%.exe -FileName dev/build/windows/setup-%CYG_ARCH%.exe'
 
 build_script:
+  - SET COQREGTESTING=Y
   - 'cd dev/build/windows/'
   - 'MakeCoq_local_git_installer.bat'
