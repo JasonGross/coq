@@ -1,5 +1,5 @@
 version: '{branch}~{build}'
-clone_depth: 100
+clone_depth: 10
 
 platform:
     - x86
