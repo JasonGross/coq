@@ -1,4 +1,4 @@
-version: 8.trunk.{build}.{branch}
+version: '{branch}~{build}'
 
 platform:
     - x86
