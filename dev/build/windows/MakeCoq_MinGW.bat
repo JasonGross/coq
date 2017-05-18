@@ -235,6 +235,7 @@ IF NOT "%0" == "" (
 )
 
 IF NOT EXIST %SETUP% (
+  CD
   ECHO The cygwin setup program %SETUP% doesn't exist. You must download it from https://cygwin.com/install.html.
   EXIT /b 1
 )
