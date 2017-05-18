@@ -2,12 +2,12 @@ version: '{branch}~{build}'
 clone_depth: 10
 
 platform:
-    - x86
+    - x64
 
 environment:
   matrix:
     -
-      CYG_ARCH: x86
+      CYG_ARCH: x86_64
 
 init:
   - 'echo System architecture: %PLATFORM%'
