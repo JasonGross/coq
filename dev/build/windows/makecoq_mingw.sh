@@ -146,6 +146,7 @@ display_log() {
   cat $2
   echo stderr:
   cat $3
+  exit $RV
 }
 
 log1() {
