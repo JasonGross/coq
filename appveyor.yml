@@ -23,4 +23,4 @@ install:
 build_script:
   - SET COQREGTESTING=Y
   - 'cd dev/build/windows/'
-  - 'MakeCoq_MinGW.bat -arch=%ARCH% -installer=Y -coqver=local -destcyg=C:\cygwin_coq%ARCH%_git_inst -destcoq=C:\coq%ARCH%_git_inst -cygcache=C:\cygwin_coq%ARCH%_git_cache'
+  - 'MakeCoq_MinGW.bat -arch=%ARCH% -installer=Y -coqver=local -destcyg=C:\cygwin_coq%ARCH%_git_inst -destcoq=C:\coq%ARCH%_git_inst -cygcache=C:/cygwin_coq%ARCH%_git_cache'
