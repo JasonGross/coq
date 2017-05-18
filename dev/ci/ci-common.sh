@@ -16,11 +16,14 @@ source ${ci_dir}/ci-basic-overlay.sh
 
 mathcomp_CI_DIR=${CI_BUILD_DIR}/math-comp
 
-# git_checkout branch url dest will create a git repository
-# in <dest> (if it does not exist already) and checkout the
-# remote branch <branch> from <url>
+# git_checkout [--recursive] branch url dest will create a git
+# repository in <dest> (if it does not exist already) and checkout the
+# remote branch <branch> from <url>.  If you pass --recursive before
+# the branch, it'll also update the submodules.
 git_checkout()
 {
+  local _RECURSIVE=""
+  if [ "${1}" == "--recursive" ]; then _RECURSIVE=`shift`; fi
   local _BRANCH=${1}
   local _URL=${2}
   local _DEST=${3}
@@ -30,11 +33,12 @@ git_checkout()
   local _DEPTH=$(if [ -z "${4}" ]; then echo "--depth 1"; fi)
 
   mkdir -p ${_DEST}
-  ( cd ${_DEST}                                                && \
-    if [ ! -d .git ] ; then git clone ${_DEPTH} ${_URL} . ; fi && \
-    echo "Checking out ${_DEST}"                               && \
-    git fetch ${_URL} ${_BRANCH}                               && \
-    git checkout ${_COMMIT}                                    && \
+  ( cd ${_DEST}                                                                     && \
+    if [ ! -d .git ] ; then git clone ${_RECURSIVE} ${_DEPTH} ${_URL} . ; fi        && \
+    echo "Checking out ${_DEST}"                                                    && \
+    git fetch ${_URL} ${_BRANCH}                                                    && \
+    git checkout ${_COMMIT}                                                         && \
+    if [ ! -z "${_RECURSIVE}" ] ; then git submodule update --init --recursive ; fi && \
     echo "${_DEST}: `git log -1 --format='%s | %H | %cd | %aN'`" )
 }
 
