@@ -236,7 +236,7 @@ IF NOT "%0" == "" (
 
 IF NOT EXIST %SETUP% (
   ECHO The cygwin setup program %SETUP% doesn't exist. You must download it from https://cygwin.com/install.html.
-  GOTO :EOF
+  EXIT /b 1
 )
 
 REM ========== ADJUST PARAMETERS ==========
