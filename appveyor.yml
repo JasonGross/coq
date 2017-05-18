@@ -8,4 +8,5 @@ init:
   - 'echo System architecture: %PLATFORM%'
 
 build_script:
-  - 'dev/build/windows/MakeCoq_local_git_installer.bat'
+  - 'cd dev/build/windows/'
+  - 'MakeCoq_local_git_installer.bat'

@@ -1092,7 +1092,7 @@ function make_coq {
   if
     case $COQ_VERSION in
       git-*) build_prep https://github.com/coq/coq/archive ${COQ_VERSION##git-} zip 1 coq-${COQ_VERSION} ;;
-      local) build_prep_local . coq-${COQ_VERSION} ;;
+      local) build_prep_local "$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../../" && pwd )" coq-${COQ_VERSION} ;;
       *)     build_prep https://coq.inria.fr/distrib/V$COQ_VERSION/files coq-$COQ_VERSION tar.gz ;;
     esac
   then
