@@ -8,6 +8,7 @@ environment:
   matrix:
     -
       CYG_ARCH: x86_64
+      ARCH: 64
 
 cache:
   - C:/cygwin_coq64_git_cache
@@ -21,4 +22,4 @@ install:
 build_script:
   - SET COQREGTESTING=Y
   - 'cd dev/build/windows/'
-  - 'MakeCoq_local_git_installer.bat'
+  - 'MakeCoq_MinGW.bat -arch=%ARCH% -installer=Y -coqver=local -destcyg=C:\cygwin_coq%ARCH%_git_inst -destcoq=C:\coq%ARCH%_git_inst -cygcache=C:\cygwin_coq%ARCH%_git_cache'
