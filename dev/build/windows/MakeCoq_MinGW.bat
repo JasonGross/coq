@@ -1,4 +1,4 @@
-@ECHO OFF
+@ECHO ON
 
 REM ========== COPYRIGHT/COPYLEFT ==========
 

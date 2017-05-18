@@ -1,0 +1,26 @@
+version: '{branch}~{build}'
+clone_depth: 10
+
+platform:
+    - x64
+
+environment:
+  matrix:
+    -
+      CYG_ARCH: x86_64
+      ARCH: 64
+
+cache:
+  - C:/cygwin_coq64_git_cache
+  - C:/cygwin_coq64_86git_inst/build
+
+init:
+  - 'echo System architecture: %PLATFORM%'
+
+install:
+  - 'appveyor DownloadFile http://cygwin.com/setup-%CYG_ARCH%.exe -FileName dev/build/windows/setup-%CYG_ARCH%.exe'
+
+build_script:
+  - SET COQREGTESTING=Y
+  - 'cd dev/build/windows/'
+  - 'MakeCoq_MinGW.bat -arch=%ARCH% -installer=Y -coqver=./../../../ -destcyg=C:\cygwin_coq%ARCH%_git_inst -destcoq=C:\coq%ARCH%_git_inst -cygcache=C:/cygwin_coq%ARCH%_git_cache'
