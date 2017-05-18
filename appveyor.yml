@@ -9,6 +9,9 @@ environment:
     -
       CYG_ARCH: x86_64
 
+cache:
+  - C:/cygwin_coq64_git_cache
+
 init:
   - 'echo System architecture: %PLATFORM%'
 
