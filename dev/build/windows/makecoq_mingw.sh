@@ -309,7 +309,6 @@ function build_prep {
 
 # ------------------------------------------------------------------------------
 # Prepare a module build from a local directory
-# - check if build is already done (name.finished file exists) - if so return 1
 # - create name.started
 # - create build folder
 # - get source from directory name and copy to build folder
@@ -326,31 +325,27 @@ function build_prep_local {
   name=$2
   tmpdir=`mktemp -d`
 
-  # Check if build is already done
-  if [ ! -f flagfiles/$name.finished ] ; then
-    BUILD_PACKAGE_NAME=$name
-    BUILD_OLDPATH=$PATH
-    BUILD_OLDPWD=`pwd`
-    LOGTARGET=$name
+  BUILD_PACKAGE_NAME=$name
+  BUILD_OLDPATH=$PATH
+  BUILD_OLDPWD=`pwd`
+  LOGTARGET=$name
 
-    touch flagfiles/$name.started
+  rm -f flagfiles/$name.finished
+  touch flagfiles/$name.started
 
-    # go through tmpdir in case $name is a subdirectory of $1
-    cp -a $1 $tmpdir
-    cp -a $tmpdir $name
-    rm -rf $tmpdir
+  # go through tmpdir in case $name is a subdirectory of $1
+  cp -a $1 $tmpdir
+  rm -rf $name
+  mv $tmpdir $name
 
-    cd $name
+  cd $name
 
-    # Create a folder and add it to path, where we can put special binaries
-    # The path is restored in build_post
-    mkdir bin_special
-    PATH=`pwd`/bin_special:$PATH
+  # Create a folder and add it to path, where we can put special binaries
+  # The path is restored in build_post
+  mkdir bin_special
+  PATH=`pwd`/bin_special:$PATH
 
-    return 0
-  else
-    return 1
-  fi
+  return 0
 }
 
 # ------------------------------------------------------------------------------

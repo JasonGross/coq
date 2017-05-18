@@ -12,6 +12,7 @@ environment:
 
 cache:
   - C:/cygwin_coq64_git_cache
+  - C:/cygwin_coq64_86git_inst/build
 
 init:
   - 'echo System architecture: %PLATFORM%'
