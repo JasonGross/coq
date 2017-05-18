@@ -4,8 +4,16 @@ clone_depth: 100
 platform:
     - x86
 
+environment:
+  matrix:
+    -
+      CYG_ARCH: x86
+
 init:
   - 'echo System architecture: %PLATFORM%'
+
+install:
+  - 'appveyor DownloadFile http://cygwin.com/setup-%CYG_ARCH%.exe -FileName dev/build/windows/setup-%CYG_ARCH%.exe'
 
 build_script:
   - 'cd dev/build/windows/'
