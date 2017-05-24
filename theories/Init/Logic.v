@@ -667,7 +667,7 @@ Section ex.
     destruct pq as [p q].
     destruct q; simpl in *.
     destruct p; reflexivity.
-  Qed.
+  Defined.
 
   Definition eq_ex {A : Type} {P : A -> Prop} (u1 v1 : A) (u2 : P u1) (v2 : P v1)
              (p : u1 = v1) (q : rew p in u2 = v2)
@@ -691,7 +691,7 @@ Section ex.
       end.
   Proof.
     destruct H, u; reflexivity.
-  Qed.
+  Defined.
 End ex.
 
 (** Equality for [ex2] *)
@@ -707,7 +707,7 @@ Section ex2.
     destruct pq as [p q r].
     destruct r, q, p; simpl in *.
     reflexivity.
-  Qed.
+  Defined.
 
   Definition eq_ex2 {A : Type} {P Q : A -> Prop}
              (u1 v1 : A)
@@ -741,5 +741,5 @@ Section ex2.
       end.
   Proof.
     destruct H, u; reflexivity.
-  Qed.
+  Defined.
 End ex2.
