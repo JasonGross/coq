@@ -248,7 +248,7 @@ Section sigT.
     destruct pq as [p q].
     destruct q; simpl in *.
     destruct p; reflexivity.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sigT_rect] to typecheck *)
 
   (** Equality of [sigT] is itself a [sigT] (backwards-reasoning version) *)
   Definition eq_sigT_uncurried {A : Type} {P : A -> Type} (u v : { a : A & P a })
@@ -257,7 +257,7 @@ Section sigT.
   Proof.
     destruct u as [u1 u2], v as [v1 v2]; simpl in *.
     apply eq_existT_uncurried; exact pq.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sigT_rect] to typecheck *)
 
   (** Curried version of proving equality of sigma types *)
   Definition eq_sigT {A : Type} {P : A -> Type} (u v : { a : A & P a })
@@ -280,13 +280,13 @@ Section sigT.
     : u = v <-> { p : projT1 u = projT1 v & rew p in projT2 u = projT2 v }.
   Proof.
     split; [ intro; subst; exists eq_refl; reflexivity | apply eq_sigT_uncurried ].
-  Defined.
+  Qed.
 
   (** Induction principle for [@eq (sigT _)] *)
   Definition eq_sigT_rect {A P} {u v : { a : A & P a }} (Q : u = v -> Type)
              (f : forall p q, Q (eq_sigT u v p q))
     : forall p, Q p.
-  Proof. intro p; specialize (f (projT1_eq p) (projT2_eq p)); destruct u, p; exact f. Defined.
+  Proof. intro p; specialize (f (projT1_eq p) (projT2_eq p)); destruct u, p; exact f. Qed.
   Definition eq_sigT_rec {A P u v} (Q : u = v :> { a : A & P a } -> Set) := eq_sigT_rect Q.
   Definition eq_sigT_ind {A P u v} (Q : u = v :> { a : A & P a } -> Prop) := eq_sigT_rec Q.
 
@@ -311,7 +311,7 @@ Section sigT.
           (rew dependent H in (projT2 u)).
   Proof.
     destruct H, u; reflexivity.
-  Defined.
+  Qed.
 End sigT.
 
 (** Equality for [sig] *)
@@ -335,7 +335,7 @@ Section sig.
     destruct pq as [p q].
     destruct q; simpl in *.
     destruct p; reflexivity.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sig_rect] to typecheck *)
 
   (** Equality of [sig] is itself a [sig] (backwards-reasoning version) *)
   Definition eq_sig_uncurried {A : Type} {P : A -> Prop} (u v : { a : A | P a })
@@ -344,7 +344,7 @@ Section sig.
   Proof.
     destruct u as [u1 u2], v as [v1 v2]; simpl in *.
     apply eq_exist_uncurried; exact pq.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sig_rect] to typecheck *)
 
   (** Curried version of proving equality of sigma types *)
   Definition eq_sig {A : Type} {P : A -> Prop} (u v : { a : A | P a })
@@ -356,7 +356,7 @@ Section sig.
   Definition eq_sig_rect {A P} {u v : { a : A | P a }} (Q : u = v -> Type)
              (f : forall p q, Q (eq_sig u v p q))
     : forall p, Q p.
-  Proof. intro p; specialize (f (proj1_sig_eq p) (proj2_sig_eq p)); destruct u, p; exact f. Defined.
+  Proof. intro p; specialize (f (proj1_sig_eq p) (proj2_sig_eq p)); destruct u, p; exact f. Qed.
   Definition eq_sig_rec {A P u v} (Q : u = v :> { a : A | P a } -> Set) := eq_sig_rect Q.
   Definition eq_sig_ind {A P u v} (Q : u = v :> { a : A | P a } -> Prop) := eq_sig_rec Q.
 
@@ -375,7 +375,7 @@ Section sig.
     : u = v <-> { p : proj1_sig u = proj1_sig v | rew p in proj2_sig u = proj2_sig v }.
   Proof.
     split; [ intro; subst; exists eq_refl; reflexivity | apply eq_sig_uncurried ].
-  Defined.
+  Qed.
 
   (** Equivalence of equality of [sig] involving hProps with equality of the first components *)
   Definition eq_sig_hprop_iff {A} {P : A -> Prop} (P_hprop : forall (x : A) (p q : P x), p = q)
@@ -391,7 +391,7 @@ Section sig.
           (rew dependent H in proj2_sig u).
   Proof.
     destruct H, u; reflexivity.
-  Defined.
+  Qed.
 End sig.
 
 (** Equality for [sigT] *)
@@ -427,7 +427,7 @@ Section sigT2.
     destruct pqr as [p q r].
     destruct r, q, p; simpl.
     reflexivity.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sigT2_rect] to typecheck *)
 
   (** Equality of [sigT2] is itself a [sigT2] (backwards-reasoning version) *)
   Definition eq_sigT2_uncurried {A : Type} {P Q : A -> Type} (u v : { a : A & P a & Q a })
@@ -437,7 +437,7 @@ Section sigT2.
   Proof.
     destruct u as [u1 u2 u3], v as [v1 v2 v3]; simpl in *.
     apply eq_existT2_uncurried; exact pqr.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sigT2_rect] to typecheck *)
 
   (** Curried version of proving equality of sigma types *)
   Definition eq_sigT2 {A : Type} {P Q : A -> Type} (u v : { a : A & P a & Q a })
@@ -464,7 +464,7 @@ Section sigT2.
           & rew p in projT2 u = projT2 v & rew p in projT3 u = projT3 v }.
   Proof.
     split; [ intro; subst; exists eq_refl; reflexivity | apply eq_sigT2_uncurried ].
-  Defined.
+  Qed.
 
   (** Induction principle for [@eq (sigT2 _ _)] *)
   Definition eq_sigT2_rect {A P Q} {u v : { a : A & P a & Q a }} (R : u = v -> Type)
@@ -474,7 +474,7 @@ Section sigT2.
     intro p.
     specialize (f (projT1_of_sigT2_eq p) (projT2_of_sigT2_eq p) (projT3_eq p)).
     destruct u, p; exact f.
-  Defined.
+  Qed.
   Definition eq_sigT2_rec {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Set) := eq_sigT2_rect R.
   Definition eq_sigT2_ind {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Prop) := eq_sigT2_rec R.
 
@@ -503,7 +503,7 @@ Section sigT2.
           (rew dependent H in projT3 u).
   Proof.
     destruct H, u; reflexivity.
-  Defined.
+  Qed.
 End sigT2.
 
 (** Equality for [sig2] *)
@@ -539,7 +539,7 @@ Section sig2.
     destruct pqr as [p q r].
     destruct r, q, p; simpl.
     reflexivity.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sig2_rect] to typecheck *)
 
   (** Equality of [sig2] is itself a [sig2] (backwards-reasoning version) *)
   Definition eq_sig2_uncurried {A} {P Q : A -> Prop} (u v : { a : A | P a & Q a })
@@ -549,7 +549,7 @@ Section sig2.
   Proof.
     destruct u as [u1 u2 u3], v as [v1 v2 v3]; simpl in *.
     apply eq_exist2_uncurried; exact pqr.
-  Defined.
+  Defined. (* N.B. This must be transparent for the proof of [eq_sig2_rect] to typecheck *)
 
   (** Curried version of proving equality of sigma types *)
   Definition eq_sig2 {A} {P Q : A -> Prop} (u v : { a : A | P a & Q a })
@@ -576,7 +576,7 @@ Section sig2.
           | rew p in proj2_sig u = proj2_sig v & rew p in proj3_sig u = proj3_sig v }.
   Proof.
     split; [ intro; subst; exists eq_refl; reflexivity | apply eq_sig2_uncurried ].
-  Defined.
+  Qed.
 
   (** Induction principle for [@eq (sig2 _ _)] *)
   Definition eq_sig2_rect {A P Q} {u v : { a : A | P a & Q a }} (R : u = v -> Type)
@@ -586,7 +586,7 @@ Section sig2.
     intro p.
     specialize (f (proj1_sig_of_sig2_eq p) (proj2_sig_of_sig2_eq p) (proj3_sig_eq p)).
     destruct u, p; exact f.
-  Defined.
+  Qed.
   Definition eq_sig2_rec {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Set) := eq_sig2_rect R.
   Definition eq_sig2_ind {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Prop) := eq_sig2_rec R.
 
@@ -615,7 +615,7 @@ Section sig2.
           (rew dependent H in proj3_sig u).
   Proof.
     destruct H, u; reflexivity.
-  Defined.
+  Qed.
 End sig2.
 
 
