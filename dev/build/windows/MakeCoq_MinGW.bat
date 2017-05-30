@@ -358,7 +358,7 @@ IF "%RUNSETUP%"=="Y" (
     -P gtk-update-icon-cache ^
     -P libtool,automake ^
     -P intltool ^
-     ^
+    > "%LOGFILE%" ^
     || GOTO :Error
 
   MKDIR %CYGWIN_INSTALLDIR_WFMT%\build
