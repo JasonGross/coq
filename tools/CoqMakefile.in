@@ -5,7 +5,7 @@
 ##    //   #                                                                 ##
 ###############################################################################
 ## GNUMakefile for Coq @COQ_VERSION@
-  
+
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
 # To implement recursion we save the name of the main Makefile
@@ -71,6 +71,11 @@ COQDEP   ?= "$(COQBIN)coqdep"
 GALLINA  ?= "$(COQBIN)gallina"
 COQDOC   ?= "$(COQBIN)coqdoc"
 COQMKTOP ?= "$(COQBIN)coqmktop"
+COQMAKE_ONE_TIME_FILE ?= "$(COQLIB)/tools/make-one-time-file.py"
+COQMAKE_BOTH_TIME_FILES ?= "$(COQLIB)/tools/make-both-time-files.py"
+COQMAKE_BOTH_SINGLE_TIMING_FILES ?= "$(COQLIB)/tools/make-both-single-timing-files.py"
+BEFORE ?=
+AFTER ?=
 
 # OCaml binaries
 CAMLC       ?= $(OCAMLFIND) ocamlc -c -rectypes -thread
@@ -80,13 +85,21 @@ CAMLOPTLINK ?= $(OCAMLFIND) opt       -rectypes -thread
 CAMLDEP     ?= $(OCAMLFIND) ocamldep -slash -ml-synonym .ml4 -ml-synonym .mlpack
 
 # DESTDIR is prepended to all installation paths
-DESTDIR ?= 
+DESTDIR ?=
 
 # Debug builds, typically -g to OCaml, -debug to Coq.
 CAMLDEBUG ?=
 COQDEBUG ?=
 
-
+# Option for making timing files
+TIMING?=
+# Output file names for timed builds
+TIME_OF_BUILD_FILE               ?= time-of-build.log
+TIME_OF_BUILD_BEFORE_FILE        ?= time-of-build-before.log
+TIME_OF_BUILD_AFTER_FILE         ?= time-of-build-after.log
+TIME_OF_PRETTY_BUILD_FILE        ?= time-of-build-pretty.log
+TIME_OF_PRETTY_BOTH_BUILD_FILE   ?= time-of-build-both.log
+TIME_OF_PRETTY_BUILD_EXTRA_FILES ?= - # also output to the command line
 
 ########## End of parameters ##################################################
 # What follows may be relevant to you only if you need to
@@ -96,7 +109,7 @@ COQDEBUG ?=
 #
 # post-all::
 # 	echo "All done!"
-# 
+#
 # in @LOCAL_FILE@
 #
 ###############################################################################
@@ -106,7 +119,7 @@ COQDEBUG ?=
 
 # Flags #######################################################################
 #
-# We define a bunch of variables combining the parameters 
+# We define a bunch of variables combining the parameters
 
 SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
@@ -116,7 +129,7 @@ TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 OPT?=
 
 COQFLAGS?=-q $(OPT) $(COQLIBS) $(OTHERFLAGS)
-COQCHKFLAGS?=-silent -o $(COQLIBS) 
+COQCHKFLAGS?=-silent -o $(COQLIBS)
 COQDOCFLAGS?=-interpolate -utf8 $(COQLIBS_NOML)
 
 # The version of Coq being run and the version of coq_makefile that
@@ -144,7 +157,22 @@ COQLIBINSTALL = $(COQLIB)user-contrib
 COQDOCINSTALL = $(DOCDIR)user-contrib
 COQTOPINSTALL = $(COQLIB)toploop
 
-# Retro compatibility (DESTDIR is standard on Unix, DESTROOT is not) 
+ifneq (,$(TIMING))
+TIMING_ARG=-time
+ifeq (after,$(TIMING))
+TIMING_EXT=after-timing
+else
+ifeq (before,$(TIMING))
+TIMING_EXT=before-timing
+else
+TIMING_EXT=timing
+endif
+endif
+else
+TIMING_ARG=
+endif
+
+# Retro compatibility (DESTDIR is standard on Unix, DESTROOT is not)
 ifneq "$(DSTROOT)" ""
 DESTDIR := $(DSTROOT)
 endif
@@ -237,11 +265,46 @@ ALLDFILES = $(addsuffix .d,$(ALLSRCFILES))
 
 # Compilation targets #########################################################
 
-all: 
+all:
 	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" pre-all
 	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" real-all
 	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" post-all
 .PHONY: all
+
+all.timing.diff:
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" pre-all
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" real-all.timing.diff TIME_OF_PRETTY_BUILD_EXTRA_FILES=""
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" post-all
+.PHONY: all.timing.diff
+
+make-pretty-timed:
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" $(TGTS) TIMED=1 2>&1 | tee -a $(TIME_OF_BUILD_FILE)
+make-pretty-timed-before:
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" make-pretty-timed TIME_OF_BUILD_FILE=$(TIME_OF_BUILD_BEFORE_FILE)
+make-pretty-timed-after:
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" make-pretty-timed TIME_OF_BUILD_FILE=$(TIME_OF_BUILD_AFTER_FILE)
+print-pretty-timed::
+	$(HIDE)$(COQMAKE_ONE_TIME_FILE) $(TIME_OF_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_EXTRA_FILES)
+print-pretty-timed-diff::
+	$(HIDE)$(COQMAKE_BOTH_TIME_FILES) $(TIME_OF_BUILD_BEFORE_FILE) $(TIME_OF_BUILD_AFTER_FILE) $(TIME_OF_PRETTY_BOTH_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_EXTRA_FILES)
+ifeq (,$(BEFORE))
+print-pretty-single-time-diff::
+	@echo 'Error: Usage: $(MAKE) print-pretty-single-time-diff BEFORE=path/to/file.v.before-timing AFTER=path/to/file.v.after-timing'
+	false
+else
+ifeq (,$(AFTER))
+print-pretty-single-time-diff::
+	@echo 'Error: Usage: $(MAKE) print-pretty-single-time-diff BEFORE=path/to/file.v.before-timing AFTER=path/to/file.v.after-timing'
+	false
+else
+print-pretty-single-time-diff::
+	$(HIDE)$(COQMAKE_BOTH_SINGLE_TIMING_FILES) $(BEFORE) $(AFTER) $(TIME_OF_PRETTY_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_EXTRA_FILES)
+endif
+endif
+pretty-timed:
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" make-pretty-timed
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" print-pretty-timed
+.PHONY: pretty-timed make-pretty-timed make-pretty-timed-before make-pretty-timed-after print-pretty-timed print-pretty-timed-diff print-pretty-single-time-diff
 
 # Extension points for actions to be performed before/after the all target
 pre-all::
@@ -258,6 +321,9 @@ post-all::
 
 real-all: $(VOFILES) $(CMOFILES) $(CMAFILES) $(if $(DO_NATDYNLINK),$(CMXSFILES))
 .PHONY: real-all
+
+real-all.timing.diff: $(VOFILES:.vo=.v.timing.diff)
+.PHONE: real-all.timing.diff
 
 # FIXME, see Ralph's bugreport
 quick: $(VOFILES:.vo=.vio)
@@ -398,10 +464,10 @@ clean::
 	$(HIDE)rm -f $(CMOFILES)
 	$(HIDE)rm -f $(CMIFILES)
 	$(HIDE)rm -f $(CMAFILES)
-	$(HIDE)rm -f $(CMOFILES:.cmo=.cmx) 
+	$(HIDE)rm -f $(CMOFILES:.cmo=.cmx)
 	$(HIDE)rm -f $(CMXAFILES)
-	$(HIDE)rm -f $(CMXSFILES) 
-	$(HIDE)rm -f $(CMOFILES:.cmo=.o) 
+	$(HIDE)rm -f $(CMXSFILES)
+	$(HIDE)rm -f $(CMOFILES:.cmo=.o)
 	$(HIDE)rm -f $(CMXAFILES:.cmxa=.a)
 	$(HIDE)rm -f $(ALLDFILES)
 	$(HIDE)rm -f $(ALLNATIVEFILES)
@@ -419,8 +485,13 @@ clean::
 
 cleanall:: clean
 	@# Extension point
-	$(SHOW)'CLEAN *.aux'
+	$(SHOW)'CLEAN *.aux *.timing'
 	$(HIDE)rm -f $(foreach f,$(VFILES:.v=),$(dir $(f)).$(notdir $(f)).aux)
+	$(HIDE)rm -f $(TIME_OF_BUILD_FILE) $(TIME_OF_BUILD_BEFORE_FILE) $(TIME_OF_BUILD_AFTER_FILE) $(TIME_OF_PRETTY_BUILD_FILE) $(TIME_OF_PRETTY_BOTH_BUILD_FILE)
+	$(HIDE)rm -f $(VOFILES:.vo=.v.timing)
+	$(HIDE)rm -f $(VOFILES:.vo=.v.before-timing)
+	$(HIDE)rm -f $(VOFILES:.vo=.v.after-timing)
+	$(HIDE)rm -f $(VOFILES:.vo=.v.timing.diff)
 .PHONY: cleanall
 
 archclean::
@@ -484,14 +555,20 @@ $(MLPACKFILES:.mlpack=.cmx): %.cmx: | %.mlpack
 	$(SHOW)'CAMLOPT -pack -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) -pack -o $@ $^
 
-# This rule is for _CoqProject with no .mllib nor .mlpack 
+# This rule is for _CoqProject with no .mllib nor .mlpack
 $(filter-out $(MLLIBFILES:.mllib=.cmxs) $(MLPACKFILES:.mlpack=.cmxs) $(addsuffix .cmxs,$(PACKEDFILES)) $(addsuffix .cmxs,$(LIBEDFILES)),$(MLFILES:.ml=.cmxs) $(ML4FILES:.ml4=.cmxs)): %.cmxs: %.cmx
 	$(SHOW)'[deprecated,use-mllib-or-mlpack] CAMLOPT -shared -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) -shared -o $@ $<
 
+ifneq (,$(TIMING))
+TIMING_EXTRA = > $<.$(TIMING_EXT)
+else
+TIMING_EXTRA =
+endif
+
 $(VOFILES): %.vo: %.v
 	$(SHOW)COQC $<
-	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $<
+	$(HIDE)$(COQC) $(COQDEBUG) $(TIMING_ARG) $(COQFLAGS) $< $(TIMING_EXTRA)
 
 # FIXME ?merge with .vo / .vio ?
 $(GLOBFILES): %.glob: %.v
@@ -500,6 +577,10 @@ $(GLOBFILES): %.glob: %.v
 $(VFILES:.v=.vio): %.vio: %.v
 	$(SHOW)COQC -quick $<
 	$(HIDE)$(COQC) -quick $(COQDEBUG) $(COQFLAGS) $<
+
+$(addsuffix .timing.diff,$(VFILES)): %.timing.diff : %.before-timing %.after-timing
+	$(SHOW)PYTHON TIMING-DIFF $<
+	$(HIDE)$(MAKE) --no-print-directory -f "$(SELF)" print-pretty-single-time-diff BEFORE=$*.before-timing AFTER=$*.after-timing TIME_OF_PRETTY_BUILD_FILE="$@"
 
 $(BEAUTYFILES): %.v.beautified: %.v
 	$(SHOW)'BEAUTIFY $<'
@@ -571,7 +652,7 @@ byte:
 
 opt:
 	$(HIDE)$(MAKE) all "OPT:=-opt" -f "$(SELF)"
-.PHONY:	opt 
+.PHONY:	opt
 
 # This is deprecated.  To extend this makefile use
 # extension points and @LOCAL_FILE@
@@ -626,4 +707,3 @@ debug:
 .PHONY: debug
 
 .DEFAULT_GOAL := all
-

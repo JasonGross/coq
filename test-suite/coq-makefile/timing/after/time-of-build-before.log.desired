@@ -1,0 +1,8 @@
+ (user: 0.00 mem: 4824 ko)
+ (user: 0.00 mem: 4828 ko)
+ (user: 0.00 mem: 4848 ko)
+COQC Slow.v
+Slow (user: 0.37 mem: 395812 ko)
+COQC Fast.v
+Fast (user: 0.02 mem: 44196 ko)
+ (user: 0.00 mem: 4832 ko)

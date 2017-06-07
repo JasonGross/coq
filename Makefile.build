@@ -34,6 +34,12 @@ TIMED ?=
 # it could be set to "'/usr/bin/time -p'".
 TIMECMD ?=
 
+# When non-empty, -time is passed to coqc and the output is recorded
+# in a timing file for each .v file.  If set to "before" or "after",
+# the file name for foo.v is foo.v.$(TIMING)-timing; otherwise, it is
+# foo.v.timing
+TIMING ?=
+
 # Non-empty skips the update of all dependency .d files:
 NO_RECALC_DEPS ?=
 
@@ -42,6 +48,16 @@ VALIDATE ?=
 
 # Is "-xml" when building XML library:
 COQ_XML ?=
+
+# Output file names for timed builds
+TIME_OF_BUILD_FILE               ?= time-of-build.log
+TIME_OF_BUILD_BEFORE_FILE        ?= time-of-build-before.log
+TIME_OF_BUILD_AFTER_FILE         ?= time-of-build-after.log
+TIME_OF_PRETTY_BUILD_FILE        ?= time-of-build-pretty.log
+TIME_OF_PRETTY_BOTH_BUILD_FILE   ?= time-of-build-both.log
+TIME_OF_PRETTY_BUILD_EXTRA_FILES ?= - # also output to the command line
+BEFORE ?=
+AFTER ?=
 
 ###########################################################################
 # Default starting rule
@@ -53,7 +69,10 @@ world: coq coqide documentation revision
 
 coq: coqlib coqbinaries tools printers
 
-.PHONY: world coq
+world.timing.diff: coq.timing.diff
+coq.timing.diff: coqlib.timing.diff
+
+.PHONY: world coq world.timing.diff coq.timing.diff
 
 ###########################################################################
 # Includes
@@ -90,6 +109,53 @@ plugins/micromega/micromega.cmi : plugins/micromega/micromega.mli
 
 plugins/micromega/micromega.mli plugins/micromega/micromega.ml : plugins/micromega/MExtraction.vo
 	@:
+
+###########################################################################
+# Timing targets
+###########################################################################
+make-pretty-timed:
+	$(HIDE)$(MAKE) --no-print-directory $(TGTS) TIMED=1 2>&1 | tee -a $(TIME_OF_BUILD_FILE)
+make-pretty-timed-before:
+	$(HIDE)$(MAKE) --no-print-directory make-pretty-timed TIME_OF_BUILD_FILE=$(TIME_OF_BUILD_BEFORE_FILE)
+make-pretty-timed-after:
+	$(HIDE)$(MAKE) --no-print-directory make-pretty-timed TIME_OF_BUILD_FILE=$(TIME_OF_BUILD_AFTER_FILE)
+print-pretty-timed::
+	$(HIDE)$(COQMAKE_ONE_TIME_FILE) $(TIME_OF_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_EXTRA_FILES)
+print-pretty-timed-diff::
+	$(HIDE)$(COQMAKE_BOTH_TIME_FILES) $(TIME_OF_BUILD_BEFORE_FILE) $(TIME_OF_BUILD_AFTER_FILE) $(TIME_OF_PRETTY_BOTH_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_EXTRA_FILES)
+ifeq (,$(BEFORE))
+print-pretty-single-time-diff::
+	@echo 'Error: Usage: $(MAKE) print-pretty-single-time-diff BEFORE=path/to/file.v.before-timing AFTER=path/to/file.v.after-timing'
+	false
+else
+ifeq (,$(AFTER))
+print-pretty-single-time-diff::
+	@echo 'Error: Usage: $(MAKE) print-pretty-single-time-diff BEFORE=path/to/file.v.before-timing AFTER=path/to/file.v.after-timing'
+	false
+else
+print-pretty-single-time-diff::
+	$(HIDE)$(COQMAKE_BOTH_SINGLE_TIMING_FILES) $(BEFORE) $(AFTER) $(TIME_OF_PRETTY_BUILD_FILE) $(TIME_OF_PRETTY_BUILD_EXTRA_FILES)
+endif
+endif
+pretty-timed:
+	$(HIDE)$(MAKE) --no-print-directory make-pretty-timed
+	$(HIDE)$(MAKE) --no-print-directory print-pretty-timed
+.PHONY: pretty-timed make-pretty-timed make-pretty-timed-before make-pretty-timed-after print-pretty-timed print-pretty-timed-diff
+
+ifneq (,$(TIMING))
+TIMING_ARG=-time
+ifeq (after,$(TIMING))
+TIMING_EXT=after-timing
+else
+ifeq (before,$(TIMING))
+TIMING_EXT=before-timing
+else
+TIMING_EXT=timing
+endif
+endif
+else
+TIMING_ARG=
+endif
 
 ###########################################################################
 
@@ -291,7 +357,7 @@ grammar/grammar.cma : $(GRAMCMO)
 	@touch grammar/test.mlp
 	$(HIDE)$(GRAMC) -pp '$(CAMLP4O) -I $(MYCAMLP4LIB) $^ -impl' -impl grammar/test.mlp -o grammar/test
 	@rm -f grammar/test.* grammar/test
-	$(SHOW)'OCAMLC -a $@'   
+	$(SHOW)'OCAMLC -a $@'
 	$(HIDE)$(GRAMC) $^ -linkall -a -o $@
 
 ## Support of Camlp5 and Camlp5
@@ -323,7 +389,7 @@ coqbinaries: $(COQMKTOP) $(COQTOPEXE) $(COQTOPBYTE) \
 
 ifeq ($(BEST),opt)
 $(COQTOPEXE): $(COQMKTOP) $(LINKCMX) $(LIBCOQRUN) $(TOPLOOPCMA:.cma=.cmxs)
-	$(SHOW)'COQMKTOP -o $@'	
+	$(SHOW)'COQMKTOP -o $@'
 	$(HIDE)$(COQMKTOP) -boot -opt $(OPTFLAGS) $(LINKMETADATA) -o $@
 	$(STRIP) $@
 	$(CODESIGN) $@
@@ -333,7 +399,7 @@ $(COQTOPEXE): $(COQTOPBYTE)
 endif
 
 $(COQTOPBYTE): $(COQMKTOP) $(LINKCMO) $(LIBCOQRUN) $(TOPLOOPCMA)
-	$(SHOW)'COQMKTOP -o $@'	
+	$(SHOW)'COQMKTOP -o $@'
 	$(HIDE)$(COQMKTOP) -boot -top $(BYTEFLAGS) -o $@
 
 # coqmktop
@@ -623,11 +689,15 @@ OCAMLDEP = $(OCAMLFIND) ocamldep -slash -ml-synonym .ml4 -ml-synonym .mlpack
 # since they are all mentioned in at least one Declare ML Module in some .v
 
 coqlib: theories plugins
+coqlib.timing.diff: theories.timing.diff plugins.timing.diff
 
 theories: $(THEORIESVO)
 plugins: $(PLUGINSVO)
 
-.PHONY: coqlib theories plugins
+theories.timing.diff: $(THEORIESVO:.vo=.v.timing.diff)
+plugins.timing.diff: $(PLUGINSVO:.vo=.v.timing.diff)
+
+.PHONY: coqlib theories plugins coqlib.timing.diff theories.timing.diff plugins.timing.diff
 
 # One of the .v files is macro-generated
 
@@ -636,22 +706,33 @@ theories/Numbers/Natural/BigN/NMake_gen.v: theories/Numbers/Natural/BigN/NMake_g
 
 # The .vo files in Init are built with the -noinit option
 
+ifneq (,$(TIMING))
+TIMING_EXTRA = > $<.$(TIMING_EXT)
+else
+TIMING_EXTRA =
+endif
+
 theories/Init/%.vo theories/Init/%.glob: theories/Init/%.v $(VO_TOOLS_DEP)
 	$(SHOW)'COQC $(COQ_XML) -noinit $<'
 	$(HIDE)rm -f theories/Init/$*.glob
-	$(HIDE)$(BOOTCOQC) $< $(COQ_XML) -noinit -R theories Coq
+	$(HIDE)$(BOOTCOQC) $< $(COQ_XML) -noinit -R theories Coq $(TIMING_ARG) $(TIMING_EXTRA)
 
 # The general rule for building .vo files :
 
 %.vo %.glob: %.v theories/Init/Prelude.vo $(VO_TOOLS_DEP)
 	$(SHOW)'COQC      $<'
 	$(HIDE)rm -f $*.glob
-	$(HIDE)$(BOOTCOQC) $<
+	$(HIDE)$(BOOTCOQC) $< $(TIMING_ARG) $(TIMING_EXTRA)
 ifdef VALIDATE
 	$(SHOW)'COQCHK    $(call vo_to_mod,$@)'
 	$(HIDE)$(CHICKEN) -boot -silent -norec $(call vo_to_mod,$@) \
 	  || ( RV=$$?; rm -f "$@"; exit $${RV} )
 endif
+
+%.v.timing.diff: %.v.before-timing %.v.after-timing
+	$(SHOW)PYTHON TIMING-DIFF $<
+	$(HIDE)$(MAKE) --no-print-directory print-pretty-single-time-diff BEFORE=$*.v.before-timing AFTER=$*.v.after-timing TIME_OF_PRETTY_BUILD_FILE="$@"
+
 
 # Dependencies of .v files
 
@@ -673,7 +754,7 @@ Makefile $(wildcard Makefile.*) config/Makefile : ;
 %:
 	@echo "Error: no rule to make target $@ (or missing .PHONY)" && false
 
-# For emacs: 
-# Local Variables: 
-# mode: makefile 
+# For emacs:
+# Local Variables:
+# mode: makefile
 # End:
