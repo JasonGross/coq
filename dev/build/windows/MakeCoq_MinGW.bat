@@ -236,7 +236,7 @@ IF "%~0" == "-threads" (
 IF NOT "%~0" == "" (
   ECHO Install cygwin and download, compile and install OCaml and Coq for MinGW
   ECHO !!! Illegal parameter %~0
-  ECHO Usage: 
+  ECHO Usage:
   ECHO MakeCoq_MinGW
   CALL :PrintPars
   GOTO :EOF
@@ -264,7 +264,7 @@ REM ========== CONFIRM PARAMETERS ==========
 CALL :PrintPars
 REM Note: DOS batch replaces variables on parsing, so one can't use a variable just set in an () block
 IF "%COQREGTESTING%"=="Y" (GOTO DontAsk)
-  SET /p ANSWER=Is this correct? y/n 
+  SET /p ANSWER=Is this correct? y/n
   IF NOT "%ANSWER%"=="y" (GOTO :EOF)
 :DontAsk
 
@@ -304,12 +304,12 @@ ECHO RESULT INSTALL DIR (MINGW)  = %RESULT_INSTALLDIR_MFMT%
 ECHO RESULT INSTALL DIR (CYGWIN) = %RESULT_INSTALLDIR_CFMT%
 
 REM WARNING: Add a space after the = in case you want set this to empty, otherwise the variable will be unset
-SET MAKE_OPT=-j %MAKE_THREADS% 
+SET MAKE_OPT=-j %MAKE_THREADS%
 
 REM ========== DERIVED CYGWIN SETUP OPTIONS ==========
 
 REM WARNING: Add a space after the = otherwise the variable will be unset
-SET CYGWIN_OPT= 
+SET CYGWIN_OPT=
 
 IF "%CYGWIN_FROM_CACHE%" == "Y" (
   SET CYGWIN_OPT= %CYGWIN_OPT% -L
@@ -419,10 +419,10 @@ ECHO ========== BATCH FUNCTIONS ==========
   ECHO -proxy    ^<internet proxy^>
   ECHO -cygrepo  ^<cygwin download repository^>
   ECHO -cygcache ^<local cygwin repository/cache^>
-  ECHO -cyglocal ^<Y or N^> install cygwin from cache 
+  ECHO -cyglocal ^<Y or N^> install cygwin from cache
   ECHO -cygquiet ^<Y or N^> install cygwin without user interaction
   ECHO -srccache ^<local source code repository/cache^>
-  ECHO -coqver   ^<Coq version to install^> 
+  ECHO -coqver   ^<Coq version to install^>
   ECHO -gtksrc   ^<Y or N^> build GTK ^(90 min^) or use cygwin version
   ECHO -threads  ^<1..N^> Number of make threads
   ECHO(
@@ -434,9 +434,9 @@ ECHO ========== BATCH FUNCTIONS ==========
   ECHO -ocaml    = %INSTALLOCAML%
   ECHO -installer= %MAKEINSTALLER%
   ECHO -make     = %INSTALLMAKE%
-  ECHO -destcyg  = %DESTCYG% 
-  ECHO -destcoq  = %DESTCOQ% 
-  ECHO -setup    = %SETUP% 
+  ECHO -destcyg  = %DESTCYG%
+  ECHO -destcoq  = %DESTCOQ%
+  ECHO -setup    = %SETUP%
   ECHO -proxy    = %PROXY%
   ECHO -cygrepo  = %CYGWIN_REPOSITORY%
   ECHO -cygcache = %CYGWIN_LOCAL_CACHE_WFMT%
