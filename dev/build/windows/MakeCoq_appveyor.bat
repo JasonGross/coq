@@ -18,7 +18,7 @@ SET ROOTDIR_CFMT=%ROOTDIR_CFMT:E:/=/cygdrive/e/%
 ECHO %ROOTDIR_WFMT%
 ECHO %ROOTDIR_CFMT%
 
-MKDIR cygwin
+MKDIR cygwin_x86_64
 MKDIR result
 MKDIR build
 
@@ -34,7 +34,7 @@ SET U
 
 appveyor DownloadFile http://cygwin.com/setup-x86_64.exe
 
-MakeCoq_MinGW.bat -arch=64 -installer=Y -coqver=%GITDIR_CFMT% -destcyg="%ROOTDIR_WFMT%\cygwin" -destcoq="%ROOTDIR_WFMT%\result"
+MakeCoq_MinGW.bat -arch=64 -installer=Y -coqver=%GITDIR_CFMT% -destcyg="%ROOTDIR_WFMT%\cygwin_x86_64" -destcoq="%ROOTDIR_WFMT%\result"
 
 IF %ERRORLEVEL% NEQ 0 (
   ECHO MakeCoq failed with error code %ERRORLEVEL%
