@@ -94,7 +94,7 @@ IF "%~0" == "-arch" (
       SET SETUP=setup-x86_64.exe
     ) ELSE (
       ECHO "Invalid -arch, valid are 32 and 64"
-      GOTO :EOF
+      GOTO ErrorExit
     )
   )
   SHIFT
@@ -113,7 +113,7 @@ IF "%~0" == "-mode" (
         SET INSTALLMODE=%~1
       ) ELSE (
         ECHO "Invalid -mode, valid are mingwincygwin, absolute and relocatable"
-        GOTO :EOF
+        GOTO ErrorExit
       )
     )
   )
@@ -239,12 +239,12 @@ IF NOT "%~0" == "" (
   ECHO Usage:
   ECHO MakeCoq_MinGW
   CALL :PrintPars
-  GOTO :EOF
+  GOTO ErrorExit
 )
 
 IF NOT EXIST %SETUP% (
   ECHO The cygwin setup program %SETUP% doesn't exist. You must download it from https://cygwin.com/install.html.
-  GOTO :EOF
+  GOTO ErrorExit
 )
 
 REM ========== ADJUST PARAMETERS ==========
