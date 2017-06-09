@@ -142,22 +142,35 @@ LOGS=`pwd`/buildlogs
 # The current log target (first part of the log file name)
 LOGTARGET=other
 
+display_log() {
+  RV=$1
+  echo stdout:
+  cat $2
+  echo stderr:
+  cat $3
+  exit $RV
+}
+
 log1() {
-  "$@" > $LOGS/$LOGTARGET-$1.log 2> $LOGS/$LOGTARGET-$1.err
+  "$@" > $LOGS/$LOGTARGET-$1.log 2> $LOGS/$LOGTARGET-$1.err \
+      || display_log $? $LOGS/$LOGTARGET-$1.log $LOGS/$LOGTARGET-$1.err
 }
 
 log2() {
-  "$@" > $LOGS/$LOGTARGET-$1-$2.log 2> $LOGS/$LOGTARGET-$1-$2.err
+  "$@" > $LOGS/$LOGTARGET-$1-$2.log 2> $LOGS/$LOGTARGET-$1-$2.err \
+      || display_log $? $LOGS/$LOGTARGET-$1-$2.log $LOGS/$LOGTARGET-$1-$2.err
 }
 
 log_1_3() {
-  "$@" > $LOGS/$LOGTARGET-$1-$3.log 2> $LOGS/$LOGTARGET-$1-$3.err
+  "$@" > $LOGS/$LOGTARGET-$1-$3.log 2> $LOGS/$LOGTARGET-$1-$3.err \
+      || display_log $? $LOGS/$LOGTARGET-$1-$3.log $LOGS/$LOGTARGET-$1-$3.err
 }
 
 logn() {
   LOGTARGETEX=$1
   shift
-  "$@" > $LOGS/$LOGTARGET-$LOGTARGETEX.log 2> $LOGS/$LOGTARGET-$LOGTARGETEX.err
+  "$@" > $LOGS/$LOGTARGET-$LOGTARGETEX.log 2> $LOGS/$LOGTARGET-$LOGTARGETEX.err \
+      || display_log $? $LOGS/$LOGTARGET-$LOGTARGETEX.log $LOGS/$LOGTARGET-$LOGTARGETEX.err
 }
 
 ###################### 'UNFIX' SED #####################
