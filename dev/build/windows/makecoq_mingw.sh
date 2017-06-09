@@ -1123,16 +1123,6 @@ function make_coq {
         build_prep NEVER-DOWNLOADED coq-local tar.gz
         ;;
 
-      # e.g. ./../../
-      ./*)
-        # Todo: --exclude-vcs-ignores doesn't work because tools/coqdoc/coqdoc.sty is excluded => fix .gitignore
-        # But this is not a big deal, only 2 files are removed with --exclude-vcs-ignores from a fresch clone
-        COQ_BUILD_PATH=/build/coq-local
-        COQ_VERSION="$(cd "${COQ_VERSION}" && pwd)"
-        tar -zcf $TARBALLS/coq-local.tar.gz --exclude-vcs -C "${COQ_VERSION%/*}" "${COQ_VERSION##*/}"
-        build_prep NEVER-DOWNLOADED coq-local tar.gz
-        ;;
-
       # e.g. 8.6 => https://coq.inria.fr/distrib/8.6/files/coq-8.6.tar.gz
       *)
         COQ_BUILD_PATH=/build/coq-$COQ_VERSION
