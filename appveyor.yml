@@ -11,7 +11,7 @@ environment:
       ARCH: 64
 
 cache:
-  - C:/cygwin
+  - C:/cygwin_x86_64
   - C:/result
   - C:/build
 
