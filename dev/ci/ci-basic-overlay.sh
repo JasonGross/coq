@@ -91,8 +91,8 @@
 ########################################################################
 # fiat_crypto
 ########################################################################
-: ${fiat_crypto_CI_BRANCH:=master}
-: ${fiat_crypto_CI_GITURL:=https://github.com/mit-plv/fiat-crypto.git}
+: ${fiat_crypto_CI_BRANCH:=zzz-broken}
+: ${fiat_crypto_CI_GITURL:=https://github.com/JasonGross/fiat-crypto.git}
 
 ########################################################################
 # formal-topology
