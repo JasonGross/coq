@@ -78,7 +78,12 @@ for ext in "" .desired; do
     done
 done
 for file in A.v.timing.diff; do
-    diff -u $file.desired.processed $file.processed || exit $?
+    diff -u $file.desired.processed $file.processed || \
+        { RV=$?;
+          echo "cat $file.desired.processed"; cat $file.desired.processed;
+          echo "cat $file.processed"; cat $file.processed;
+          diff -u $file.desired.processed $file.processed;
+          exit $RV }
 done
 
 exit 0
