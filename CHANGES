@@ -96,6 +96,8 @@ Standard Library
   [Scheme Equality], which is now run in the corresponding files.
   Note that this means that they have slightly different judgmental
   reduction behavior.
+- There are now conversions between [string] and [positive] in binary,
+  octal, and hex.
 
 Changes from 8.7.1 to 8.7.2
 ===========================
