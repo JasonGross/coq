@@ -114,7 +114,8 @@ Standard Library
   positive, N, Z, and string.
 - Added [Coq.Strings.String.concat] to concatenate a list of strings
   inserting a separator between each item
-
+- There are now conversions between [string] and [positive], [Z],
+  [nat], and [N] in binary, octal, and hex.
 - Some deprecated aliases are now emitting warnings when used.
 
 Compatibility support

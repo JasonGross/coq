@@ -467,6 +467,15 @@ Fixpoint ldiff (p q:positive) : N :=
     | p~1, q~0 => Nsucc_double (ldiff p q)
   end.
 
+(** Append two sequences *)
+
+Fixpoint app (p q:positive) : positive :=
+  match q with
+  | q~0 => (app p q)~0
+  | q~1 => (app p q)~1
+  | 1 => p~1
+  end.
+
 (** [xor] *)
 
 Fixpoint lxor (p q:positive) : N :=
