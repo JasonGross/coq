@@ -8,6 +8,8 @@
 
 Require Import Ascii String.
 Require Import BinNums.
+Import BinNatDef.
+Import BinIntDef.
 Import BinPosDef.
 
 Local Open Scope positive_scope.
@@ -33,70 +35,93 @@ Fixpoint oct_string_of_pos' (p : positive) (rest : string) : string
      end.
 Definition oct_string_of_pos (p : positive) : string
   := String "0" (String "o" (oct_string_of_pos' p "")).
+Definition oct_string_of_N (n : N) : string
+  := match n with
+     | N0 => "0o0"
+     | Npos p => oct_string_of_pos p
+     end.
+Definition oct_string_of_Z (z : Z) : string
+  := match z with
+     | Zneg p => String "-" (oct_string_of_pos p)
+     | Z0 => "0o0"
+     | Zpos p => oct_string_of_pos p
+     end.
 
-Local Notation default := 1.
-
-Fixpoint pos_of_oct_string' (s : string) (rest : option positive)
-  : option positive
+Fixpoint N_of_oct_string' (s : string) (rest : N)
+  : N
   := match s with
      | "" => rest
      | String ch s'
-       => pos_of_oct_string'
+       => N_of_oct_string'
             s'
             (if ascii_beq ch "0"
              then match rest with
-                  | Some p => Some (p~0~0~0)
-                  | None => None
+                  | N0 => N0
+                  | Npos p => Npos (p~0~0~0)
                   end
              else if ascii_beq ch "1"
              then match rest with
-                  | Some p => Some (p~0~0~1)
-                  | None => Some 1
+                  | N0 => Npos 1
+                  | Npos p => Npos (p~0~0~1)
                   end
              else if ascii_beq ch "2"
              then match rest with
-                  | Some p => Some (p~0~1~0)
-                  | None => Some 2
+                  | N0 => Npos 2
+                  | Npos p => Npos (p~0~1~0)
                   end
              else if ascii_beq ch "3"
              then match rest with
-                  | Some p => Some (p~0~1~1)
-                  | None => Some 3
+                  | N0 => Npos 3
+                  | Npos p => Npos (p~0~1~1)
                   end
              else if ascii_beq ch "4"
              then match rest with
-                  | Some p => Some (p~1~0~0)
-                  | None => Some 4
+                  | N0 => Npos 4
+                  | Npos p => Npos (p~1~0~0)
                   end
              else if ascii_beq ch "5"
              then match rest with
-                  | Some p => Some (p~1~0~1)
-                  | None => Some 5
+                  | N0 => Npos 5
+                  | Npos p => Npos (p~1~0~1)
                   end
              else if ascii_beq ch "6"
              then match rest with
-                  | Some p => Some (p~1~1~0)
-                  | None => Some 6
+                  | N0 => Npos 6
+                  | Npos p => Npos (p~1~1~0)
                   end
              else if ascii_beq ch "7"
              then match rest with
-                  | Some p => Some (p~1~1~1)
-                  | None => Some 7
+                  | N0 => Npos 7
+                  | Npos p => Npos (p~1~1~1)
                   end
-             else None)
+             else N0)
+     end.
+Definition N_of_oct_string (s : string) : N
+  := match s with
+     | String s0 (String so s)
+       => if ascii_beq s0 "0"
+          then if ascii_beq so "o"
+               then N_of_oct_string' s N0
+               else N0
+          else N0
+     | _ => N0
      end.
 Definition pos_of_oct_string (s : string) : positive
-  := match s with
-     | String s0 (String sb s)
-       => if ascii_beq s0 "0"
-          then if ascii_beq sb "o"
-               then match pos_of_oct_string' s None with
-                    | Some p => p
-                    | None => default
-                    end
-               else default
-          else default
-     | _ => default
+  := match N_of_oct_string s with
+     | N0 => 1
+     | Npos p => p
+     end.
+Definition Z_of_oct_string (s : string) : Z
+  := let '(is_neg, n) := match s with
+                         | String s0 s'
+                           => if ascii_beq s0 "-"
+                              then (true, N_of_oct_string s')
+                              else (false, N_of_oct_string s)
+                         | EmptyString => (false, N_of_oct_string s)
+                         end in
+     match n with
+     | N0 => Z0
+     | Npos p => if is_neg then Zneg p else Zpos p
      end.
 
 Fixpoint pos_oct_app (p q:positive) : positive :=
@@ -118,23 +143,39 @@ Fixpoint pos_oct_app (p q:positive) : positive :=
   | q~1~1~1 => (pos_oct_app p q)~1~1~1
   end.
 
-Fixpoint pos_of_oct_string_of_pos' (p : positive)
-      (base : option positive)
-      (rest : string)
-  : pos_of_oct_string' (oct_string_of_pos' p rest) base
-    = pos_of_oct_string' rest (match base with
-                               | None => Some p
-                               | Some v => Some (pos_oct_app v p)
-                               end).
+Fixpoint N_of_oct_string_of_pos' (p : positive) (rest : string) (base : N)
+  : N_of_oct_string' (oct_string_of_pos' p rest) base
+    = N_of_oct_string' rest match base with
+                            | N0 => N.pos p
+                            | Npos v => Npos (pos_oct_app v p)
+                            end.
 Proof.
   do 3 try destruct p as [p|p|]; destruct base; try reflexivity;
-    cbn; rewrite pos_of_oct_string_of_pos'; reflexivity.
+    cbn; rewrite N_of_oct_string_of_pos'; reflexivity.
+Qed.
+
+Lemma N_of_oct_string_of_N (n : N)
+  : N_of_oct_string (oct_string_of_N n)
+    = n.
+Proof.
+  destruct n; [ reflexivity | apply N_of_oct_string_of_pos' ].
+Qed.
+
+Lemma Z_of_oct_string_of_Z (z : Z)
+  : Z_of_oct_string (oct_string_of_Z z)
+    = z.
+Proof.
+  cbv [oct_string_of_Z Z_of_oct_string]; destruct z as [|z|z]; cbn;
+    try reflexivity;
+    rewrite N_of_oct_string_of_pos'; cbn; reflexivity.
 Qed.
 
 Lemma pos_of_oct_string_of_pos (p : positive)
-  : pos_of_oct_string (oct_string_of_pos p) = p.
+  : pos_of_oct_string (oct_string_of_pos p)
+    = p.
 Proof.
-  cbn; rewrite pos_of_oct_string_of_pos'; reflexivity.
+  cbv [oct_string_of_pos pos_of_oct_string N_of_oct_string]; cbn;
+    rewrite N_of_oct_string_of_pos'; cbn; reflexivity.
 Qed.
 
 Example oct_string_of_pos_1 : oct_string_of_pos 1 = "0o1" := eq_refl.
@@ -142,3 +183,6 @@ Example oct_string_of_pos_2 : oct_string_of_pos 2 = "0o2" := eq_refl.
 Example oct_string_of_pos_3 : oct_string_of_pos 3 = "0o3" := eq_refl.
 Example oct_string_of_pos_7 : oct_string_of_pos 7 = "0o7" := eq_refl.
 Example oct_string_of_pos_8 : oct_string_of_pos 8 = "0o10" := eq_refl.
+Example oct_string_of_N_0 : oct_string_of_N 0 = "0o0" := eq_refl.
+Example oct_string_of_Z_0 : oct_string_of_Z 0 = "0o0" := eq_refl.
+Example oct_string_of_Z_m1 : oct_string_of_Z (-1) = "-0o1" := eq_refl.
