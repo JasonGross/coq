@@ -55,7 +55,7 @@ let warn_large_num =
   CWarnings.create ~name:"large-number" ~category:"numbers"
     (fun ty ->
       strbrk "Stack overflow or segmentation fault happens when " ++
-      strbrk "working with large numbers in " ++ pr_reference ty ++
+      strbrk "working with large numbers in " ++ pr_qualid ty ++
       strbrk " (threshold may vary depending" ++
       strbrk " on your system limits and on the command executed).")
 
@@ -64,7 +64,7 @@ let warn_abstract_large_num =
     (fun (ty,f) ->
       let (sigma, env) = Pfedit.get_current_context () in
       strbrk "To avoid stack overflow, large numbers in " ++
-      pr_reference ty ++ strbrk " are interpreted as applications of " ++
+      pr_qualid ty ++ strbrk " are interpreted as applications of " ++
       Printer.pr_constr_env env sigma f ++ strbrk ".")
 
 (** Comparing two raw numbers (base 10, big-endian, non-negative).
@@ -238,7 +238,7 @@ let rec glob_of_constr ?loc c = match Constr.kind c with
 let no_such_number ?loc ty =
   CErrors.user_err ?loc
    (str "Cannot interpret this number as a value of type " ++
-    pr_reference ty)
+    pr_qualid ty)
 
 let interp_option ty ?loc c =
   match Constr.kind c with
@@ -276,7 +276,7 @@ type numeral_notation_obj =
     to_ty : constr;
     of_kind : conversion_kind;
     of_ty : constr;
-    num_ty : Libnames.reference; (* for warnings / error messages *)
+    num_ty : Libnames.qualid; (* for warnings / error messages *)
     warning : numnot_option }
 
 let interp o ?loc n =
@@ -355,7 +355,7 @@ let unsafe_locate_ind q =
 
 let locate_ind q =
   try unsafe_locate_ind q
-  with Not_found -> Nametab.error_global_not_found (CAst.make q)
+  with Not_found -> Nametab.error_global_not_found q
 
 let locate_z () =
   try
@@ -367,14 +367,12 @@ let locate_int () =
   { uint = locate_ind q_uint;
     int = locate_ind q_int }
 
-let locate_globref r =
-  let q = qualid_of_reference r in
-  try Nametab.locate CAst.(q.v)
+let locate_globref q =
+  try Nametab.locate q
   with Not_found -> Nametab.error_global_not_found q
 
-let locate_constant r =
-  let q = qualid_of_reference r in
-  try Nametab.locate_constant CAst.(q.v)
+let locate_constant q =
+  try Nametab.locate_constant q
   with Not_found -> Nametab.error_global_not_found q
 
 let has_type f ty =
@@ -385,14 +383,14 @@ let has_type f ty =
 
 let type_error_to f ty loadZ =
   CErrors.user_err
-    (pr_reference f ++ str " should go from Decimal.int to " ++
-     pr_reference ty ++ str " or (option " ++ pr_reference ty ++ str ")." ++
+    (pr_qualid f ++ str " should go from Decimal.int to " ++
+     pr_qualid ty ++ str " or (option " ++ pr_qualid ty ++ str ")." ++
      fnl () ++ str "Instead of int, the types uint or Z could be used" ++
      (if loadZ then str " (load Z first)." else str "."))
 
 let type_error_of g ty loadZ =
   CErrors.user_err
-    (pr_reference g ++ str " should go from " ++ pr_reference ty ++
+    (pr_qualid g ++ str " should go from " ++ pr_qualid ty ++
      str " to Decimal.int or (option int)." ++ fnl () ++
      str "Instead of int, the types uint or Z could be used" ++
      (if loadZ then str " (load Z first)." else str "."))
@@ -405,7 +403,7 @@ let vernac_numeral_notation ty f g scope opts =
   let of_ty = mkConst (locate_constant g) in
   let cty = mkRefC ty in
   let app x y = mkAppC (x,[y]) in
-  let cref q = mkRefC (CAst.make (Qualid q)) in
+  let cref q = mkRefC q in
   let arrow x y =
     mkProdC ([CAst.make Anonymous],Default Decl_kinds.Explicit, x, y)
   in
@@ -420,17 +418,17 @@ let vernac_numeral_notation ty f g scope opts =
        get_constructors ind
     | IndRef _ ->
        CErrors.user_err
-         (str "The inductive type " ++ pr_reference ty ++
+         (str "The inductive type " ++ pr_qualid ty ++
           str " cannot be polymorphic here for the moment")
     | ConstRef _ | ConstructRef _ | VarRef _ ->
        CErrors.user_err
-        (pr_reference ty ++ str " is not an inductive type")
+        (pr_qualid ty ++ str " is not an inductive type")
   in
   (* Check the type of f *)
   let to_kind =
     if Global.is_polymorphic (Nametab.global f) then
       CErrors.user_err
-        (pr_reference f ++ str " cannot be polymorphic for the moment")
+        (pr_qualid f ++ str " cannot be polymorphic for the moment")
     else if has_type f (arrow cint cty) then Int int_ty, Direct
     else if has_type f (arrow cint (opt cty)) then Int int_ty, Option
     else if has_type f (arrow cuint cty) then UInt int_ty.uint, Direct
@@ -447,7 +445,7 @@ let vernac_numeral_notation ty f g scope opts =
   let of_kind =
     if Global.is_polymorphic (Nametab.global g) then
       CErrors.user_err
-        (pr_reference g ++ str " cannot be polymorphic for the moment")
+        (pr_qualid g ++ str " cannot be polymorphic for the moment")
     else if has_type g (arrow cty cint) then Int int_ty, Direct
     else if has_type g (arrow cty (opt cint)) then Int int_ty, Option
     else if has_type g (arrow cty cuint) then UInt int_ty.uint, Direct
