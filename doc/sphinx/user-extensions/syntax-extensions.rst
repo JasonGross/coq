@@ -650,7 +650,7 @@ example of recursive notation with closed binders:
 A recursive pattern for binders can be used in position of a recursive
 pattern for terms. Here is an example:
 
-.. coqtop:: in 
+.. coqtop:: in
 
    Notation "'FUNAPP' x .. y , f" :=
      (fun x => .. (fun y => (.. (f x) ..) y ) ..)
@@ -1010,7 +1010,7 @@ The ``function_scope`` interpretation scope
 
 .. index:: function_scope
 
-The scope ``function_scope`` also has a special status. 
+The scope ``function_scope`` also has a special status.
 It is temporarily activated each time the argument of a global reference is
 recognized to be a ``Funclass`` istance, i.e., of type :g:`forall x:A, B` or
 :g:`A -> B`.
@@ -1025,11 +1025,11 @@ Scopes` or :cmd:`Print Scope`.
 
 ``type_scope``
   This scope includes infix * for product types and infix + for sum types. It
-  is delimited by key ``type``, and bound to the coercion class 
+  is delimited by key ``type``, and bound to the coercion class
   ``Sortclass``, as described above.
 
 ``function_scope``
-  This scope is delimited by key ``function``, and bound to the coercion class 
+  This scope is delimited by key ``function``, and bound to the coercion class
   ``Funclass``, as described above.
 
 ``nat_scope``
@@ -1229,16 +1229,21 @@ And the printing function `pr` should have one of the following types:
 .. cmdv:: Numeral Notation @ty @pa @pr : @scope (warning after @n).
 
 When a literal larger than `n` is parsed, a warning message about
-possible stack overflow will be displayed.
+possible stack overflow, resulting from evaluating :g:`pa`, will be
+displayed.
 
 .. cmdv:: Numeral Notation @ty @pa @pr : @scope (abstract after @n).
 
 When a literal `m` larger than `n` is parsed, the result will be
 :g:`(pa m)`, without reduction of this application to a normal form.
 Here `m` will be a ``Decimal.int`` or ``Decimal.uint`` or ``Z``,
-depending on the type of the parsing function `pa`. This allows a more
-compact representation of literals in types such as ``nat``, and
-limits parse failures due to stack overflow.
+depending on the type of the parsing function `pa`. This allows for a
+more compact representation of literals in types such as ``nat``, and
+limits parse failures due to stack overflow.  For example
+
+.. coqtop:: all
+
+   Check 90000.
 
 .. _TacticNotation:
 

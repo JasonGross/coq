@@ -1,9 +1,11 @@
 (************************************************************************)
-(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2016     *)
+(*         *   The Coq Proof Assistant / The Coq Development Team       *)
+(*  v      *   INRIA, CNRS and contributors - Copyright 1999-2018       *)
+(* <O___,, *       (see CREDITS file for the list of authors)           *)
 (*   \VV/  **************************************************************)
-(*    //   *      This file is distributed under the terms of the       *)
-(*         *       GNU Lesser General Public License Version 2.1        *)
+(*    //   *    This file is distributed under the terms of the         *)
+(*         *     GNU Lesser General Public License Version 2.1          *)
+(*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
 DECLARE PLUGIN "numeral_notation_plugin"
@@ -24,7 +26,7 @@ open Misctypes
 
     The constr [c] below isn't necessarily well-typed, since we
     built it via an [mkApp] of a conversion function on a term
-    that starts with the right constructor, but might be partially
+    that starts with the right constructor but might be partially
     applied.
 
     At least [c] is known to be evar-free, since it comes from
@@ -68,7 +70,7 @@ let warn_abstract_large_num =
       Printer.pr_constr_env env sigma f ++ strbrk ".")
 
 (** Comparing two raw numbers (base 10, big-endian, non-negative).
-    A bit nasty, but not critical : only used to decide when a
+    A bit nasty, but not critical: only used to decide when a
     number is considered as large (see warnings above). *)
 
 exception Comp of int
