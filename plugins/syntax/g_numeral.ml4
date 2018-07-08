@@ -322,7 +322,7 @@ let uninterp o (Glob_term.AnyGlobConstr n) =
 
 let load_numeral_notation _ (_, (uid,opts)) =
   Notation.register_rawnumeral_interpretation
-    uid (interp opts, uninterp opts)
+    ~allow_overwrite:true uid (interp opts, uninterp opts)
 
 let cache_numeral_notation x = load_numeral_notation 1 x
 

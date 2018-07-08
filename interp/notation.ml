@@ -353,31 +353,32 @@ let prim_token_interp_infos =
 let prim_token_uninterp_infos =
   ref (Refmap.empty : (scope_name * prim_token_uid * bool) Refmap.t)
 
-let hashtbl_check_and_set uid f h eq =
+let hashtbl_check_and_set allow_overwrite uid f h eq =
   match Hashtbl.find h uid with
    | exception Not_found -> Hashtbl.add h uid f
+   | _ when allow_overwrite -> Hashtbl.add h uid f
    | g when eq f g -> ()
    | _ ->
       user_err ~hdr:"prim_token_interpreter"
        (str "Unique identifier " ++ str uid ++
         str " already used to register a numeral or string (un)interpreter.")
 
-let register_gen_interpretation uid (interp, uninterp) =
+let register_gen_interpretation allow_overwrite uid (interp, uninterp) =
   hashtbl_check_and_set
-    uid interp prim_token_interpreters InnerPrimToken.interp_eq;
+    allow_overwrite uid interp prim_token_interpreters InnerPrimToken.interp_eq;
   hashtbl_check_and_set
-    uid uninterp prim_token_uninterpreters InnerPrimToken.uninterp_eq
+    allow_overwrite uid uninterp prim_token_uninterpreters InnerPrimToken.uninterp_eq
 
-let register_rawnumeral_interpretation uid (interp, uninterp) =
-  register_gen_interpretation uid
+let register_rawnumeral_interpretation ?(allow_overwrite=false) uid (interp, uninterp) =
+  register_gen_interpretation allow_overwrite uid
     (InnerPrimToken.RawNumInterp interp, InnerPrimToken.RawNumUninterp uninterp)
 
-let register_bignumeral_interpretation uid (interp, uninterp) =
-  register_gen_interpretation uid
+let register_bignumeral_interpretation ?(allow_overwrite=false) uid (interp, uninterp) =
+  register_gen_interpretation allow_overwrite uid
     (InnerPrimToken.BigNumInterp interp, InnerPrimToken.BigNumUninterp uninterp)
 
-let register_string_interpretation uid (interp, uninterp) =
-  register_gen_interpretation uid
+let register_string_interpretation ?(allow_overwrite=false) uid (interp, uninterp) =
+  register_gen_interpretation allow_overwrite uid
     (InnerPrimToken.StringInterp interp, InnerPrimToken.StringUninterp uninterp)
 
 type prim_token_infos = {

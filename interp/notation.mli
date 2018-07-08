@@ -78,13 +78,13 @@ type 'a prim_token_interpretation =
   'a prim_token_interpreter * 'a prim_token_uninterpreter
 
 val register_rawnumeral_interpretation :
-  prim_token_uid -> rawnum prim_token_interpretation -> unit
+  ?allow_overwrite:bool -> prim_token_uid -> rawnum prim_token_interpretation -> unit
 
 val register_bignumeral_interpretation :
-  prim_token_uid -> Bigint.bigint prim_token_interpretation -> unit
+  ?allow_overwrite:bool -> prim_token_uid -> Bigint.bigint prim_token_interpretation -> unit
 
 val register_string_interpretation :
-  prim_token_uid -> string prim_token_interpretation -> unit
+  ?allow_overwrite:bool -> prim_token_uid -> string prim_token_interpretation -> unit
 
 type prim_token_infos = {
   pt_scope : scope_name; (** Concerned scope *)
