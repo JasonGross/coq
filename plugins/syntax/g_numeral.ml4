@@ -18,7 +18,6 @@ open Globnames
 open Constrexpr
 open Constrexpr_ops
 open Constr
-open Misctypes
 
 (** * Numeral notation *)
 
@@ -379,7 +378,7 @@ let locate_constant q =
 
 let has_type f ty =
   let (sigma, env) = Pfedit.get_current_context () in
-  let c = mkCastC (mkRefC f, CastConv ty) in
+  let c = mkCastC (mkRefC f, Glob_term.CastConv ty) in
   try let _ = Constrintern.interp_constr env sigma c in true
   with Pretype_errors.PretypeError _ -> false
 

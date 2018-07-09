@@ -385,7 +385,7 @@ type prim_token_infos = {
   pt_scope : scope_name; (** Concerned scope *)
   pt_uid : prim_token_uid; (** Unique id "pointing" to (un)interp functions *)
   pt_required : required_module; (** Module that should be loaded first *)
-  pt_refs : global_reference list; (** Entry points during uninterpretation *)
+  pt_refs : GlobRef.t list; (** Entry points during uninterpretation *)
   pt_in_match : bool (** Is this prim token legal in match patterns ? *)
 }
 
