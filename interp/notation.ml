@@ -421,19 +421,25 @@ let enable_prim_token_interpretation infos =
     (the latter inside a [Mltop.declare_cache_obj]).
 *)
 
+let fresh_string_of =
+  let count = ref 0 in
+  fun root -> count := !count+1; (string_of_int !count)^"_"^root
+
 let declare_numeral_interpreter sc dir interp (patl,uninterp,b) =
-  register_bignumeral_interpretation sc (interp,uninterp);
+  let uid = fresh_string_of sc in
+  register_bignumeral_interpretation uid (interp,uninterp);
   enable_prim_token_interpretation
     { pt_scope = sc;
-      pt_uid = sc;
+      pt_uid = uid;
       pt_required = dir;
       pt_refs = List.map_filter glob_prim_constr_key patl;
       pt_in_match = b }
 let declare_string_interpreter sc dir interp (patl,uninterp,b) =
-  register_string_interpretation sc (interp,uninterp);
+  let uid = fresh_string_of sc in
+  register_string_interpretation uid (interp,uninterp);
   enable_prim_token_interpretation
     { pt_scope = sc;
-      pt_uid = sc;
+      pt_uid = uid;
       pt_required = dir;
       pt_refs = List.map_filter glob_prim_constr_key patl;
       pt_in_match = b }
