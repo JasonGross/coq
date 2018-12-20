@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import with_statement
-import os, re, sys
+import os, re, sys, io
 
 # Obtain the absolute path of the script being run.  By assuming that
 # the script lives in dev/tools/, and basing all calls on the path of
@@ -24,6 +24,14 @@ TEST_SUITE_DESCRIPTIONS = ('current-minus-three', 'current-minus-two', 'current-
 # sanity check that we are where we think we are
 assert(os.path.normpath(os.path.realpath(SCRIPT_PATH)) == os.path.normpath(os.path.realpath(os.path.join(ROOT_PATH, 'dev', 'tools'))))
 assert(os.path.exists(CONFIGURE_PATH))
+
+def writefile(path, contents):
+    # force linux line endings
+    #
+    # note that we only need to do this on writing a file, as Python
+    # automatically handles all styles of newlines on file reading
+    with io.open(path, 'w', newline='\n') as f:
+        f.write(contents)
 
 def get_header():
     with open(HEADER_PATH, 'r') as f: return f.read()
@@ -96,8 +104,7 @@ def update_compat_files(old_versions, new_versions, assert_unchanged=False, **ar
             if next_v is not None:
                 contents += '\nRequire Export Coq.Compat.%s.\n' % version_name_to_compat_name(next_v, ext='')
             if not assert_unchanged:
-                with open(compat_path, 'w') as f:
-                    f.write(contents)
+                writefile(compat_path, contents)
                 print(r"Don't forget to 'git add %s'!" % compat_file)
             else:
                 raise Exception('%s does not exist!' % compat_file)
@@ -118,8 +125,7 @@ def update_compat_files(old_versions, new_versions, assert_unchanged=False, **ar
                     contents = contents.replace(header, '%s\n%s' % (header, line))
                     if not assert_unchanged:
                         print('Updating %s...' % compat_file)
-                        with open(compat_path, 'w') as f:
-                            f.write(contents)
+                        writefile(compat_path, contents)
                     else:
                         raise Exception('Compat file %s is missing line %s' % (compat_file, line))
 
@@ -201,8 +207,7 @@ def update_if_changed(contents, new_contents, path, assert_unchanged=False, **ar
     if contents != new_contents:
         if not assert_unchanged:
             print('Updating %s...' % os.path.relpath(path, ROOT_PATH))
-            with open(path, 'w') as f:
-                f.write(new_contents)
+            wrtefile(path, new_contents)
         else:
             raise Exception('%s changed!' % os.path.relpath(path, ROOT_PATH))
 
