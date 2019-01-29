@@ -460,3 +460,7 @@ module New : sig
   (** The reducing tactic called after {!refine}. *)
 
 end
+
+(** {6 Tactics for interacting with hint databases} *)
+val with_hint_db : Hints.hint_db_name list -> Geninterp.Val.t -> unit Proofview.tactic
+val add_resolve_to_db : local:bool -> Hints.hint_term -> Hints.hint_db_name list -> unit Proofview.tactic

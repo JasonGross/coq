@@ -185,7 +185,7 @@ TACTIC EXTEND dependent_rewrite
 END
 
 (** To be deprecated?, "cutrewrite (t=u) as <-" is equivalent to
-    "replace u with t" or "enough (t=u) as <-" and 
+    "replace u with t" or "enough (t=u) as <-" and
     "cutrewrite (t=u) as ->" is equivalent to "enough (t=u) as ->". *)
 
 TACTIC EXTEND cut_rewrite
@@ -584,7 +584,7 @@ TACTIC EXTEND dep_generalize_eqs_vars
 | ["dependent" "generalize_eqs_vars" hyp(id) ] -> { abstract_generalize ~force_dep:true ~generalize_vars:true id }
 END
 
-(** Tactic to automatically simplify hypotheses of the form [Π Δ, x_i = t_i -> T] 
+(** Tactic to automatically simplify hypotheses of the form [Π Δ, x_i = t_i -> T]
     where [t_i] is closed w.r.t. Δ. Such hypotheses are automatically generated
     during dependent induction. For internal use. *)
 
@@ -602,12 +602,12 @@ END
 
 {
 
-let subst_var_with_hole occ tid t = 
+let subst_var_with_hole occ tid t =
   let occref = if occ > 0 then ref occ else Find_subterm.error_invalid_occurrence [occ] in
   let locref = ref 0 in
   let rec substrec x = match DAst.get x with
     | GVar id ->
-        if Id.equal id tid 
+        if Id.equal id tid
         then
 	  (decr occref;
 	   if Int.equal !occref 0 then x
@@ -659,7 +659,7 @@ let hResolve id c occ t =
   let c_raw = Detyping.detype Detyping.Now true env_ids env sigma c in
   let t_raw = Detyping.detype Detyping.Now true env_ids env sigma t in
   let rec resolve_hole t_hole =
-    try 
+    try
       Pretyping.understand env sigma t_hole
     with
       | Pretype_errors.PretypeError (_,_,Pretype_errors.UnsolvableImplicit _) as e ->
@@ -675,7 +675,7 @@ let hResolve id c occ t =
   end
 
 let hResolve_auto id c t =
-  let rec resolve_auto n = 
+  let rec resolve_auto n =
     try
       hResolve id c n t
     with
@@ -716,7 +716,7 @@ exception Found of unit Proofview.tactic
 let rewrite_except h =
   Proofview.Goal.enter begin fun gl ->
   let hyps = Tacmach.New.pf_ids_of_hyps gl in
-  Tacticals.New.tclMAP (fun id -> if Id.equal id h then Proofview.tclUNIT () else 
+  Tacticals.New.tclMAP (fun id -> if Id.equal id h then Proofview.tclUNIT () else
       Tacticals.New.tclTRY (Equality.general_rewrite_in true Locus.AllOccurrences true true id (mkVar h) false))
     hyps
   end
@@ -777,7 +777,7 @@ let rec find_a_destructable_match sigma t =
 	  (* let _ = Pp.msgnl (Printer.pr_lconstr x)  in *)
 	  raise (Found (case_eq_intros_rewrite x))
     | _ -> EConstr.iter sigma (fun c -> find_a_destructable_match sigma c) t
-	
+
 
 let destauto t =
   Proofview.tclEVARMAP >>= fun sigma ->
@@ -785,7 +785,7 @@ let destauto t =
     Tacticals.New.tclZEROMSG (str "No destructable match found")
   with Found tac -> tac
 
-let destauto_in id = 
+let destauto_in id =
   Proofview.Goal.enter begin fun gl ->
   let ctype = Tacmach.New.pf_unsafe_type_of gl (mkVar id) in
 (*  Pp.msgnl (Printer.pr_lconstr (mkVar id)); *)
@@ -812,6 +812,27 @@ TACTIC EXTEND transparent_abstract
       Abstract.tclABSTRACT ~opaque:false None (Tacinterp.tactic_of_value ist t) end }
 | [ "transparent_abstract" tactic3(t) "using" ident(id) ] -> { Proofview.Goal.enter begin fun gl ->
       Abstract.tclABSTRACT ~opaque:false (Some id) (Tacinterp.tactic_of_value ist t) end }
+END
+
+(**********************************************************************)
+
+(**********************************************************************)
+(* Two tactics for interacting with hint databases                    *)
+(* Introduced by Jason Gross and Benjamin Delaware in January 2019    *)
+(**********************************************************************)
+
+TACTIC EXTEND hint_resolve
+| [ "hint_resolve" constr(name) ":" ne_preident_list(l) ] ->
+   { Proofview.Goal.enter begin fun gl -> add_resolve_to_db ~local:true (Hints.IsConstr (name, Univ.ContextSet.empty)) l end }
+| [ "local" "hint_resolve" constr(name) ":" ne_preident_list(l) ] ->
+   { Proofview.Goal.enter begin fun gl -> add_resolve_to_db ~local:true (Hints.IsConstr (name, Univ.ContextSet.empty)) l end }
+| [ "global" "hint_resolve" constr(name) ":" ne_preident_list(l) ] ->
+   { Proofview.Goal.enter begin fun gl -> add_resolve_to_db ~local:false (Hints.IsConstr (name, Univ.ContextSet.empty)) l end }
+END
+
+TACTIC EXTEND hint_foreach
+  | [ "hint_foreach" "[" ne_preident_list(l) "]" "run" tactic3(k) ]  ->
+     { Proofview.Goal.enter begin fun gl -> with_hint_db l k end }
 END
 
 (* ********************************************************************* *)

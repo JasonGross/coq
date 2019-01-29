@@ -4965,3 +4965,46 @@ module New = struct
     Refine.refine ~typecheck c <*>
     reduce_after_refine
 end
+
+
+(**********************************************************************)
+(* Two tactics for interacting with hint databases                    *)
+(* Introduced by Jason Gross and Benjamin Delaware in January 2019    *)
+(**********************************************************************)
+
+let with_hint_db dbs tacK =
+  let open Tacticals.New in
+  (* [dbs] : list of hint databases *)
+  (* [tacK] : tactic to run on a hint *)
+  let syms = ref [] in
+  let _ =
+    List.iter (fun l ->
+             (* Fetch the searchtable from the database*)
+             let db = Hints.searchtable_map l in
+             (* iterate over the hint database, pulling the hint *)
+             (* list out for each. *)
+             Hints.Hint_db.iter (fun _ _ hintlist ->
+                                 syms := hintlist::!syms) db) dbs in
+  (* Now iterate over the list of list of hints, *)
+  List.fold_left
+    (fun tac hints ->
+     List.fold_left
+       (fun tac (hint : Hints.full_hint) ->
+        let hint1 = hint.Hints.code in
+        Hints.run_hint hint1
+               (fun hint2 ->
+                      (* match the type of the hint to pull out the lemma *)
+                      match hint2 with
+                        Hints.Give_exact ((lem, _, _) , _)
+                      | Hints.Res_pf ((lem, _, _) , _)
+                      | Hints.ERes_pf ((lem, _, _) , _) ->
+                         let this_tac = Tacinterp.Value.apply tacK [Tacinterp.Value.of_constr lem] in
+                         tclORELSE this_tac tac
+                      | _ -> tac))
+       tac hints)
+    (tclFAIL 0 (Pp.str "No applicable tactic!")) !syms
+
+let add_resolve_to_db lem db =
+  (* we only permit local hints, as we don't want to make more evil tactics that pollute the global env like [abstract] *)
+  let _ = Hints.add_hints ~local:true db (Hints.HintsResolveEntry [({ Typeclasses.hint_priority = Some 1 ; Typeclasses.hint_pattern = None },false,true,Hints.PathAny,lem)]) in
+  tclIDTAC
