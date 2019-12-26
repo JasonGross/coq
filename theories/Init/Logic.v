@@ -440,6 +440,53 @@ Section Logic_lemmas.
     forall (A:Type) (x:A) (P:A -> Type), P x -> forall y:A, y = x -> P y.
     intros A x P H y H0; elim eq_sym with (1 := H0); assumption.
   Defined.
+
+  Definition eq_sind_dep :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> SProp), P x eq_refl -> forall (y:A) (p:x = y), P y p.
+  Proof.
+    intros A x P H y H0. case H0; assumption.
+  Defined.
+
+  Definition eq_ind_dep :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> Prop), P x eq_refl -> forall (y:A) (p:x = y), P y p.
+    intros A x P H y H0. case H0; assumption.
+  Defined.
+
+  Register eq_ind_dep as core.eq.ind_dep.
+
+  Definition eq_rec_dep :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> Set), P x eq_refl -> forall (y:A) (p:x = y), P y p.
+    intros A x P H y H0; case H0; assumption.
+  Defined.
+
+  Definition eq_rect_dep :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> Type), P x eq_refl -> forall (y:A) (p:x = y), P y p.
+    intros A x P H y H0; case H0; assumption.
+  Defined.
+
+  Definition eq_sind_dep_r :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> SProp), P x eq_refl -> forall (y:A) (p:y = x), P y (eq_sym p).
+  Proof.
+    intros A x P H y H0. case (eq_sym H0); assumption.
+  Defined.
+
+  Definition eq_ind_dep_r :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> Prop), P x eq_refl -> forall (y:A) (p:y = x), P y (eq_sym p).
+    intros A x P H y H0. case (eq_sym H0); assumption.
+  Defined.
+
+  Register eq_ind_dep_r as core.eq.ind_dep_r.
+
+  Definition eq_rec_dep_r :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> Set), P x eq_refl -> forall (y:A) (p:y = x), P y (eq_sym p).
+    intros A x P H y H0; case (eq_sym H0); assumption.
+  Defined.
+
+  Definition eq_rect_dep_r :
+    forall (A:Type) (x:A) (P:forall y:A, x = y -> Type), P x eq_refl -> forall (y:A) (p:y = x), P y (eq_sym p).
+    intros A x P H y H0; case (eq_sym H0); assumption.
+  Defined.
+
 End Logic_lemmas.
 
 Module EqNotations.
@@ -461,55 +508,25 @@ Module EqNotations.
     (at level 10, H' at level 10, only parsing).
 
   Notation "'rew' 'dependent' H 'in' H'"
-    := (match H with
-        | eq_refl => H'
-        end)
+    := (eq_rect_dep _ H' H)
          (at level 10, H' at level 10,
           format "'[' 'rew'  'dependent'  H  in  '/' H' ']'").
   Notation "'rew' 'dependent' -> H 'in' H'"
-    := (match H with
-        | eq_refl => H'
-        end)
+    := (eq_rect_dep _ H' H)
          (at level 10, H' at level 10, only parsing).
   Notation "'rew' 'dependent' <- H 'in' H'"
-    := (match eq_sym H with
-        | eq_refl => H'
-        end)
+    := (eq_rect_dep_r _ H' H)
          (at level 10, H' at level 10,
           format "'[' 'rew'  'dependent'  <-  H  in  '/' H' ']'").
-  Notation "'rew' 'dependent' [ 'fun' y p => P ] H 'in' H'"
-    := (match H as p in (_ = y) return P with
-        | eq_refl => H'
-        end)
-         (at level 10, H' at level 10, y ident, p ident,
-          format "'[' 'rew'  'dependent'  [ 'fun'  y  p  =>  P ]  '/    ' H  in  '/' H' ']'").
-  Notation "'rew' 'dependent' -> [ 'fun' y p => P ] H 'in' H'"
-    := (match H as p in (_ = y) return P with
-        | eq_refl => H'
-        end)
-         (at level 10, H' at level 10, y ident, p ident, only parsing).
-  Notation "'rew' 'dependent' <- [ 'fun' y p => P ] H 'in' H'"
-    := (match eq_sym H as p in (_ = y) return P with
-        | eq_refl => H'
-        end)
-         (at level 10, H' at level 10, y ident, p ident,
-          format "'[' 'rew'  'dependent'  <-  [ 'fun'  y  p  =>  P ]  '/    ' H  in  '/' H' ']'").
   Notation "'rew' 'dependent' [ P ] H 'in' H'"
-    := (match H as p in (_ = y) return P y p with
-        | eq_refl => H'
-        end)
+    := (eq_rect_dep P H' H)
          (at level 10, H' at level 10,
           format "'[' 'rew'  'dependent'  [ P ]  '/    ' H  in  '/' H' ']'").
   Notation "'rew' 'dependent' -> [ P ] H 'in' H'"
-    := (match H as p in (_ = y) return P y p with
-        | eq_refl => H'
-        end)
-         (at level 10, H' at level 10,
-          only parsing).
+    := (eq_rect_dep P H' H)
+         (at level 10, H' at level 10, only parsing).
   Notation "'rew' 'dependent' <- [ P ] H 'in' H'"
-    := (match eq_sym H as p in (_ = y) return P y p with
-        | eq_refl => H'
-        end)
+    := (eq_rect_dep_r P H' H)
          (at level 10, H' at level 10,
           format "'[' 'rew'  'dependent'  <-  [ P ]  '/    ' H  in  '/' H' ']'").
 End EqNotations.
@@ -875,8 +892,21 @@ Section ex.
           => ex_intro
                (Q y)
                (rew H in u1)
-               (rew dependent H in u2)
+               (rew dependent (*[fun y H => Q y (rew H in u1)]*) H in u2)
       end.
+  (* Error:
+In environment
+A : Type
+x : A
+P : A -> Type
+Q : forall a : A, P a -> Prop
+u : exists p : P x, Q x p
+y : A
+H : x = y
+u1 : P x
+u2 : Q x u1
+Unable to unify "Q x u1" with "?P0 x eq_refl".
+*)
   Proof.
     destruct H, u; reflexivity.
   Qed.
