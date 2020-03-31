@@ -159,6 +159,23 @@ VERNAC COMMAND EXTEND ResetExtractionBlacklist CLASSIFIED AS SIDEFF
 END
 
 
+VERNAC COMMAND EXTEND ExtractionIdentifierBlacklist CLASSIFIED AS SIDEFF
+(* Force Extraction to not use some filenames *)
+| [ "Extraction" "Identifier" "Blacklist" ne_ident_list(l) ]
+  -> { extraction_identifier_blacklist l }
+END
+
+VERNAC COMMAND EXTEND PrintExtractionIdentifierBlacklist CLASSIFIED AS QUERY
+| [ "Print" "Extraction" "Identifier" "Blacklist" ]
+  -> { Feedback.msg_notice (print_extraction_identifier_blacklist ()) }
+END
+
+VERNAC COMMAND EXTEND ResetExtractionIdentifierBlacklist CLASSIFIED AS SIDEFF
+| [ "Reset" "Extraction" "Identifier" "Blacklist" ]
+  -> { reset_extraction_identifier_blacklist () }
+END
+
+
 (* Overriding of a Coq object by an ML one *)
 VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF
 | [ "Extract" "Constant" global(x) string_list(idl) "=>" mlname(y) ]
