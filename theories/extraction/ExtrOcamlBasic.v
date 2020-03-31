@@ -12,9 +12,13 @@ Require Coq.extraction.Extraction.
 
 (** Extraction to Ocaml : use of basic Ocaml types *)
 
+Extraction Identifier Blacklist bool true false.
 Extract Inductive bool => bool [ true false ].
+Extraction Identifier Blacklist option Some None.
 Extract Inductive option => option [ Some None ].
+Extraction Identifier Blacklist unit.
 Extract Inductive unit => unit [ "()" ].
+Extraction Identifier Blacklist list.
 Extract Inductive list => list [ "[]" "( :: )" ].
 Extract Inductive prod => "( * )" [ "" ].
 
@@ -34,4 +38,3 @@ Extract Inductive sumor => option [ Some None ].
 
 Extract Inlined Constant andb => "(&&)".
 Extract Inlined Constant orb => "(||)".
-

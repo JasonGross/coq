@@ -31,6 +31,8 @@ let keywords =
     "as"; "qualified"; "hiding" ; "unit" ; "unsafeCoerce" ]
   Id.Set.empty
 
+let all_keywords () = Id.Set.union keywords (get_extraction_identifier_blacklist ())
+
 let pp_comment s = str "-- " ++ s ++ fnl ()
 let pp_bracket_comment s = str"{- " ++ hov 0 s ++ str" -}"
 
@@ -274,7 +276,7 @@ let pp_logical_ind packet =
 
 let pp_singleton kn packet =
   let name = pp_global Type (GlobRef.IndRef (kn,0)) in
-  let l = rename_tvars keywords packet.ip_vars in
+  let l = rename_tvars (all_keywords ()) packet.ip_vars in
   hov 2 (str "type " ++ name ++ spc () ++
          prlist_with_sep spc Id.print l ++
          (if not (List.is_empty l) then str " " else mt ()) ++ str "=" ++ spc () ++
@@ -283,7 +285,7 @@ let pp_singleton kn packet =
                      Id.print packet.ip_consnames.(0)))
 
 let pp_one_ind ip pl cv =
-  let pl = rename_tvars keywords pl in
+  let pl = rename_tvars (all_keywords ()) pl in
   let pp_constructor (r,l) =
     (pp_global Cons r ++
      match l with
@@ -326,7 +328,7 @@ let pp_decl = function
   | Dtype (r, l, t) ->
       if is_inline_custom r then mt ()
       else
-        let l = rename_tvars keywords l in
+        let l = rename_tvars (all_keywords ()) l in
         let st =
           try
             let ids,s = find_type_custom r in

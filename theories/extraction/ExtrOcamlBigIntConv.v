@@ -25,6 +25,9 @@ Parameter bigint_succ : bigint -> bigint.
 Parameter bigint_opp : bigint -> bigint.
 Parameter bigint_twice : bigint -> bigint.
 
+Extraction Blacklist Big.
+Extraction Identifier Blacklist Big.
+
 Extract Inlined Constant bigint => "Big.big_int".
 Extract Inlined Constant bigint_zero => "Big.zero".
 Extract Inlined Constant bigint_succ => "Big.succ".

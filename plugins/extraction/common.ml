@@ -193,7 +193,7 @@ let set_keywords, get_keywords =
 
 let add_global_ids, get_global_ids =
   let ids = ref Id.Set.empty in
-  register_cleanup (fun () -> ids := get_keywords ());
+  register_cleanup (fun () -> ids := Id.Set.union (get_keywords ()) (get_extraction_identifier_blacklist ()));
   let add s = ids := Id.Set.add s !ids
   and get () = !ids
   in (add,get)
@@ -336,7 +336,7 @@ let modular_rename k id =
   let s = ascii_of_id id in
   let prefix,is_ok = if upperkind k then "Coq_",is_upper else "coq_",is_lower
   in
-  if not (is_ok s) || Id.Set.mem id (get_keywords ()) || begins_with s prefix
+  if not (is_ok s) || Id.Set.mem id (get_keywords ()) || Id.Set.mem id (get_extraction_identifier_blacklist ()) || begins_with s prefix
   then prefix ^ s
   else s
 

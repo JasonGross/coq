@@ -42,7 +42,8 @@ Require Import ExtrOcamlBasic.
 (** Mapping of [nat] into [int]. The last string corresponds to
     a [nat_case], see documentation of [Extract Inductive]. *)
 
-Extract Inductive nat => int [ "0" "Pervasives.succ" ]
+Extraction Identifier Blacklist int succ.
+Extract Inductive nat => int [ "0" succ ]
  "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 
 (** Efficient (but uncertified) versions for usual [nat] functions *)
@@ -59,6 +60,7 @@ Extract Inlined Constant EqNat.eq_nat_decide => "(=)".
 
 Extract Inlined Constant Peano_dec.eq_nat_dec => "(=)".
 
+Extraction Identifiers Blacklist "Eq" "Lt" "Gt".
 Extract Constant Nat.compare =>
  "fun n m -> if n=m then Eq else if n<m then Lt else Gt".
 Extract Inlined Constant Compare_dec.leb => "(<=)".

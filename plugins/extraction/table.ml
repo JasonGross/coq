@@ -735,6 +735,10 @@ let extraction_implicit r l =
 
 let blacklist_table = Summary.ref Id.Set.empty ~name:"ExtrBlacklist"
 
+(*s Extraction Identifier Blacklist of identifiers, constructors, types, etc not to use while extracting *)
+
+let identifier_blacklist_table = Summary.ref Id.Set.empty ~name:"ExtrIdentifierBlacklist"
+
 let modfile_ids = ref Id.Set.empty
 let modfile_mps = ref MPmap.empty
 
@@ -766,11 +770,21 @@ let add_blacklist_entries l =
     List.fold_right (fun s -> Id.Set.add (Id.of_string (String.capitalize_ascii s)))
       l !blacklist_table
 
+let add_identifier_blacklist_entries l =
+  identifier_blacklist_table :=
+    List.fold_right (fun s -> Id.Set.add (Id.of_string s))
+      l !identifier_blacklist_table
+
 (* Registration of operations for rollback. *)
 
 let blacklist_extraction : string list -> obj =
   declare_object @@ superglobal_object_nodischarge "Extraction Blacklist"
     ~cache:(fun (_,l) -> add_blacklist_entries l)
+    ~subst:None
+
+let identifier_blacklist_extraction : string list -> obj =
+  declare_object @@ superglobal_object_nodischarge "Extraction Identifier Blacklist"
+    ~cache:(fun (_,l) -> add_identifier_blacklist_entries l)
     ~subst:None
 
 (* Grammar entries. *)
@@ -779,10 +793,17 @@ let extraction_blacklist l =
   let l = List.rev_map Id.to_string l in
   Lib.add_anonymous_leaf (blacklist_extraction l)
 
+let extraction_identifier_blacklist l =
+  let l = List.rev_map Id.to_string l in
+  Lib.add_anonymous_leaf (identifier_blacklist_extraction l)
+
 (* Printing part *)
 
 let print_extraction_blacklist () =
   prlist_with_sep fnl Id.print (Id.Set.elements !blacklist_table)
+
+let print_extraction_identifier_blacklist () =
+  prlist_with_sep fnl Id.print (Id.Set.elements !identifier_blacklist_table)
 
 (* Reset part *)
 
@@ -791,7 +812,16 @@ let reset_blacklist : unit -> obj =
     ~cache:(fun (_,_)-> blacklist_table := Id.Set.empty)
     ~subst:None
 
+let reset_identifier_blacklist : unit -> obj =
+  declare_object @@ superglobal_object_nodischarge "Reset Extraction Identifier Blacklist"
+    ~cache:(fun (_,_)-> identifier_blacklist_table := Id.Set.empty)
+    ~subst:None
+
 let reset_extraction_blacklist () = Lib.add_anonymous_leaf (reset_blacklist ())
+
+let reset_extraction_identifier_blacklist () = Lib.add_anonymous_leaf (reset_identifier_blacklist ())
+
+let get_extraction_identifier_blacklist () = !identifier_blacklist_table
 
 (*s Extract Constant/Inductive. *)
 

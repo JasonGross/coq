@@ -22,8 +22,10 @@ Parameter int_succ : int -> int.
 Parameter int_opp : int -> int.
 Parameter int_twice : int -> int.
 
+Extraction Identifier Blacklist int.
 Extract Inlined Constant int => int.
 Extract Inlined Constant int_zero => "0".
+Extraction Identifiers Blacklist succ.
 Extract Inlined Constant int_succ => "succ".
 Extract Inlined Constant int_opp => "-".
 Extract Inlined Constant int_twice => "2 *".

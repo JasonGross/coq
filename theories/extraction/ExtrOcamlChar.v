@@ -14,6 +14,7 @@ Require Coq.extraction.Extraction.
 
 Require Import Ascii String Coq.Strings.Byte.
 
+Extraction Identifier Blacklist char.
 Extract Inductive ascii => char
 [
 "(* If this appears, you're using Ascii internals. Please don't *)

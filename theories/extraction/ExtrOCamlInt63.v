@@ -14,6 +14,7 @@ From Coq Require Int63 Extraction.
 
 (** Basic data types used by some primitive operators. *)
 
+Extraction Identifier Blacklist bool true false.
 Extract Inductive bool => bool [ true false ].
 Extract Inductive prod => "( * )" [ "" ].
 Extract Inductive comparison => int [ "0" "(-1)" "1" ].

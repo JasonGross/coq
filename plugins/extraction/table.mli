@@ -212,5 +212,9 @@ val extraction_blacklist : Id.t list -> unit
 val reset_extraction_blacklist : unit -> unit
 val print_extraction_blacklist : unit -> Pp.t
 
+(*s Table of blacklisted identifiers *)
 
-
+val extraction_identifier_blacklist : Id.t list -> unit
+val reset_extraction_identifier_blacklist : unit -> unit
+val print_extraction_identifier_blacklist : unit -> Pp.t
+val get_extraction_identifier_blacklist : unit -> Id.Set.t

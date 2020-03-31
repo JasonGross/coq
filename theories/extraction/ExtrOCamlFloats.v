@@ -25,12 +25,15 @@ From Coq Require Floats Extraction.
 
 (** Basic data types used by some primitive operators. *)
 
+Extraction Identifier Blacklist bool true false.
 Extract Inductive bool => bool [ true false ].
 Extract Inductive prod => "( * )" [ "" ].
 
+Extraction Identifier Blacklist PNormal NNormal PSubn NSubn PZero NZero PInf NInf NaN.
 Extract Inductive FloatClass.float_class =>
   "Float64.float_class"
   [ "PNormal" "NNormal" "PSubn" "NSubn" "PZero" "NZero" "PInf" "NInf" "NaN" ].
+Extraction Identifier Blacklist FEq FLt FGt FNotComparable.
 Extract Inductive PrimFloat.float_comparison =>
   "Float64.float_comparison"
   [ "FEq" "FLt" "FGt" "FNotComparable" ].

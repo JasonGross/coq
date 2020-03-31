@@ -46,6 +46,7 @@ Extract Constant EqNat.eq_nat_decide => "Big.eq".
 
 Extract Constant Peano_dec.eq_nat_dec => "Big.eq".
 
+Extraction Identifiers Blacklist "Eq" "Lt" "Gt".
 Extract Constant Nat.compare =>
  "Big.compare_case Eq Lt Gt".
 
