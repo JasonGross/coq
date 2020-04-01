@@ -212,5 +212,8 @@ val extraction_blacklist : Id.t list -> unit
 val reset_extraction_blacklist : unit -> unit
 val print_extraction_blacklist : unit -> Pp.t
 
-
-
+(*s Table for extra opened modules *)
+val get_extraction_opened_modules : unit -> ModPath.t list
+val reset_extraction_opened_modules : unit -> unit
+val print_extraction_opened_modules : unit -> Pp.t
+val append_extraction_opened_module : ModPath.t list -> unit

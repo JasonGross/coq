@@ -159,6 +159,23 @@ VERNAC COMMAND EXTEND ResetExtractionBlacklist CLASSIFIED AS SIDEFF
 END
 
 
+VERNAC COMMAND EXTEND ExtractionOpen CLASSIFIED AS SIDEFF
+(* Force Extraction to not use some filenames *)
+| [ "Extraction" "Open" ne_global_list(l) ]
+  -> { append_extraction_opened_module l }
+END
+
+VERNAC COMMAND EXTEND PrintExtractionOpen CLASSIFIED AS QUERY
+| [ "Print" "Extraction" "Open" ]
+  -> { Feedback.msg_notice (print_extraction_opened_modules ()) }
+END
+
+VERNAC COMMAND EXTEND ResetExtractionOpen CLASSIFIED AS SIDEFF
+| [ "Reset" "Extraction" "Open" ]
+  -> { reset_extraction_opened_modules () }
+END
+
+
 (* Overriding of a Coq object by an ML one *)
 VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF
 | [ "Extract" "Constant" global(x) string_list(idl) "=>" mlname(y) ]

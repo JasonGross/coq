@@ -735,12 +735,23 @@ let extraction_implicit r l =
 
 let blacklist_table = Summary.ref Id.Set.empty ~name:"ExtrBlacklist"
 
+let opened_modules = Summary.ref [] ~name:"ExtrOpenedModules"
+
 let modfile_ids = ref Id.Set.empty
 let modfile_mps = ref MPmap.empty
 
 let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
+
+let get_extraction_opened_modules () = !opened_modules
+let reset_extraction_opened_modules () = opened_modules := []
+
+let append_extraction_opened_module ls =
+  opened_modules := List.append !opened_modules ls
+
+let print_extraction_opened_modules () =
+  prlist pr_qualid !opened_modules
 
 let string_of_modfile mp =
   try MPmap.find mp !modfile_mps

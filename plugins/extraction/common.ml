@@ -488,7 +488,7 @@ let opened_libraries () =
     in
     mpfiles_clear ();
     List.iter mpfiles_add to_open;
-    mpfiles_list ()
+    List.append (mpfiles_list ()) (opened_modules ())
 
 (*s On-the-fly qualification issues for both monolithic or modular extraction. *)
 
