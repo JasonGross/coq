@@ -1119,3 +1119,37 @@ let tclOPTIMIZE_HEAP =
 TACTIC EXTEND optimize_heap
 | [ "optimize_heap" ] -> { tclOPTIMIZE_HEAP }
 END
+
+(** tactic analogous to "Strategy" *)
+
+{
+
+let with_set_strategy lvl ql k =
+  let glob_key r =
+    match r with
+    | GlobRef.ConstRef sp -> ConstKey sp
+    | GlobRef.VarRef id -> VarKey id
+    | _ -> user_err Pp.(str
+        "cannot set an inductive type or a constructor as transparent") in
+  Proofview.tclENV >>= fun env ->
+  let orig_kl = List.map (fun k ->
+      (k, Conv_oracle.get_strategy (Environ.oracle env) k))
+      (List.map glob_key ql) in
+  let env = List.fold_left (fun env q ->
+    Environ.set_oracle env
+      (Conv_oracle.set_strategy (Environ.oracle env) (glob_key q) lvl)) env ql in
+  Proofview.Unsafe.tclSETENV env <*>
+  k <*>
+  Proofview.tclENV >>= fun env ->
+  let env = List.fold_left (fun env (k, lvl) ->
+    Environ.set_oracle env
+      (Conv_oracle.set_strategy (Environ.oracle env) k lvl)) env orig_kl in
+  Proofview.Unsafe.tclSETENV env
+
+}
+
+TACTIC EXTEND with_strategy
+| [ "with_strategy" strategy_level_or_var(v) "[" ne_smart_global_list(q) "]" tactic3(tac) ] -> {
+  with_set_strategy v q (Tacinterp.tactic_of_value ist tac)
+}
+END

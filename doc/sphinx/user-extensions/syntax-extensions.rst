@@ -1730,11 +1730,13 @@ Tactic notations allow to customize the syntax of tactics. They have the followi
    tacn                 : Tactic Notation [`tactic_level`] [`prod_item` … `prod_item`] := `tactic`.
    prod_item            : `string` | `tactic_argument_type`(`ident`)
    tactic_level         : (at level `num`)
-   tactic_argument_type : ident | simple_intropattern | reference
+   tactic_argument_type : ident | simple_intropattern | reference | smart_global
                         : hyp | hyp_list | ne_hyp_list
                         : constr | uconstr | constr_list | ne_constr_list
                         : integer | integer_list | ne_integer_list
                         : int_or_var | int_or_var_list | ne_int_or_var_list
+                        : strategy_level | strategy_level_list | ne_strategy_level_list
+                        : strategy_level_or_var | strategy_level_or_var_list | ne_strategy_level_or_var_list
                         : tactic | tactic0 | tactic1 | tactic2 | tactic3
                         : tactic4 | tactic5
 
@@ -1786,6 +1788,11 @@ Tactic notations allow to customize the syntax of tactics. They have the followi
         - a global reference of term
         - unfold
 
+      * - ``smart_global``
+        - qualified identifier or notation
+        - a global reference of term
+        - strategy
+
       * - ``constr``
         - term
         - a term
@@ -1805,6 +1812,16 @@ Tactic notations allow to customize the syntax of tactics. They have the followi
         - identifier or integer
         - an integer
         - do
+
+      * - ``strategy_level``
+        - integer, or ``expand``, ``transparent``, or ``opaque``
+        - a strategy level
+        -
+
+      * - ``strategy_level_or_var``
+        - identifier or integer or ``expand``, ``transparent``, or ``opaque``
+        - a strategy level
+        - strategy
 
       * - ``tactic``
         - tactic at level 5
