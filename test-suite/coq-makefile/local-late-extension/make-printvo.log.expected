@@ -1,0 +1,3 @@
+COQDEP VFILES
+echo 'foo.vo'
+foo.vo
