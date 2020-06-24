@@ -141,11 +141,14 @@ Including the generated makefile with an include directive is
 discouraged, since the contents of this file, including variable names and
 status of rules, may change in the future.
 
-An optional file ``CoqMakefile.local`` can be provided by the user in order to
-extend ``CoqMakefile``. In particular one can declare custom actions to be
-performed before or after the build process. Similarly one can customize the
-install target or even provide new targets. Extension points are documented in
-paragraph :ref:`coqmakefilelocal`.
+An optional file ``CoqMakefile.local`` can be provided by the user in
+order to extend ``CoqMakefile``.  In particular one can declare custom
+actions to be performed before or after the build process. Similarly
+one can customize the install target or even provide new
+targets. Extension points are documented in paragraph
+:ref:`coqmakefilelocal`.  If the user needs to access variables
+defined in the ``Makefile``, the optional file
+``CoqMakefile.local-late`` can be used.
 
 The extensions of the files listed in ``_CoqProject`` is used in order to
 decide how to build them. In particular:
@@ -176,9 +179,10 @@ file ``CoqMakefile``. It can contain two kinds of directives.
 
 **Variable assignment**
 
-The variable may belong to the variables listed in the ``Parameters``
-section of the generated makefile.
-Here we describe only few of them.
+The variable must belong to the variables listed in the ``Parameters``
+section of the generated makefile.  If access to more variables are
+needed, ``CoqMakefile.local-late`` can be used instead. Here we
+describe only few of the variables.
 
 :CAMLPKGS:
    can be used to specify third party findlib packages, and is
