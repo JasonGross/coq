@@ -47,10 +47,6 @@ OCAMLWARN         := $(COQMF_WARN)
 @CONF_FILE@: @PROJECT_FILE@
 	@COQ_MAKEFILE_INVOCATION@
 
-# This file can be created by the user to hook into double colon rules or
-# add any other Makefile code he may need
--include @LOCAL_FILE@
-
 # Parameters ##################################################################
 #
 # Parameters are make variable assignments.
@@ -225,8 +221,7 @@ COQSRCLIBS?= $(foreach d,$(COQ_SRC_SUBDIRS), -I "$(COQCORELIB)/$(d)")
 
 CAMLFLAGS+=$(OCAMLLIBS) $(COQSRCLIBS)
 # ocamldoc fails with unknown argument otherwise
-CAMLDOCFLAGS:=$(filter-out -annot, $(filter-out -bin-annot, $(CAMLFLAGS)))
-CAMLFLAGS+=$(OCAMLWARN)
+CAMLDOCFLAGS=$(filter-out -annot, $(filter-out -bin-annot, $(CAMLFLAGS)))
 
 ifneq (,$(TIMING))
 TIMING_ARG=-time
@@ -652,7 +647,7 @@ archclean::
 
 $(MLIFILES:.mli=.cmi): %.cmi: %.mli
 	$(SHOW)'CAMLC -c $<'
-	$(HIDE)$(TIMER) $(CAMLC) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) $<
+	$(HIDE)$(TIMER) $(CAMLC) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) $<
 
 $(MLGFILES:.mlg=.ml): %.ml: %.mlg
 	$(SHOW)'COQPP $<'
@@ -661,53 +656,53 @@ $(MLGFILES:.mlg=.ml): %.ml: %.mlg
 # Stupid hack around a deficient syntax: we cannot concatenate two expansions
 $(filter %.cmo, $(MLFILES:.ml=.cmo) $(MLGFILES:.mlg=.cmo)): %.cmo: %.ml
 	$(SHOW)'CAMLC -c $<'
-	$(HIDE)$(TIMER) $(CAMLC) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) $<
+	$(HIDE)$(TIMER) $(CAMLC) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) $<
 
 # Same hack
 $(filter %.cmx, $(MLFILES:.ml=.cmx) $(MLGFILES:.mlg=.cmx)): %.cmx: %.ml
 	$(SHOW)'CAMLOPT -c $(FOR_PACK) $<'
-	$(HIDE)$(TIMER) $(CAMLOPTC) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) $(FOR_PACK) $<
+	$(HIDE)$(TIMER) $(CAMLOPTC) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) $(FOR_PACK) $<
 
 
 $(MLLIBFILES:.mllib=.cmxs): %.cmxs: %.cmxa
 	$(SHOW)'CAMLOPT -shared -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
+	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) \
 		-linkall -shared -o $@ $<
 
 $(MLLIBFILES:.mllib=.cma): %.cma: | %.mllib
 	$(SHOW)'CAMLC -a -o $@'
-	$(HIDE)$(TIMER) $(CAMLLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) -a -o $@ $^
+	$(HIDE)$(TIMER) $(CAMLLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) -a -o $@ $^
 
 $(MLLIBFILES:.mllib=.cmxa): %.cmxa: | %.mllib
 	$(SHOW)'CAMLOPT -a -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) -a -o $@ $^
+	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) -a -o $@ $^
 
 
 $(MLPACKFILES:.mlpack=.cmxs): %.cmxs: %.cmxa
 	$(SHOW)'CAMLOPT -shared -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
+	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) \
 		-shared -linkall -o $@ $<
 
 $(MLPACKFILES:.mlpack=.cmxa): %.cmxa: %.cmx
 	$(SHOW)'CAMLOPT -a -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) -a -o $@ $<
+	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) -a -o $@ $<
 
 $(MLPACKFILES:.mlpack=.cma): %.cma: %.cmo | %.mlpack
 	$(SHOW)'CAMLC -a -o $@'
-	$(HIDE)$(TIMER) $(CAMLLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) -a -o $@ $^
+	$(HIDE)$(TIMER) $(CAMLLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) -a -o $@ $^
 
 $(MLPACKFILES:.mlpack=.cmo): %.cmo: | %.mlpack
 	$(SHOW)'CAMLC -pack -o $@'
-	$(HIDE)$(TIMER) $(CAMLLINK) $(CAMLDEBUG) $(CAMLFLAGS) -pack -o $@ $^
+	$(HIDE)$(TIMER) $(CAMLLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) -pack -o $@ $^
 
 $(MLPACKFILES:.mlpack=.cmx): %.cmx: | %.mlpack
 	$(SHOW)'CAMLOPT -pack -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) -pack -o $@ $^
+	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) -pack -o $@ $^
 
 # This rule is for _CoqProject with no .mllib nor .mlpack
 $(filter-out $(MLLIBFILES:.mllib=.cmxs) $(MLPACKFILES:.mlpack=.cmxs) $(addsuffix .cmxs,$(PACKEDFILES)) $(addsuffix .cmxs,$(LIBEDFILES)),$(MLFILES:.ml=.cmxs) $(MLGFILES:.mlg=.cmxs)): %.cmxs: %.cmx
 	$(SHOW)'[deprecated,use-mllib-or-mlpack] CAMLOPT -shared -o $@'
-	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
+	$(HIDE)$(TIMER) $(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(OCAMLWARN) $(CAMLPKGS) \
 		-shared -o $@ $<
 
 ifneq (,$(TIMING))
@@ -867,10 +862,10 @@ debug:
 
 .DEFAULT_GOAL := all
 
-# This file can be created by the user to hook into double colon rules
-# or add any other Makefile code he may need, making use of defined
+# This file can be created by the user to hook into double colon rules or
+# add any other Makefile code he may need, making use of defined
 # variables if necessary.
--include @LOCAL_LATE_FILE@
+-include @LOCAL_FILE@
 
 # Local Variables:
 # mode: makefile-gmake
