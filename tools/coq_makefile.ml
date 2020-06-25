@@ -122,7 +122,7 @@ let read_whole_file s =
 
 let quote s = if String.contains s ' ' || CString.is_empty s then "'" ^ s ^ "'" else s
 
-let generate_makefile oc conf_file local_file local_late_file dep_file args project =
+let generate_makefile oc conf_file local_file dep_file args project =
   let coqlib = Envars.coqlib () in
   let makefile_template =
     CPath.choose_existing
@@ -142,7 +142,6 @@ let generate_makefile oc conf_file local_file local_late_file dep_file args proj
     (fun s (k,v) -> Str.global_substitute (Str.regexp_string k) (fun _ -> v) s) s
     [ "@CONF_FILE@", conf_file;
       "@LOCAL_FILE@", local_file;
-      "@LOCAL_LATE_FILE@", local_late_file;
       "@DEP_FILE@", dep_file;
       "@COQ_VERSION@", Coq_config.version;
       "@PROJECT_FILE@", (Option.default "" project.project_file);
@@ -423,7 +422,6 @@ let _ =
 
   let conf_file = Option.default "CoqMakefile" project.makefile ^ ".conf" in
   let local_file = Option.default "CoqMakefile" project.makefile ^ ".local" in
-  let local_late_file = Option.default "CoqMakefile" project.makefile ^ ".local-late" in
   let dep_file = "." ^ Option.default "CoqMakefile" project.makefile ^ ".d" in
 
   if project.extra_targets <> [] then begin
@@ -447,7 +445,7 @@ let _ =
   Envars.set_coqlib ~fail:(fun x -> Printf.eprintf "Error: %s\n" x; exit 1);
 
   let ocm = Option.cata open_out stdout project.makefile in
-  generate_makefile ocm conf_file local_file local_late_file dep_file (prog :: args) project;
+  generate_makefile ocm conf_file local_file dep_file (prog :: args) project;
   close_out ocm;
   let occ = open_out conf_file in
   generate_conf occ project (prog :: args);
