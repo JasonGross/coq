@@ -86,7 +86,7 @@ Proof.
    assert (i = j).
    { rewrite NoDup_nth_error in N. apply N.
      - rewrite <- nth_error_Some. now rewrite X'.
-     - rewrite X', Y'. now f_equal. }
+     - rewrite X', Y'. now apply f_equal. }
    subst j. rewrite Y in X. now injection X.
 Qed.
 
@@ -325,7 +325,7 @@ Proof.
    apply f2n_inj. apply hf; try apply f2n_ok.
    now rewrite 2 extend_f2n, Eq.
  - intros hf x y hx hy Eq.
-   rewrite <- (f2n_n2f hx), <- (f2n_n2f hy). f_equal.
+   rewrite <- (f2n_n2f hx), <- (f2n_n2f hy). apply f_equal.
    apply hf.
    rewrite <- 2 extend_n2f.
    generalize (extend_ok f hx) (extend_ok f hy).
@@ -353,7 +353,7 @@ Lemma restrict_injective n f h :
 Proof.
  split.
  - intros hf x y hx hy Eq.
-   rewrite <- (f2n_n2f hx), <- (f2n_n2f hy). f_equal.
+   rewrite <- (f2n_n2f hx), <- (f2n_n2f hy). apply f_equal.
    apply hf.
    rewrite 2 restrict_n2f.
    generalize (h x hx) (h y hy).

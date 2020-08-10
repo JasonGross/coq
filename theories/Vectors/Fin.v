@@ -28,9 +28,15 @@ Section SCHEMES.
 Definition case0 P (p: t 0): P p :=
   match p with | F1 | FS  _ => fun devil => False_rect (@IDProp) devil (* subterm !!! *) end.
 
-Definition caseS' {n : nat} (p : t (S n)) : forall (P : t (S n) -> Type) 
+Definition caseS' {n : nat} (p : t (S n)) : forall (P : t (S n) -> Type)
   (P1 : P F1) (PS : forall (p : t n), P (FS p)), P p :=
-  match p with
+  match p as p in t n
+        return forall (P : t n -> _),
+      match n return (t n -> _) -> t n -> Type with
+      | O => fun _ _ => IDProp
+      | S n => fun P p => forall P1 PS, P p
+      end P p
+  with
   | @F1 k => fun P P1 PS => P1
   | FS pp => fun P P1 PS => PS pp
   end.
@@ -120,7 +126,7 @@ Lemma to_nat_of_nat {p}{n} (h : p < n) : to_nat (of_nat_lt h) = exist _ p h.
 Proof.
  revert n h.
  induction p; (destruct n ; intros h; [ destruct (Lt.lt_n_O _ h) | cbn]);
- [ | rewrite (IHp _ (Lt.lt_S_n p n h))];  f_equal; apply Peano_dec.le_unique.
+ [ | rewrite (IHp _ (Lt.lt_S_n p n h))]; apply f_equal; apply Peano_dec.le_unique.
 Qed.
 
 Lemma to_nat_inj {n} (p q : t n) :
@@ -157,7 +163,7 @@ induction p.
 - reflexivity.
 - simpl; destruct (to_nat (L n p)); simpl in *; rewrite IHp. now destruct (to_nat p).
 Qed.
- 
+
 (** The p{^ th} element of [fin m] viewed as the p{^ th} element of
 [fin (n + m)]
 Really really inefficient !!! *)

@@ -54,6 +54,7 @@ Definition rectS {A} (P:forall {n}, t A (S n) -> Type)
  |_ => fun devil => False_ind (@IDProp) devil (* subterm !!! *)
  end.
 
+
 (** A vector of length [0] is [nil] *)
 Definition case0 {A} (P:t A 0 -> Type) (H:P (nil A)) v:P v :=
 match v with
@@ -71,9 +72,15 @@ end.
 
 Definition caseS' {A} {n : nat} (v : t A (S n)) : forall (P : t A (S n) -> Type)
   (H : forall h t, P (h :: t)), P v :=
-  match v with
+  match v as v in t _ n return
+        forall (P : t _ n -> _),
+          match n return (t _ n -> _) -> t _ n -> Type with
+          | O => fun _ _ => _
+          | S n => fun P v => forall H, P v
+          end P v
+  with
   | h :: t => fun P H => H h t
-  | _ => fun devil => False_rect (@IDProp) devil
+  | _ => fun P devil => False_rect (@IDProp) devil
   end.
 
 (** An induction scheme for 2 vectors of same length *)
@@ -154,13 +161,13 @@ Definition shiftrepeat {A} := @rectS _ (fun n _ => t A (S (S n)))
 Global Arguments shiftrepeat {A} {n} v.
 
 (** Take first [p] elements of a vector *)
-Fixpoint take {A} {n} (p:nat) (le:p <= n) (v:t A n) : t A p := 
-  match p as p return p <= n -> t A p with 
-  | 0 => fun _ => [] 
+Fixpoint take {A} {n} (p:nat) (le:p <= n) (v:t A n) : t A p :=
+  match p as p return p <= n -> t A p with
+  | 0 => fun _ => []
   | S p' => match v in t _ n return S p' <= n -> t A (S p') with
     | []=> fun le => False_rect _ (Nat.nle_succ_0 p' le)
     | x::xs => fun le => x::take p' (le_S_n p' _ le) xs
-    end 
+    end
   end le.
 
 (** Remove [p] last elements of a vector *)

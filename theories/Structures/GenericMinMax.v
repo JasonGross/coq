@@ -112,7 +112,7 @@ Proof.
  intros x x' Hx y y' Hy.
  assert (H1 := max_spec x y). assert (H2 := max_spec x' y').
  set (m := max x y) in *; set (m' := max x' y') in *; clearbody m m'.
- rewrite <- Hx, <- Hy in *. 
+ rewrite <- Hx, <- Hy in *.
  destruct (lt_total x y); intuition order.
 Qed.
 
@@ -585,7 +585,7 @@ Module UsualMinMaxDecProperties
 
  Lemma max_case_strong : forall n m (P:t -> Type),
   (m<=n -> P n) -> (n<=m -> P m) -> P (max n m).
- Proof. intros; apply max_case_strong; auto. congruence. Defined.
+ Proof. intros; apply max_case_strong; auto. intros; subst; assumption. Defined.
 
  Lemma max_case : forall n m (P:t -> Type),
   P n -> P m -> P (max n m).
@@ -596,7 +596,7 @@ Module UsualMinMaxDecProperties
 
  Lemma min_case_strong : forall n m (P:O.t -> Type),
   (n<=m -> P n) -> (m<=n -> P m) -> P (min n m).
- Proof. intros; apply min_case_strong; auto. congruence. Defined.
+ Proof. intros; apply min_case_strong; auto. intros; subst; assumption. Defined.
 
  Lemma min_case : forall n m (P:O.t -> Type),
   P n -> P m -> P (min n m).

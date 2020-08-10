@@ -401,7 +401,7 @@ Module MakeRaw (X: OrderedType) <: RawSets X.
   Global Instance union_ok s s' : forall `(Ok s, Ok s'), Ok (union s s').
   Proof.
   repeat rewrite <- isok_iff; revert s s'.
-  induction2; constructors; try apply @ok; auto. 
+  induction2; constructors; try apply @ok; auto.
   apply Inf_eq with x'; auto; apply union_inf; auto; apply Inf_eq with x; auto; order.
   change (Inf x' (union (x :: l) l')); auto.
   Qed.
@@ -474,7 +474,7 @@ Module MakeRaw (X: OrderedType) <: RawSets X.
    equal s s' = true <-> Equal s s'.
   Proof.
   induction s as [ | x s IH]; intros [ | x' s'] Hs Hs'; simpl.
-  intuition reflexivity. 
+  intuition reflexivity.
   split; intros H. discriminate. assert (In x' nil) by (rewrite H; auto). inv.
   split; intros H. discriminate. assert (In x nil) by (rewrite <-H; auto). inv.
   inv.
@@ -822,7 +822,7 @@ Module MakeRaw (X: OrderedType) <: RawSets X.
 
   Lemma compare_spec_aux : forall s s', CompSpec eq L.lt s s' (compare s s').
   Proof.
-  induction s as [|x s IH]; intros [|x' s']; simpl; intuition. 
+  induction s as [|x s IH]; intros [|x' s']; simpl; intuition.
   elim_compare x x'; auto.
   Qed.
 
@@ -871,7 +871,7 @@ Module MakeWithLeibniz (X: OrderedTypeWithLeibniz) <: SWithLeibniz with Module E
   Proof.
     induction xs as [|x xs]; intros [|y ys] H; inversion H; [ | ].
     reflexivity.
-    f_equal.
+    apply f_equal2.
     apply X.eq_leibniz; congruence.
     apply IHxs; subst; assumption.
   Qed.
@@ -885,7 +885,7 @@ Module MakeWithLeibniz (X: OrderedTypeWithLeibniz) <: SWithLeibniz with Module E
       apply SortA_equivlistA_eqlistA with X.lt; auto with *.
     apply eq_leibniz_list in H.
     subst ys.
-    f_equal.
+    apply f_equal.
     apply Eqdep_dec.eq_proofs_unicity.
     intros x y; destruct (bool_dec x y); tauto.
   Qed.

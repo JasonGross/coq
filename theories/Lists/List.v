@@ -142,7 +142,7 @@ Section Facts.
 
   Theorem app_nil_r : forall l:list A, l ++ [] = l.
   Proof.
-    induction l; simpl; f_equal; auto.
+    induction l; simpl; try apply f_equal; auto.
   Qed.
 
   (* begin hide *)
@@ -154,7 +154,7 @@ Section Facts.
   (** [app] is associative *)
   Theorem app_assoc : forall l m n:list A, l ++ m ++ n = (l ++ m) ++ n.
   Proof.
-    intros l m n; induction l; simpl; f_equal; auto.
+    intros l m n; induction l; simpl; try apply f_equal; auto.
   Qed.
 
   (* begin hide *)
@@ -257,7 +257,7 @@ Section Facts.
     absurd (length (x1 :: l1 ++ l) <= length l).
     simpl; rewrite app_length; auto with arith.
     rewrite H; auto with arith.
-    injection H as [= H H0]; f_equal; eauto.
+    injection H as [= H H0]; try apply f_equal2; eauto.
   Qed.
 
   (************************)
@@ -514,7 +514,7 @@ Section Elts.
     induction n as [|n IH]; intros [|a l] H; try easy.
     - exists nil; exists l; now simpl.
     - destruct (IH l) as (l1 & l2 & Hl & Hl1); auto with arith.
-      exists (a::l1); exists l2; simpl; split; now f_equal.
+      exists (a::l1); exists l2; simpl; split; now apply f_equal.
   Qed.
 
   Lemma nth_ext : forall l l' d d', length l = length l' ->
@@ -526,7 +526,7 @@ Section Elts.
     - inversion Hlen.
     - change a with (nth 0 (a :: l) d).
       change b with (nth 0 (b :: l') d').
-      rewrite Hnth; f_equal.
+      rewrite Hnth; try apply f_equal.
       + apply IHl with d d'; [ now inversion Hlen | ].
         intros n Hlen'; apply (Hnth (S n)).
         now simpl; apply lt_n_S.
@@ -577,7 +577,7 @@ Section Elts.
     induction n as [|n IH]; intros [|x l] H; simpl in *; try easy.
     - exists nil; exists l. now injection H as [= ->].
     - destruct (IH _ H) as (l1 & l2 & H1 & H2).
-      exists (x::l1); exists l2; simpl; split; now f_equal.
+      exists (x::l1); exists l2; simpl; split; now apply f_equal.
   Qed.
 
   Lemma nth_error_app1 l l' n : n < length l ->
@@ -680,7 +680,7 @@ Section Elts.
     simpl; auto.
     simpl; discriminate.
     specialize (IHl l' H).
-    destruct (l++l'); [elim H0; auto|f_equal; auto].
+    destruct (l++l'); [elim H0; auto|apply f_equal; auto].
   Qed.
 
   Lemma removelast_last : forall l a, removelast (l ++ [a]) = l.
@@ -716,7 +716,7 @@ Section Elts.
     - reflexivity.
     - destruct (eq_dec x a).
       + apply IHl1.
-      + rewrite <- app_comm_cons; f_equal.
+      + rewrite <- app_comm_cons; apply f_equal.
         apply IHl1.
   Qed.
 
@@ -734,7 +734,7 @@ Section Elts.
     intros l x; induction l as [|y l]; simpl; intros Hnin.
     - reflexivity.
     - destruct (eq_dec x y); subst; intuition.
-      f_equal; assumption.
+      apply f_equal; assumption.
   Qed.
 
   Lemma in_remove: forall l x y, In x (remove y l) -> In x l /\ x <> y.
@@ -1357,7 +1357,7 @@ End Fold_Right_Recursor.
     induction l.
     simpl; auto.
     simpl; intros.
-    f_equal; auto.
+    apply f_equal; auto.
   Qed.
 
   Lemma fold_left_rev_right : forall (A B:Type)(f:A->B->B) l i,
@@ -1645,7 +1645,7 @@ End Fold_Right_Recursor.
     Lemma remove_alt (x : A) (l : list A) : remove' x l = remove eq_dec x l.
     Proof with intuition.
       induction l...
-      simpl. destruct eq_dec; f_equal...
+      simpl. destruct eq_dec; try apply f_equal...
     Qed.
 
     (** Counting occurrences by filtering *)
@@ -1740,7 +1740,7 @@ End Fold_Right_Recursor.
       simpl; auto.
       destruct a; simpl.
       destruct (split l); simpl in *.
-      f_equal; auto.
+      apply f_equal; auto.
     Qed.
 
     Lemma combine_split : forall (l:list A)(l':list B), length l = length l' ->
@@ -2066,7 +2066,7 @@ Section Cutting.
       rewrite (length_zero_iff_nil l) in H1. subst. now simpl.
     - destruct l as [|x xs]; simpl.
       * now reflexivity.
-      * simpl. intro H. apply Peano.le_S_n in H. f_equal. apply iHk, H.
+      * simpl. intro H. apply Peano.le_S_n in H. apply f_equal. apply iHk, H.
   Qed.
 
   Lemma firstn_O l: firstn 0 l = [].
@@ -2095,7 +2095,7 @@ Section Cutting.
     - now simpl.
     - destruct l1 as [|x xs].
       * unfold firstn at 2, length. now rewrite 2!app_nil_l, <- minus_n_O.
-      * rewrite <- app_comm_cons. simpl. f_equal. apply iHk.
+      * rewrite <- app_comm_cons. simpl. apply f_equal. apply iHk.
   Qed.
 
   Lemma firstn_app_2 n:
@@ -2122,7 +2122,7 @@ Section Cutting.
       * intro. now simpl.
       * destruct j.
         + now simpl.
-        + simpl. f_equal. apply Hl.
+        + simpl. apply f_equal. apply Hl.
   Qed.
 
   Fixpoint skipn (n:nat)(l:list A) : list A :=
@@ -2167,7 +2167,7 @@ Section Cutting.
     induction n.
     simpl; auto.
     destruct l; simpl; auto.
-    f_equal; auto.
+    apply f_equal; auto.
   Qed.
 
   Lemma firstn_length : forall n l, length (firstn n l) = min n (length l).
@@ -2193,7 +2193,7 @@ Section Cutting.
     intros x l; rewrite <-(firstn_skipn x l) at 3.
     rewrite rev_app_distr, skipn_app, rev_app_distr, rev_length,
             skipn_length, Nat.sub_diag; simpl; rewrite rev_involutive.
-    rewrite <-app_nil_r at 1; f_equal; symmetry; apply length_zero_iff_nil.
+    rewrite <-app_nil_r at 1; apply f_equal; symmetry; apply length_zero_iff_nil.
     repeat rewrite rev_length, skipn_length; apply Nat.sub_diag.
   Qed.
 
@@ -2254,7 +2254,7 @@ Section Cutting.
      simpl in H.
      change (removelast (a :: l)) with (removelast ((a::nil)++l)).
      rewrite removelast_app.
-     simpl; f_equal; auto with arith.
+     simpl; apply f_equal; auto with arith.
      intro H0; rewrite H0 in H; inversion_clear H; inversion_clear H1.
    Qed.
 
@@ -2335,7 +2335,7 @@ Section Add.
    induction 1.
    - exists nil; exists l; split; trivial.
    - destruct IHAdd as (l1 & l2 & Hl & Hl').
-     exists (x::l1); exists l2; split; simpl; f_equal; trivial.
+     exists (x::l1); exists l2; split; simpl; apply f_equal; trivial.
   Qed.
 
   Lemma Add_in a l l' : Add a l l' ->
@@ -2525,7 +2525,7 @@ Section ReDun.
       - destruct i, j; simpl in *; auto.
         * elim Hal. eapply nth_error_In; eauto.
         * elim Hal. eapply nth_error_In; eauto.
-        * f_equal. apply IH; auto with arith. }
+        * apply f_equal. apply IH; auto with arith. }
     { induction l as [|a l]; intros H; constructor.
       * intro Ha. apply In_nth_error in Ha. destruct Ha as (n,Hn).
         assert (n < length l) by (now rewrite <- nth_error_Some, Hn).
@@ -2545,7 +2545,7 @@ Section ReDun.
       - destruct i, j; simpl in *; auto.
         * elim Hal. subst a. apply nth_In; auto with arith.
         * elim Hal. subst a. apply nth_In; auto with arith.
-        * f_equal. apply IH; auto with arith. }
+        * apply f_equal. apply IH; auto with arith. }
     { induction l as [|a l]; intros H; constructor.
       * intro Ha. eapply In_nth in Ha. destruct Ha as (n & Hn & Hn').
         specialize (H 0 (S n)). simpl in H. discriminate H; eauto with arith.
@@ -3154,7 +3154,7 @@ Section Repeat.
   Proof.
     induction n; simpl.
     - reflexivity.
-    - f_equal; apply IHn.
+    - apply f_equal; apply IHn.
   Qed.
 
 End Repeat.
@@ -3164,7 +3164,7 @@ Lemma repeat_to_concat A n (a:A) :
 Proof.
   induction n; simpl.
   - reflexivity.
-  - f_equal; apply IHn.
+  - apply f_equal; apply IHn.
 Qed.
 
 

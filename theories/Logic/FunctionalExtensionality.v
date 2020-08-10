@@ -38,7 +38,7 @@ Lemma functional_extensionality {A B} (f g : A -> B) :
 Proof.
   intros ; eauto using @functional_extensionality_dep.
 Qed.
-
+(*
 (** Extensionality of [forall]s follows from functional extensionality. *)
 Lemma forall_extensionality {A} {B C : A -> Type} (H : forall x : A, B x = C x)
 : (forall x, B x) = (forall x, C x).
@@ -57,7 +57,7 @@ Lemma forall_extensionalityS {A} {B C : A -> Set} (H : forall x : A, B x = C x)
 Proof.
   apply functional_extensionality in H. destruct H. reflexivity.
 Defined.
-
+*)
 (** A version of [functional_extensionality_dep] which is provably
     equal to [eq_refl] on [fun _ => eq_refl] *)
 Definition functional_extensionality_dep_good
@@ -136,10 +136,10 @@ Tactic Notation "extensionality" ident(x) :=
   match goal with
     [ |- ?X = ?Y ] =>
     (apply (@functional_extensionality _ _ X Y) ||
-     apply (@functional_extensionality_dep _ _ X Y) ||
+     apply (@functional_extensionality_dep _ _ X Y) (*||
      apply forall_extensionalityP ||
      apply forall_extensionalityS ||
-     apply forall_extensionality) ; intro x
+     apply forall_extensionality*)) ; intro x
   end.
 
 (** Iteratively apply [functional_extensionality] on an hypothesis

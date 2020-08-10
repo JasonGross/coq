@@ -146,7 +146,7 @@ Section Sets_as_an_algebra.
      intros  A B C.
      rewrite Intersection_commutative.
      rewrite Distributivity.
-     f_equal; apply Intersection_commutative.
+     apply f_equal2; apply Intersection_commutative.
   Qed.
 
   Theorem Distributivity' :
@@ -350,4 +350,3 @@ End Sets_as_an_algebra.
 
 Hint Resolve Empty_set_zero Empty_set_zero' Union_associative Union_add
   singlx incl_add: sets.
-

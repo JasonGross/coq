@@ -529,7 +529,7 @@ Fixpoint mapi (f: key -> elt -> elt') (m:t elt) : t elt' :=
    | nil => nil
    | (k,e)::m' => (k,f k e) :: mapi f m'
   end.
- 
+
 End Elt.
 Section Elt2.
 (* A new section is necessary for previous definitions to work
@@ -744,7 +744,7 @@ Proof.
  rewrite IHm'; auto.
  (* fin map2_r *)
  induction m'; destruct a.
- simpl; f_equal.
+ simpl; apply f_equal.
  (* map2_l *)
  clear IHm.
  induction m; try destruct a; simpl; auto.
@@ -752,7 +752,7 @@ Proof.
  (* fin map2_l *)
  destruct a0.
  simpl.
- destruct (X.compare t0 t1); simpl; f_equal.
+ destruct (X.compare t0 t1); simpl; apply f_equal.
  apply IHm.
  apply IHm.
  apply IHm'.

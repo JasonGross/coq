@@ -48,7 +48,7 @@ Section BEQ.
    refine (@rect2 _ _ _ _ _); [now constructor | simpl].
    intros ? ? ? Hrec h1 h2; destruct Hrec; destruct (A_eqb_eq h1 h2); split.
    + intros Hbeq. apply andb_prop in Hbeq; destruct Hbeq.
-     f_equal; now auto.
+     intuition (subst; auto).
    + intros Heq. destruct (cons_inj Heq). apply andb_true_intro.
      split; now auto.
  Qed.

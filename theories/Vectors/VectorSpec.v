@@ -40,10 +40,11 @@ Proof.
 split.
 - revert n v1 v2; refine (@rect2 _ _ _ _ _); simpl; intros.
   + reflexivity.
-  + f_equal. apply (H0 Fin.F1 Fin.F1 eq_refl).
-    apply H. intros p1 p2 H1;
+  + pose proof (H0 Fin.F1 Fin.F1 eq_refl) as H1; cbv in H1; subst.
+    apply f_equal.
+    apply H. intros p1 p2 H1.
     apply (H0 (Fin.FS p1) (Fin.FS p2) (f_equal (@Fin.FS n) H1)).
-- intros; now f_equal.
+- intros; now subst.
 Qed.
 
 Lemma nth_order_hd A: forall n (v : t A (S n)) (H : 0 < S n),
@@ -162,7 +163,7 @@ apply (Fin.rect2 (fun n p1 p2 => forall v a b,
   refine (@rectS _ _ _ _); auto.
 - intros n p1 p2 IH v; revert n v p1 p2 IH.
   refine (@rectS _ _ _ _); simpl; do 6 intro; [ | do 3 intro ]; intro Hneq;
-    f_equal; apply IH; intros Heq; apply Hneq; now subst.
+    apply f_equal; apply IH; intros Heq; apply Hneq; now subst.
 Qed.
 
 (** ** Properties of [const] *)
@@ -227,7 +228,7 @@ Proof.
 assert (forall n h (v: t B n) a, fold_left f (f a h) v = f (fold_left f a v) h).
 - induction v0.
   + now simpl.
-  + intros; simpl. rewrite<- IHv0, assoc. now f_equal.
+  + intros; simpl. rewrite<- IHv0, assoc. now apply f_equal.
 - induction v.
   + reflexivity.
   + simpl. intros; now rewrite<- (IHv).
@@ -239,37 +240,37 @@ Lemma to_list_of_list_opp {A} (l: list A): to_list (of_list l) = l.
 Proof.
 induction l.
 - reflexivity.
-- unfold to_list; simpl. now f_equal.
+- unfold to_list; simpl. now apply f_equal.
 Qed.
 
 (** ** Properties of [take] *)
 
 Lemma take_O : forall {A} {n} le (v:t A n), take 0 le v = [].
-Proof. 
+Proof.
   reflexivity.
-Qed. 
+Qed.
 
-Lemma take_idem : forall {A} p n (v:t A n)  le le', 
+Lemma take_idem : forall {A} p n (v:t A n)  le le',
   take p le' (take p le v) = take p le v.
-Proof. 
+Proof.
   induction p; intros n v le le'.
-  - auto. 
-  - destruct v. inversion le. simpl. apply f_equal. apply IHp. 
+  - auto.
+  - destruct v. inversion le. simpl. apply f_equal. apply IHp.
 Qed.
 
 Lemma take_app : forall {A} {n} (v:t A n) {m} (w:t A m) le, take n le (append v w) = v.
-Proof. 
+Proof.
   induction v; intros m w le.
-  - reflexivity. 
-  - simpl. apply f_equal. apply IHv. 
+  - reflexivity.
+  - simpl. apply f_equal. apply IHv.
 Qed.
 
 (* Proof is irrelevant for [take] *)
 Lemma take_prf_irr : forall {A} p {n} (v:t A n) le le', take p le v = take p le' v.
-Proof. 
-  induction p; intros n v le le'. 
-  - reflexivity.  
-  - destruct v. inversion le. simpl. apply f_equal. apply IHp. 
+Proof.
+  induction p; intros n v le le'.
+  - reflexivity.
+  - destruct v. inversion le. simpl. apply f_equal. apply IHp.
 Qed.
 
 (** ** Properties of [uncons] and [splitat] *)
@@ -279,7 +280,6 @@ Lemma uncons_cons {A} : forall {n : nat} (a : A) (v : t A n),
 Proof. reflexivity. Qed.
 
 (* [append] *)
-
 Lemma append_comm_cons {A} : forall {n m : nat} (v : t A n) (w : t A m) (a : A),
     a :: (v ++ w) = (a :: v) ++ w.
 Proof. reflexivity. Qed.
@@ -307,8 +307,7 @@ Proof with auto.
   rewrite (eta vw).
   apply cons_inj in H0.
   destruct H0; subst.
-  f_equal...
-  apply IHv...
+  apply f_equal...
 Qed.
 
 (** ** Properties of [Forall] and [Forall2] *)

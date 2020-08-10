@@ -56,7 +56,7 @@ Proof.
 intros l1 l2; split.
 - intros [l1' l2'].
   exists (length l1').
-  rewrite skipn_app, skipn_all, Nat.sub_diag; simpl; f_equal.
+  rewrite skipn_app, skipn_all, Nat.sub_diag; simpl; apply f_equal.
   now rewrite firstn_app, firstn_all, Nat.sub_diag; simpl; rewrite app_nil_r.
 - now intros [n ->]; rewrite <- (firstn_skipn n) at 1.
 Qed.

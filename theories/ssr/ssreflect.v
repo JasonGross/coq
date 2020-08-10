@@ -491,7 +491,7 @@ elim: n k  => [|n IHn] k k_P /= A; first exact: k_P.
 by apply: IHn => B e He; apply: k_P => f x1 x2 <-.
 Qed.
 
-Lemma ssr_congr_arrow Plemma Pgoal : Plemma = Pgoal -> Plemma -> Pgoal.
+Polymorphic Lemma ssr_congr_arrow Plemma Pgoal : Plemma = Pgoal -> Plemma -> Pgoal.
 Proof. by move->. Qed.
 Arguments ssr_congr_arrow : clear implicits.
 
@@ -525,7 +525,7 @@ Hint View for apply/ iffRLn|2 iffLRn|2 iffRL|2 iffLR|2.
  for reductions occurring in the context, hence
    set here := pattern; vm_compute in (value of here)
  blows up at Qed time.                                        **)
-Lemma abstract_context T (P : T -> Type) x :
+Polymorphic Lemma abstract_context T (P : T -> Type) x :
   (forall Q, Q = P -> Q x) -> P x.
 Proof. by move=> /(_ P); apply. Qed.
 

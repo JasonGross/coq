@@ -38,7 +38,7 @@ Definition JMeq_hom {A : Type} (x y : A) := JMeq x y.
 Register JMeq_hom as core.JMeq.hom.
 
 Lemma JMeq_sym : forall (A B:Type) (x:A) (y:B), JMeq x y -> JMeq y x.
-Proof. 
+Proof.
 intros; destruct H; trivial.
 Qed.
 
@@ -105,7 +105,7 @@ Register JMeq_congr as core.JMeq.congr.
 (** [JMeq] is equivalent to [eq_dep Type (fun X => X)] *)
 
 Require Import Eqdep.
-
+(*
 Lemma JMeq_eq_dep_id :
  forall (A B:Type) (x:A) (y:B), JMeq x y -> eq_dep Type (fun X => X) A x B y.
 Proof.
@@ -144,8 +144,8 @@ Qed.
 (** However, when the dependencies are equal, [JMeq (P p) x (P q) y]
     is as strong as [eq_dep U P p x q y] (this uses [JMeq_eq]) *)
 
-Lemma JMeq_eq_dep : 
-  forall U (P:U->Type) p q (x:P p) (y:P q), 
+Lemma JMeq_eq_dep :
+  forall U (P:U->Type) p q (x:P p) (y:P q),
   p = q -> JMeq x y -> eq_dep U P p x q y.
 Proof.
 intros.
@@ -154,7 +154,7 @@ apply JMeq_eq in H0 as ->.
 reflexivity.
 Qed.
 
-
+*)
 (* Compatibility *)
 Notation sym_JMeq := JMeq_sym (only parsing).
 Notation trans_JMeq := JMeq_trans (only parsing).

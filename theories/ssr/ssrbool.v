@@ -1187,9 +1187,9 @@ Notation xpreim := (fun f (p : pred _) x => p (f x)).
 Structure predType T :=
    PredType {pred_sort :> Type; topred : pred_sort -> pred T}.
 
-Definition clone_pred T U :=
+Polymorphic Definition clone_pred T U :=
   fun pT & @pred_sort T pT -> U =>
-  fun toP (pT' := @PredType T U toP) & phant_id pT' pT => pT'.
+    fun toP (pT' := @PredType T U toP) & phant_id pT' pT => pT'.
 Notation "[ 'predType' 'of' T ]" := (@clone_pred _ T _ id _ id) : form_scope.
 
 Canonical predPredType T := PredType (@id (pred T)).

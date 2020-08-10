@@ -76,8 +76,10 @@ Proof.
   - inversion H.
     reflexivity.
 
-  - pi.
+  - apply f_equal.
+    pi.
 Qed.
+
 
 (* Somewhat trivial definition, but not unfolded automatically hence we can match on [match_eq ?A ?B ?x ?f]
    in tactics. *)

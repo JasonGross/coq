@@ -590,16 +590,16 @@ Proof.
   revert e1 e2. induction p ; simpl.
   - reflexivity.
   - intros e1 e2 EQ. apply IHp. intros. apply EQ.
-  - intros e1 e2 EQ. f_equal; [f_equal|].
+  - intros e1 e2 EQ. apply f_equal2; [apply f_equal2|].
     + now apply IHp1.
-    + f_equal. apply EQ.
+    + apply f_equal2; trivial. apply EQ.
     + apply IHp2. intros; apply EQ.
 Qed.
 
 Lemma Pjump_add P i j l :
   P @ (jump (i + j) l) = P @ (jump j (jump i l)).
 Proof.
-  apply env_morph. intros. rewrite <- jump_add. f_equal.
+  apply env_morph. intros. rewrite <- jump_add. apply f_equal3; trivial.
   apply Pos.add_comm.
 Qed.
 
@@ -835,9 +835,9 @@ Qed.
  Proof.
    revert e1 e2; induction M; simpl; intros e1 e2 EQ; trivial.
    - apply IHM. intros; apply EQ.
-   - f_equal.
+   - apply f_equal2; trivial.
      * apply IHM. intros; apply EQ.
-     * f_equal. apply EQ.
+     * apply f_equal2; trivial. apply EQ.
  Qed.
 
 Lemma Mjump_xO_tail M p l :
