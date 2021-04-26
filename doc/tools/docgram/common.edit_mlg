@@ -1831,7 +1831,7 @@ ltac_defined_tactics: [
 | "discrR"
 | "easy"
 | "exfalso"
-| "inversion_sigma"
+| "inversion_sigma" OPT ident
 | "lia"
 | "lra"
 | "nia"
