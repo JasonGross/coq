@@ -298,26 +298,43 @@ Ltac induction_sigma2_in_using H rect :=
   simpl_proj_exist_in H0;
   simpl_proj_exist_in H1;
   simpl_proj_exist_in H2.
+Ltac inversion_sigma_on H :=
+  lazymatch type of H with
+  | _ = exist _ _ _
+    => induction_sigma_in_using H @eq_sig_rect
+  | _ = existT _ _ _
+    => induction_sigma_in_using H @eq_sigT_rect
+  | exist _ _ _ = _
+    => induction_sigma_in_using H @eq_sig_rect
+  | existT _ _ _ = _
+    => induction_sigma_in_using H @eq_sigT_rect
+  | _ = exist2 _ _ _ _ _
+    => induction_sigma2_in_using H @eq_sig2_rect
+  | _ = existT2 _ _ _ _ _
+    => induction_sigma2_in_using H @eq_sigT2_rect
+  | exist2 _ _ _ _ _ = _
+    => induction_sigma_in_using H @eq_sig2_rect
+  | existT2 _ _ _ _ _ = _
+    => induction_sigma_in_using H @eq_sigT2_rect
+  | _ = _ :> ?T
+    => let sig := uconstr:(@sig) in
+       let sig2 := uconstr:(@sig2) in
+       let sigT := uconstr:(@sigT) in
+       let sigT2 := uconstr:(@sigT2) in
+       let ex := uconstr:(@ex) in
+       let ex2 := uconstr:(@ex2) in
+       fail 0 "Type of" H "is not an equality of recognized Σ types: expected one of" sig "," sig2 "," sigT "," sigT2 "," sigT2 "," ex "," ex2 "but got" T
+  | _
+    => fail 0 H "is not an equality of Σ types"
+  end.
 Ltac inversion_sigma_step :=
   match goal with
-  | [ H : _ = exist _ _ _ |- _ ]
-    => induction_sigma_in_using H @eq_sig_rect
-  | [ H : _ = existT _ _ _ |- _ ]
-    => induction_sigma_in_using H @eq_sigT_rect
-  | [ H : exist _ _ _ = _ |- _ ]
-    => induction_sigma_in_using H @eq_sig_rect
-  | [ H : existT _ _ _ = _ |- _ ]
-    => induction_sigma_in_using H @eq_sigT_rect
-  | [ H : _ = exist2 _ _ _ _ _ |- _ ]
-    => induction_sigma2_in_using H @eq_sig2_rect
-  | [ H : _ = existT2 _ _ _ _ _ |- _ ]
-    => induction_sigma2_in_using H @eq_sigT2_rect
-  | [ H : exist2 _ _ _ _ _ = _ |- _ ]
-    => induction_sigma_in_using H @eq_sig2_rect
-  | [ H : existT2 _ _ _ _ _ = _ |- _ ]
-    => induction_sigma_in_using H @eq_sigT2_rect
+  | [ H : _ |- _ ] => inversion_sigma_on H
   end.
 Ltac inversion_sigma := repeat inversion_sigma_step.
+
+Tactic Notation "inversion_sigma" := inversion_sigma.
+Tactic Notation "inversion_sigma" hyp(H) := inversion_sigma_on H.
 
 (** A version of [time] that works for constrs *)
 

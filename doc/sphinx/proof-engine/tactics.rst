@@ -2512,7 +2512,7 @@ and an explanation of the underlying technique.
    This tactic behaves as generalizing :n:`{+ @ident}`, then doing
    :n:`inversion @ident using @ident`.
 
-.. tacv:: inversion_sigma
+.. tacv:: inversion_sigma {? @ident}
    :name: inversion_sigma
 
    This tactic turns equalities of dependent pairs (e.g.,
@@ -2521,11 +2521,27 @@ and an explanation of the underlying technique.
    :g:`H : x = y` and a hypothesis of type :g:`rew H in p = q`); these
    hypotheses can subsequently be simplified using :tacn:`subst`, without ever
    invoking any kind of axiom asserting uniqueness of identity proofs. If you
-   want to explicitly specify the hypothesis to be inverted, or name the
+   want to explicitly specify the hypothesis to be inverted, you can pass it as
+   an argument to :tacn:`inversion_sigma`. If you want to name the
    generated hypotheses, you can invoke
    :n:`induction H as [H1 H2] using eq_sigT_rect.` This tactic also works for
-   :g:`sig`, :g:`sigT2`, and :g:`sig2`, and there are similar :g:`eq_sig`
+   :g:`sig`, :g:`sigT2`, :g:`sig2`, :g:`ex`, and :g:`ex2`, and there are similar :g:`eq_sig`
    :g:`***_rect` induction lemmas.
+
+
+   .. exn:: Type of @ident is not an equality of recognized Σ types: expected one of sig , sig2 , sigT , sigT2 , sigT2 , ex , ex2 but got @term
+
+      The variant of :tacn:`inversion_sigma` which explicitly takes a
+      hypothesis :n:`ident` can only handle equalities in the
+      aforementioned sigma types.
+
+   .. exn:: @ident is not an equality of Σ types
+
+      The variant of :tacn:`inversion_sigma` which explicitly takes a
+      hypothesis :n:`ident` should only be called on hypotheses whose
+      type is syntactically an equality using :g:`Coq.Logic.Init.eq` of
+      the standard library.
+
 
 .. example::
 
