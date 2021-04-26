@@ -2512,7 +2512,7 @@ and an explanation of the underlying technique.
    This tactic behaves as generalizing :n:`{+ @ident}`, then doing
    :n:`inversion @ident using @ident`.
 
-.. tacv:: inversion_sigma {? @ident}
+.. tacv:: inversion_sigma {? @ident }
    :name: inversion_sigma
 
    This tactic turns equalities of dependent pairs (e.g.,
@@ -2531,16 +2531,13 @@ and an explanation of the underlying technique.
 
    .. exn:: Type of @ident is not an equality of recognized Σ types: expected one of sig , sig2 , sigT , sigT2 , sigT2 , ex , ex2 but got @term
 
-      The variant of :tacn:`inversion_sigma` which explicitly takes a
-      hypothesis :n:`ident` can only handle equalities in the
-      aforementioned sigma types.
+      When applied to a hypothesis, :tacn:`inversion_sigma` can only handle equalities of the
+      listed sigma types.
 
    .. exn:: @ident is not an equality of Σ types
 
-      The variant of :tacn:`inversion_sigma` which explicitly takes a
-      hypothesis :n:`ident` should only be called on hypotheses whose
-      type is syntactically an equality using :g:`Coq.Logic.Init.eq` of
-      the standard library.
+      When applied to a hypothesis, :tacn:`inversion_sigma` can only be called on hypotheses that
+      are equalities using :g:`Coq.Logic.Init.eq`.
 
 
 .. example::
