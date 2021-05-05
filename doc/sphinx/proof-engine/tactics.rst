@@ -2529,7 +2529,7 @@ and an explanation of the underlying technique.
    :g:`***_rect` induction lemmas.
 
 
-   .. exn:: Type of @ident is not an equality of recognized Σ types: expected one of sig , sig2 , sigT , sigT2 , sigT2 , ex , ex2 but got @term
+   .. exn:: Type of @ident is not an equality of recognized Σ types: expected one of sig , sig2 , sigT , sigT2 , sigT2 but got @term
 
       When applied to a hypothesis, :tacn:`inversion_sigma` can only handle equalities of the
       listed sigma types.
