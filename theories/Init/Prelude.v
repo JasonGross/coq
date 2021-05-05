@@ -16,6 +16,8 @@ Require Export Specif.
 Require Coq.Init.Byte.
 Require Coq.Init.Decimal.
 Require Coq.Init.Hexadecimal.
+Require Coq.Init.Octal.
+Require Coq.Init.Binary.
 Require Coq.Init.Numeral.
 Require Coq.Init.Number.
 Require Coq.Init.Nat.
@@ -30,6 +32,22 @@ Require Export Coq.Init.Tauto.
 *)
 Declare ML Module "cc_plugin".
 Declare ML Module "firstorder_plugin".
+
+(* Parsing / printing of binary numbers *)
+Arguments Nat.of_bin_uint d%bin_uint_scope.
+Arguments Nat.of_bin_int d%bin_int_scope.
+Number Notation Number.uint Number.uint_of_uint Number.uint_of_uint
+  : bin_uint_scope.
+Number Notation Number.int Number.int_of_int Number.int_of_int
+  : bin_int_scope.
+
+(* Parsing / printing of octal numbers *)
+Arguments Nat.of_oct_uint d%oct_uint_scope.
+Arguments Nat.of_oct_int d%oct_int_scope.
+Number Notation Number.uint Number.uint_of_uint Number.uint_of_uint
+  : oct_uint_scope.
+Number Notation Number.int Number.int_of_int Number.int_of_int
+  : oct_int_scope.
 
 (* Parsing / printing of hexadecimal numbers *)
 Arguments Nat.of_hex_uint d%hex_uint_scope.
@@ -48,6 +66,8 @@ Number Notation Number.int Number.int_of_int Number.int_of_int
   : dec_int_scope.
 
 (* Parsing / printing of [nat] numbers *)
+Number Notation nat Nat.of_num_uint Nat.to_num_bin_uint (abstract after 5001) : bin_nat_scope.
+Number Notation nat Nat.of_num_uint Nat.to_num_oct_uint (abstract after 5001) : oct_nat_scope.
 Number Notation nat Nat.of_num_uint Nat.to_num_hex_uint (abstract after 5001) : hex_nat_scope.
 Number Notation nat Nat.of_num_uint Nat.to_num_uint (abstract after 5001) : nat_scope.
 

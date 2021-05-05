@@ -639,10 +639,56 @@ Fixpoint of_hex_uint (d:Hexadecimal.uint) : N :=
   | Hexadecimal.Df l => Npos (of_hex_uint_acc l 1~1~1~1)
   end.
 
+Local Notation eight := 1~0~0.
+
+Fixpoint of_oct_uint_acc (d:Octal.uint)(acc:positive) :=
+  match d with
+  | Octal.Nil => acc
+  | Octal.D0 l => of_oct_uint_acc l (mul eight acc)
+  | Octal.D1 l => of_oct_uint_acc l (add 1 (mul eight acc))
+  | Octal.D2 l => of_oct_uint_acc l (add 1~0 (mul eight acc))
+  | Octal.D3 l => of_oct_uint_acc l (add 1~1 (mul eight acc))
+  | Octal.D4 l => of_oct_uint_acc l (add 1~0~0 (mul eight acc))
+  | Octal.D5 l => of_oct_uint_acc l (add 1~0~1 (mul eight acc))
+  | Octal.D6 l => of_oct_uint_acc l (add 1~1~0 (mul eight acc))
+  | Octal.D7 l => of_oct_uint_acc l (add 1~1~1 (mul eight acc))
+  end.
+
+Fixpoint of_oct_uint (d:Octal.uint) : N :=
+  match d with
+  | Octal.Nil => N0
+  | Octal.D0 l => of_oct_uint l
+  | Octal.D1 l => Npos (of_oct_uint_acc l 1)
+  | Octal.D2 l => Npos (of_oct_uint_acc l 1~0)
+  | Octal.D3 l => Npos (of_oct_uint_acc l 1~1)
+  | Octal.D4 l => Npos (of_oct_uint_acc l 1~0~0)
+  | Octal.D5 l => Npos (of_oct_uint_acc l 1~0~1)
+  | Octal.D6 l => Npos (of_oct_uint_acc l 1~1~0)
+  | Octal.D7 l => Npos (of_oct_uint_acc l 1~1~1)
+  end.
+
+Local Notation two := 1~0.
+
+Fixpoint of_bin_uint_acc (d:Binary.uint)(acc:positive) :=
+  match d with
+  | Binary.Nil => acc
+  | Binary.D0 l => of_bin_uint_acc l (mul two acc)
+  | Binary.D1 l => of_bin_uint_acc l (add 1 (mul two acc))
+  end.
+
+Fixpoint of_bin_uint (d:Binary.uint) : N :=
+  match d with
+  | Binary.Nil => N0
+  | Binary.D0 l => of_bin_uint l
+  | Binary.D1 l => Npos (of_bin_uint_acc l 1)
+  end.
+
 Definition of_num_uint (d:Number.uint) : N :=
   match d with
   | Number.UIntDecimal d => of_uint d
   | Number.UIntHexadecimal d => of_hex_uint d
+  | Number.UIntOctal d => of_oct_uint d
+  | Number.UIntBinary d => of_bin_uint d
   end.
 
 Definition of_int (d:Decimal.int) : option positive :=
@@ -665,10 +711,32 @@ Definition of_hex_int (d:Hexadecimal.int) : option positive :=
   | Hexadecimal.Neg _ => None
   end.
 
+Definition of_oct_int (d:Octal.int) : option positive :=
+  match d with
+  | Octal.Pos d =>
+    match of_oct_uint d with
+    | N0 => None
+    | Npos p => Some p
+    end
+  | Octal.Neg _ => None
+  end.
+
+Definition of_bin_int (d:Binary.int) : option positive :=
+  match d with
+  | Binary.Pos d =>
+    match of_bin_uint d with
+    | N0 => None
+    | Npos p => Some p
+    end
+  | Binary.Neg _ => None
+  end.
+
 Definition of_num_int (d:Number.int) : option positive :=
   match d with
   | Number.IntDecimal d => of_int d
   | Number.IntHexadecimal d => of_hex_int d
+  | Number.IntOctal d => of_oct_int d
+  | Number.IntBinary d => of_bin_int d
   end.
 
 Fixpoint to_little_uint p :=
@@ -689,11 +757,33 @@ Fixpoint to_little_hex_uint p :=
 
 Definition to_hex_uint p := Hexadecimal.rev (to_little_hex_uint p).
 
+Fixpoint to_little_oct_uint p :=
+  match p with
+  | 1 => Octal.D1 Octal.Nil
+  | p~1 => Octal.Little.succ_double (to_little_oct_uint p)
+  | p~0 => Octal.Little.double (to_little_oct_uint p)
+  end.
+
+Definition to_oct_uint p := Octal.rev (to_little_oct_uint p).
+
+Fixpoint to_little_bin_uint p :=
+  match p with
+  | 1 => Binary.D1 Binary.Nil
+  | p~1 => Binary.Little.succ_double (to_little_bin_uint p)
+  | p~0 => Binary.Little.double (to_little_bin_uint p)
+  end.
+
+Definition to_bin_uint p := Binary.rev (to_little_bin_uint p).
+
 Definition to_num_uint p := Number.UIntDecimal (to_uint p).
 
 Definition to_int n := Decimal.Pos (to_uint n).
 
 Definition to_hex_int p := Hexadecimal.Pos (to_hex_uint p).
+
+Definition to_oct_int p := Octal.Pos (to_oct_uint p).
+
+Definition to_bin_int p := Binary.Pos (to_bin_uint p).
 
 Definition to_num_int n := Number.IntDecimal (to_int n).
 

@@ -9,7 +9,7 @@
 (************************************************************************)
 
 Require Import Notations Logic Datatypes.
-Require Decimal Hexadecimal Number.
+Require Decimal Hexadecimal Octal Binary Number.
 Local Open Scope nat_scope.
 
 (**********************************************************************)
@@ -212,10 +212,38 @@ Fixpoint of_hex_uint_acc (d:Hexadecimal.uint)(acc:nat) :=
 
 Definition of_hex_uint (d:Hexadecimal.uint) := of_hex_uint_acc d O.
 
+Local Notation eight := (S (S (S (S (S (S (S (S O)))))))).
+
+Fixpoint of_oct_uint_acc (d:Octal.uint)(acc:nat) :=
+  match d with
+  | Octal.Nil => acc
+  | Octal.D0 d => of_oct_uint_acc d (tail_mul eight acc)
+  | Octal.D1 d => of_oct_uint_acc d (S (tail_mul eight acc))
+  | Octal.D2 d => of_oct_uint_acc d (S (S (tail_mul eight acc)))
+  | Octal.D3 d => of_oct_uint_acc d (S (S (S (tail_mul eight acc))))
+  | Octal.D4 d => of_oct_uint_acc d (S (S (S (S (tail_mul eight acc)))))
+  | Octal.D5 d => of_oct_uint_acc d (S (S (S (S (S (tail_mul eight acc))))))
+  | Octal.D6 d => of_oct_uint_acc d (S (S (S (S (S (S (tail_mul eight acc)))))))
+  | Octal.D7 d => of_oct_uint_acc d (S (S (S (S (S (S (S (tail_mul eight acc))))))))
+  end.
+
+Definition of_oct_uint (d:Octal.uint) := of_oct_uint_acc d O.
+
+Fixpoint of_bin_uint_acc (d:Binary.uint)(acc:nat) :=
+  match d with
+  | Binary.Nil => acc
+  | Binary.D0 d => of_bin_uint_acc d (tail_mul (S (S O)) acc)
+  | Binary.D1 d => of_bin_uint_acc d (S (tail_mul (S (S O)) acc))
+  end.
+
+Definition of_bin_uint (d:Binary.uint) := of_bin_uint_acc d O.
+
 Definition of_num_uint (d:Number.uint) :=
   match d with
   | Number.UIntDecimal d => of_uint d
   | Number.UIntHexadecimal d => of_hex_uint d
+  | Number.UIntOctal d => of_oct_uint d
+  | Number.UIntBinary d => of_bin_uint d
   end.
 
 Fixpoint to_little_uint n acc :=
@@ -236,9 +264,31 @@ Fixpoint to_little_hex_uint n acc :=
 Definition to_hex_uint n :=
   Hexadecimal.rev (to_little_hex_uint n Hexadecimal.zero).
 
+Fixpoint to_little_oct_uint n acc :=
+  match n with
+  | O => acc
+  | S n => to_little_oct_uint n (Octal.Little.succ acc)
+  end.
+
+Definition to_oct_uint n :=
+  Octal.rev (to_little_oct_uint n Octal.zero).
+
+Fixpoint to_little_bin_uint n acc :=
+  match n with
+  | O => acc
+  | S n => to_little_bin_uint n (Binary.Little.succ acc)
+  end.
+
+Definition to_bin_uint n :=
+  Binary.rev (to_little_bin_uint n Binary.zero).
+
 Definition to_num_uint n := Number.UIntDecimal (to_uint n).
 
 Definition to_num_hex_uint n := Number.UIntHexadecimal (to_hex_uint n).
+
+Definition to_num_oct_uint n := Number.UIntOctal (to_oct_uint n).
+
+Definition to_num_bin_uint n := Number.UIntBinary (to_bin_uint n).
 
 Definition of_int (d:Decimal.int) : option nat :=
   match Decimal.norm d with
@@ -252,15 +302,33 @@ Definition of_hex_int (d:Hexadecimal.int) : option nat :=
     | _ => None
   end.
 
+Definition of_oct_int (d:Octal.int) : option nat :=
+  match Octal.norm d with
+    | Octal.Pos u => Some (of_oct_uint u)
+    | _ => None
+  end.
+
+Definition of_bin_int (d:Binary.int) : option nat :=
+  match Binary.norm d with
+    | Binary.Pos u => Some (of_bin_uint u)
+    | _ => None
+  end.
+
 Definition of_num_int (d:Number.int) : option nat :=
   match d with
   | Number.IntDecimal d => of_int d
   | Number.IntHexadecimal d => of_hex_int d
+  | Number.IntOctal d => of_oct_int d
+  | Number.IntBinary d => of_bin_int d
   end.
 
 Definition to_int n := Decimal.Pos (to_uint n).
 
 Definition to_hex_int n := Hexadecimal.Pos (to_hex_uint n).
+
+Definition to_oct_int n := Octal.Pos (to_oct_uint n).
+
+Definition to_bin_int n := Binary.Pos (to_bin_uint n).
 
 Definition to_num_int n := Number.IntDecimal (to_int n).
 

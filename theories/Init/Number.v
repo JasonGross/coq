@@ -8,23 +8,35 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** * Decimal or Hexadecimal numbers *)
+(** * Decimal or Hexadecimal or Octal or Binary numbers *)
 
-Require Import Decimal Hexadecimal.
+Require Import Decimal Hexadecimal Octal Binary.
 
-Variant uint := UIntDecimal (u:Decimal.uint) | UIntHexadecimal (u:Hexadecimal.uint).
+Variant uint :=
+| UIntDecimal (u:Decimal.uint)
+| UIntHexadecimal (u:Hexadecimal.uint)
+| UIntOctal (u:Octal.uint)
+| UIntBinary (u:Binary.uint).
 #[deprecated(since="8.13",note="Use UintDecimal instead.")]
 Notation UIntDec := UIntDecimal (only parsing).
 #[deprecated(since="8.13",note="Use UintHexadecimal instead.")]
 Notation UIntHex := UIntHexadecimal (only parsing).
 
-Variant int := IntDecimal (i:Decimal.int) | IntHexadecimal (i:Hexadecimal.int).
+Variant int :=
+| IntDecimal (i:Decimal.int)
+| IntHexadecimal (i:Hexadecimal.int)
+| IntOctal (i:Octal.int)
+| IntBinary (i:Binary.int).
 #[deprecated(since="8.13",note="Use IntDecimal instead.")]
 Notation IntDec := IntDecimal (only parsing).
 #[deprecated(since="8.13",note="Use IntHexadecimal instead.")]
 Notation IntHex := IntHexadecimal (only parsing).
 
-Variant number := Decimal (d:Decimal.decimal) | Hexadecimal (h:Hexadecimal.hexadecimal).
+Variant number :=
+| Decimal (d:Decimal.decimal)
+| Hexadecimal (h:Hexadecimal.hexadecimal)
+| Octal (h:Octal.octal)
+| Binary (h:Binary.binary).
 #[deprecated(since="8.13",note="Use Decimal instead.")]
 Notation Dec := Decimal (only parsing).
 #[deprecated(since="8.13",note="Use Hexadecimal instead.")]

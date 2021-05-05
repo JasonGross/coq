@@ -164,6 +164,12 @@ Inductive nat : Set :=
   | O : nat
   | S : nat -> nat.
 
+Declare Scope bin_nat_scope.
+Delimit Scope bin_nat_scope with bnat.
+
+Declare Scope oct_nat_scope.
+Delimit Scope oct_nat_scope with onat.
+
 Declare Scope hex_nat_scope.
 Delimit Scope hex_nat_scope with xnat.
 
