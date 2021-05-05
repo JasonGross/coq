@@ -2512,7 +2512,7 @@ and an explanation of the underlying technique.
    This tactic behaves as generalizing :n:`{+ @ident}`, then doing
    :n:`inversion @ident using @ident`.
 
-.. tacv:: inversion_sigma {? @ident }
+.. tacv:: inversion_sigma {? @ident {? as @simple_intropattern } }
    :name: inversion_sigma
 
    This tactic turns equalities of dependent pairs (e.g.,
@@ -2522,10 +2522,8 @@ and an explanation of the underlying technique.
    hypotheses can subsequently be simplified using :tacn:`subst`, without ever
    invoking any kind of axiom asserting uniqueness of identity proofs. If you
    want to explicitly specify the hypothesis to be inverted, you can pass it as
-   an argument to :tacn:`inversion_sigma`. If you want to name the
-   generated hypotheses, you can invoke
-   :n:`induction H as [H1 H2] using eq_sigT_rect.` This tactic also works for
-   :g:`sig`, :g:`sigT2`, :g:`sig2`, :g:`ex`, and :g:`ex2`, and there are similar :g:`eq_sig`
+   an argument to :tacn:`inversion_sigma`. This tactic also works for
+   :g:`sig`, :g:`sigT2`, and :g:`sig2`, and there are similar :g:`eq_sig`
    :g:`***_rect` induction lemmas.
 
 

@@ -267,38 +267,34 @@ Tactic Notation "dependent" "destruction" ident(H) :=
 
 Ltac simpl_proj_exist_in H :=
   cbn [proj1_sig proj2_sig proj3_sig projT1 projT2 projT3 sig_of_sig2 sigT_of_sigT2] in H.
-Ltac induction_sigma_in_using H rect :=
-  let H0 := fresh H in
-  let H1 := fresh H in
-  induction H as [H0 H1] using (rect _ _ _ _);
-  simpl_proj_exist_in H0;
-  simpl_proj_exist_in H1.
-Ltac induction_sigma2_in_using H rect :=
-  let H0 := fresh H in
-  let H1 := fresh H in
-  let H2 := fresh H in
-  induction H as [H0 H1 H2] using (rect _ _ _ _ _);
-  simpl_proj_exist_in H0;
-  simpl_proj_exist_in H1;
-  simpl_proj_exist_in H2.
-Ltac inversion_sigma_on H :=
+Ltac induction_sigma_in_as_using H ip rect :=
+  let H' := fresh H in
+  induction H as [H'] using (rect _ _ _ _);
+  simpl_proj_exist_in H';
+  destruct H' as ip.
+Ltac induction_sigma2_in_as_using H ip rect :=
+  let H' := fresh H in
+  induction H as [H'] using (rect _ _ _ _ _);
+  simpl_proj_exist_in H';
+  destruct H' as ip.
+Ltac inversion_sigma_on_as H ip :=
   lazymatch type of H with
   | _ = exist _ _ _
-    => induction_sigma_in_using H @eq_sig_rect
+    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
   | _ = existT _ _ _
-    => induction_sigma_in_using H @eq_sigT_rect
+    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
   | exist _ _ _ = _
-    => induction_sigma_in_using H @eq_sig_rect
+    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
   | existT _ _ _ = _
-    => induction_sigma_in_using H @eq_sigT_rect
+    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
   | _ = exist2 _ _ _ _ _
-    => induction_sigma2_in_using H @eq_sig2_rect
+    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
   | _ = existT2 _ _ _ _ _
-    => induction_sigma2_in_using H @eq_sigT2_rect
+    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
   | exist2 _ _ _ _ _ = _
-    => induction_sigma_in_using H @eq_sig2_rect
+    => induction_sigma_in_as_using H ip @eq_sig2_rect_uncurried
   | existT2 _ _ _ _ _ = _
-    => induction_sigma_in_using H @eq_sigT2_rect
+    => induction_sigma_in_as_using H ip @eq_sigT2_rect_uncurried
   | _ = _ :> ?T
     => let sig := uconstr:(@sig) in
        let sig2 := uconstr:(@sig2) in
@@ -308,6 +304,7 @@ Ltac inversion_sigma_on H :=
   | _
     => fail 0 H "is not an equality of Σ types"
   end.
+Ltac inversion_sigma_on H := inversion_sigma_on_as H ipattern:([]).
 Ltac inversion_sigma_step :=
   match goal with
   | [ H : _ |- _ ] => inversion_sigma_on H
@@ -316,6 +313,7 @@ Ltac inversion_sigma := repeat inversion_sigma_step.
 
 Tactic Notation "inversion_sigma" := inversion_sigma.
 Tactic Notation "inversion_sigma" hyp(H) := inversion_sigma_on H.
+Tactic Notation "inversion_sigma" hyp(H) "as" simple_intropattern(ip) := inversion_sigma_on_as H ip.
 
 (** A version of [time] that works for constrs *)
 
