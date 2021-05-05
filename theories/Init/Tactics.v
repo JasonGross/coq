@@ -266,24 +266,7 @@ Tactic Notation "dependent" "destruction" ident(H) :=
     provable into one which requires axiom K / UIP.  *)
 
 Ltac simpl_proj_exist_in H :=
-  repeat match type of H with
-         | context G[proj1_sig (exist _ ?x ?p)]
-           => let G' := context G[x] in change G' in H
-         | context G[proj2_sig (exist _ ?x ?p)]
-           => let G' := context G[p] in change G' in H
-         | context G[projT1 (existT _ ?x ?p)]
-           => let G' := context G[x] in change G' in H
-         | context G[projT2 (existT _ ?x ?p)]
-           => let G' := context G[p] in change G' in H
-         | context G[proj3_sig (exist2 _ _ ?x ?p ?q)]
-           => let G' := context G[q] in change G' in H
-         | context G[projT3 (existT2 _ _ ?x ?p ?q)]
-           => let G' := context G[q] in change G' in H
-         | context G[sig_of_sig2 (@exist2 ?A ?P ?Q ?x ?p ?q)]
-           => let G' := context G[@exist A P x p] in change G' in H
-         | context G[sigT_of_sigT2 (@existT2 ?A ?P ?Q ?x ?p ?q)]
-           => let G' := context G[@existT A P x p] in change G' in H
-         end.
+  cbn [proj1_sig proj2_sig proj3_sig projT1 projT2 projT3 sig_of_sig2 sigT_of_sigT2] in H.
 Ltac induction_sigma_in_using H rect :=
   let H0 := fresh H in
   let H1 := fresh H in
