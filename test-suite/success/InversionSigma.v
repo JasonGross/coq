@@ -26,6 +26,15 @@ Section inversion_sigma.
            end;
     fin_test_inversion_sigma.
 
+  Local Ltac test_inversion_sigma_in_H :=
+    intros;
+    destr_sigma;
+    repeat match goal with H : _ = _ |- _ => inversion_sigma H end;
+    repeat match goal with
+           | [ H : ?x = ?y |- _ ] => is_var x; is_var y; subst x; simpl in *
+           end;
+    fin_test_inversion_sigma.
+
   Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
               (p : x = y), p = p.
   Proof. test_inversion_sigma. Qed.
@@ -49,6 +58,30 @@ Section inversion_sigma.
   Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
               (p : x = y), p = p.
   Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : A | { b : { b : B a | C a b } | { d : D a (proj1_sig b) (proj2_sig b) | E _ _ _ d } } })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a } & C _ (projT2 a) & C' _ (projT2 a) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a } | C _ (projT2 a) & C' _ (projT2 a) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a & B' a } & C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
 
   Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
               (p : x = y), p = p.
