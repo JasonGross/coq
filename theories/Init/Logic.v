@@ -325,17 +325,6 @@ Section ex2_Projections.
 
 End ex2_Projections.
 
-(** Versions of [ex] and [ex2] in [Prop], with primitive projections
-    turned on, used to speed up [inversion_sigma].  Suffix [_p] is
-    used for [Prop]. *)
-Section ex_ex2_prim.
-  Local Set Primitive Projections.
-  Record ex_p (A : Prop) (P : A -> Prop) : Prop
-    := ex_p_intro { ex_p_proj1 : A ; ex_p_proj2 : P ex_p_proj1 }.
-  Record ex2_p (A : Prop) (P Q : A -> Prop) : Prop
-    := ex_p_intro2 { ex2_p_proj1 : A ; ex2_p_proj2 : P ex2_p_proj1 ; ex2_p_proj3 : Q ex2_p_proj1 }.
-End ex_ex2_prim.
-
 Definition all (A:Type) (P:A -> Prop) := forall x:A, P x.
 
 (* Rule order is important to give printing priority to fully typed exists *)
@@ -966,13 +955,6 @@ Section ex.
   Definition eq_ex_rec_uncurried {A : Prop} {P : A -> Prop} {u v} (Q : u = v :> (exists a : A, P a) -> Set) := eq_ex_rect_uncurried Q.
   Definition eq_ex_ind_uncurried {A : Prop} {P : A -> Prop} {u v} (Q : u = v :> (exists a : A, P a) -> Prop) := eq_ex_rec_uncurried Q.
 
-  Definition eq_ex_rect_uncurried_p {A : Prop} {P : A -> Prop} {u v : exists a : A, P a} (Q : u = v -> Type)
-             (f : forall pq, Q (eq_ex u v (ex_p_proj1 pq) (ex_p_proj2 pq)))
-    : forall p, Q p
-    := eq_ex_rect Q (fun p q => f (ex_p_intro _ p q)).
-  Definition eq_ex_rec_uncurried_p {A : Prop} {P : A -> Prop} {u v} (Q : u = v :> (exists a : A, P a) -> Set) := eq_ex_rect_uncurried_p Q.
-  Definition eq_ex_ind_uncurried_p {A : Prop} {P : A -> Prop} {u v} (Q : u = v :> (exists a : A, P a) -> Prop) := eq_ex_rec_uncurried_p Q.
-
   (** Equality of [ex] when the property is an hProp *)
   Definition eq_ex_hprop {A : Prop} {P : A -> Prop} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : exists a : A, P a)
@@ -1132,13 +1114,6 @@ Section ex2.
     := eq_ex2_rect R (fun p q r => f (ex_intro2 _ _ p q r)).
   Definition eq_ex2_rec_uncurried {A : Prop} {P Q : A -> Prop} {u v} (R : u = v :> (exists2 a : A, P a & Q a) -> Set) := eq_ex2_rect_uncurried R.
   Definition eq_ex2_ind_uncurried {A : Prop} {P Q : A -> Prop} {u v} (R : u = v :> (exists2 a : A, P a & Q a) -> Prop) := eq_ex2_rec_uncurried R.
-
-  Definition eq_ex2_rect_uncurried_p {A : Prop} {P Q : A -> Prop} {u v : exists2 a : A, P a & Q a} (R : u = v -> Type)
-             (f : forall pqr, R (eq_ex2 u v (ex2_p_proj1 pqr) (ex2_p_proj2 pqr) (ex2_p_proj3 pqr)))
-    : forall p, R p
-    := eq_ex2_rect R (fun p q r => f (ex_p_intro2 _ _ p q r)).
-  Definition eq_ex2_rec_uncurried_p {A : Prop} {P Q : A -> Prop} {u v} (R : u = v :> (exists2 a : A, P a & Q a) -> Set) := eq_ex2_rect_uncurried_p R.
-  Definition eq_ex2_ind_uncurried_p {A : Prop} {P Q : A -> Prop} {u v} (R : u = v :> (exists2 a : A, P a & Q a) -> Prop) := eq_ex2_rec_uncurried_p R.
 
   (** Equivalence of equality of [ex2] involving hProps with equality of the first components *)
   Definition eq_ex2_hprop_iff {A : Prop} {P Q : A -> Prop} (Q_hprop : forall (x : A) (p q : Q x), p = q)
