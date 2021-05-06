@@ -266,7 +266,7 @@ Tactic Notation "dependent" "destruction" ident(H) :=
     provable into one which requires axiom K / UIP.  *)
 
 Ltac simpl_ex_proj_in_all :=
-  cbn beta match delta [ex_proj1 ex_proj2 ex_proj3 ex_of_ex2] in *.
+  cbn beta match delta [ex_proj1 ex_proj2 ex_proj3 ex_of_ex2 ex_p_proj1 ex_p_proj2 ex2_p_proj1 ex2_p_proj2 ex2_p_proj3] in *.
 Ltac simpl_proj_exist_in H :=
   cbn beta match delta
       [proj1_sig proj2_sig proj3_sig
@@ -281,40 +281,40 @@ Ltac induction_sigma_in_as_using H ip rect :=
   let H' := fresh H in
   induction H as [H'] using (rect _ _ _ _);
   simpl_proj_exist_in H';
-  induction H' as ip using (@ex_rect);
+  destruct H' as ip;
   simpl_ex_proj_in_all.
 Ltac induction_sigma2_in_as_using H ip rect :=
   let H' := fresh H in
   induction H as [H'] using (rect _ _ _ _ _);
   simpl_proj_exist_in H';
-  induction H' as ip using (@ex2_rect);
+  destruct H' as ip;
   simpl_ex_proj_in_all.
 Ltac inversion_sigma_on_as H ip :=
   lazymatch type of H with
   | _ = ex_intro _ _ _
-    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried
+    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried_p
   | _ = exist _ _ _
-    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
+    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried_p
   | _ = existT _ _ _
-    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
+    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried_p
   | ex_intro _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried
+    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried_p
   | exist _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
+    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried_p
   | existT _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
+    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried_p
   | _ = ex_intro2 _ _ _ _ _
-    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried_p
   | _ = exist2 _ _ _ _ _
-    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried_p
   | _ = existT2 _ _ _ _ _
-    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried_p
   | ex_intro2 _ _ _ _ _ = _
-    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried_p
   | exist2 _ _ _ _ _ = _
-    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried_p
   | existT2 _ _ _ _ _ = _
-    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried_p
   | _ = _ :> ?T
     => let sig := uconstr:(@sig) in
        let sig2 := uconstr:(@sig2) in

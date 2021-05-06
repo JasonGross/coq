@@ -386,6 +386,13 @@ Section sigT.
   Definition eq_sigT_rec_uncurried {A P u v} (Q : u = v :> { a : A & P a } -> Set) := eq_sigT_rect_uncurried Q.
   Definition eq_sigT_ind_uncurried {A P u v} (Q : u = v :> { a : A & P a } -> Prop) := eq_sigT_rec_uncurried Q.
 
+  Definition eq_sigT_rect_uncurried_p {A P} {u v : { a : A & P a }} (Q : u = v -> Type)
+             (f : forall pq, Q (eq_sigT u v (ex_p_proj1 pq) (ex_p_proj2 pq)))
+    : forall p, Q p
+    := eq_sigT_rect Q (fun p q => f (ex_p_intro _ p q)).
+  Definition eq_sigT_rec_uncurried_p {A P u v} (Q : u = v :> { a : A & P a } -> Set) := eq_sigT_rect_uncurried_p Q.
+  Definition eq_sigT_ind_uncurried_p {A P u v} (Q : u = v :> { a : A & P a } -> Prop) := eq_sigT_rec_uncurried_p Q.
+
   (** Equivalence of equality of [sigT] involving hProps with equality of the first components *)
   Definition eq_sigT_hprop_iff {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : { a : A & P a })
@@ -469,6 +476,13 @@ Section sig.
     := eq_sig_rect Q (fun p q => f (ex_intro _ p q)).
   Definition eq_sig_rec_uncurried {A P u v} (Q : u = v :> { a : A | P a } -> Set) := eq_sig_rect_uncurried Q.
   Definition eq_sig_ind_uncurried {A P u v} (Q : u = v :> { a : A | P a } -> Prop) := eq_sig_rec_uncurried Q.
+
+  Definition eq_sig_rect_uncurried_p {A P} {u v : { a : A | P a }} (Q : u = v -> Type)
+             (f : forall pq, Q (eq_sig u v (ex_p_proj1 pq) (ex_p_proj2 pq)))
+    : forall p, Q p
+    := eq_sig_rect Q (fun p q => f (ex_p_intro _ p q)).
+  Definition eq_sig_rec_uncurried_p {A P u v} (Q : u = v :> { a : A | P a } -> Set) := eq_sig_rect_uncurried_p Q.
+  Definition eq_sig_ind_uncurried_p {A P u v} (Q : u = v :> { a : A | P a } -> Prop) := eq_sig_rec_uncurried_p Q.
 
   (** Equality of [sig] when the property is an hProp *)
   Definition eq_sig_hprop {A} {P : A -> Prop} (P_hprop : forall (x : A) (p q : P x), p = q)
@@ -600,6 +614,13 @@ Section sigT2.
   Definition eq_sigT2_rec_uncurried {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Set) := eq_sigT2_rect_uncurried R.
   Definition eq_sigT2_ind_uncurried {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Prop) := eq_sigT2_rec_uncurried R.
 
+  Definition eq_sigT2_rect_uncurried_p {A P Q} {u v : { a : A & P a & Q a }} (R : u = v -> Type)
+             (f : forall pqr, R (eq_sigT2 u v (ex2_p_proj1 pqr) (ex2_p_proj2 pqr) (ex2_p_proj3 pqr)))
+    : forall p, R p
+    := eq_sigT2_rect R (fun p q r => f (ex_p_intro2 _ _ p q r)).
+  Definition eq_sigT2_rec_uncurried_p {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Set) := eq_sigT2_rect_uncurried_p R.
+  Definition eq_sigT2_ind_uncurried_p {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Prop) := eq_sigT2_rec_uncurried_p R.
+
   (** Equivalence of equality of [sigT2] involving hProps with equality of the first components *)
   Definition eq_sigT2_hprop_iff {A P Q} (Q_hprop : forall (x : A) (p q : Q x), p = q)
              (u v : { a : A & P a & Q a })
@@ -723,6 +744,13 @@ Section sig2.
     := eq_sig2_rect R (fun p q r => f (ex_intro2 _ _ p q r)).
   Definition eq_sig2_rec_uncurried {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Set) := eq_sig2_rect_uncurried R.
   Definition eq_sig2_ind_uncurried {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Prop) := eq_sig2_rec_uncurried R.
+
+  Definition eq_sig2_rect_uncurried_p {A P Q} {u v : { a : A | P a & Q a }} (R : u = v -> Type)
+             (f : forall pqr, R (eq_sig2 u v (ex2_p_proj1 pqr) (ex2_p_proj2 pqr) (ex2_p_proj3 pqr)))
+    : forall p, R p
+    := eq_sig2_rect R (fun p q r => f (ex_p_intro2 _ _ p q r)).
+  Definition eq_sig2_rec_uncurried_p {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Set) := eq_sig2_rect_uncurried_p R.
+  Definition eq_sig2_ind_uncurried_p {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Prop) := eq_sig2_rec_uncurried_p R.
 
   (** Equivalence of equality of [sig2] involving hProps with equality of the first components *)
   Definition eq_sig2_hprop_iff {A} {P Q : A -> Prop} (Q_hprop : forall (x : A) (p q : Q x), p = q)
