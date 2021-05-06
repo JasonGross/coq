@@ -2,14 +2,18 @@ Section inversion_sigma.
   Local Unset Implicit Arguments.
   Context A (B B' : A -> Prop) (C C' : forall a, B a -> Prop)
           (D : forall a b, C a b -> Prop) (E : forall a b c, D a b c -> Prop).
+  Context (AP : Prop) (BP BP' : AP -> Prop) (CP CP' : forall a, BP a -> Prop)
+          (DP : forall a b, CP a b -> Prop) (EP : forall a b c, DP a b c -> Prop).
 
   (* Require that, after destructing sigma types and inverting
      equalities, we can subst equalities of variables only, and reduce
      down to [eq_refl = eq_refl]. *)
   Local Ltac destr_sigma :=
     repeat match goal with
+           | [ H : ex _ |- _ ] => destruct H
            | [ H : sig _ |- _ ] => destruct H
            | [ H : sigT _ |- _ ] => destruct H
+           | [ H : ex2 _ _ |- _ ] => destruct H
            | [ H : sig2 _ _ |- _ ] => destruct H
            | [ H : sigT2 _ _ |- _ ] => destruct H
            end; simpl in *.
@@ -37,64 +41,36 @@ Section inversion_sigma.
 
   Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
               (p : x = y), p = p.
-  Proof. test_inversion_sigma. Qed.
-
-  Goal forall (x y : { a : A | { b : { b : B a | C a b } | { d : D a (proj1_sig b) (proj2_sig b) | E _ _ _ d } } })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma. Qed.
-
-  Goal forall (x y : { a : { a : A & B a } & C _ (projT2 a) & C' _ (projT2 a) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma. Qed.
-
-  Goal forall (x y : { a : { a : A & B a } | C _ (projT2 a) & C' _ (projT2 a) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma. Qed.
-
-  Goal forall (x y : { a : { a : A & B a & B' a } & C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma. Qed.
-
-  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma. Qed.
-
-  Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma_in_H. Qed.
-
-  Goal forall (x y : { a : A | { b : { b : B a | C a b } | { d : D a (proj1_sig b) (proj2_sig b) | E _ _ _ d } } })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma_in_H. Qed.
-
-  Goal forall (x y : { a : { a : A & B a } & C _ (projT2 a) & C' _ (projT2 a) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma_in_H. Qed.
-
-  Goal forall (x y : { a : { a : A & B a } | C _ (projT2 a) & C' _ (projT2 a) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma_in_H. Qed.
-
-  Goal forall (x y : { a : { a : A & B a & B' a } & C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma_in_H. Qed.
-
-  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
-              (p : x = y), p = p.
-  Proof. test_inversion_sigma_in_H. Qed.
-
-  Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
-              (p : x = y), p = p.
   Proof.
     intros x y p; destr_sigma.
-    inversion_sigma p as [-> p]; cbn [eq_rect] in *.
+    Set Ltac Profiling.
+    Time inversion_sigma p as [-> p]; cbn [eq_rect] in *.
+    Show Ltac Profile.
+    (*
+total time:      1.799s
+
+ tactic                                   local  total   calls       max
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─inversion_sigma_on_as -----------------   0.0%  99.9%       0    1.798s
+─induction_sigma_in_as_using -----------   0.0%  99.3%       2    1.787s
+─induction H' as ip using ex_rect ------  94.9%  94.9%       1    1.707s
+─induction H as [H'] using (rect _ _ _ _   4.2%   4.2%       1    0.076s
+
+ tactic                                   local  total   calls       max
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─inversion_sigma_on_as -----------------   0.0%  99.9%       0    1.798s
+└induction_sigma_in_as_using -----------   0.0%  99.3%       1    1.787s
+ ├─induction H' as ip using ex_rect ----  94.9%  94.9%       1    1.707s
+ └─induction H as [H'] using (rect _ _ _   4.2%   4.2%       1    0.076s
+
+*)
     lazymatch type of p with
     | existT _ (existT _ ?a ?b) (existT _ ?c ?d) = existT _ (existT _ ?e ?f) (existT _ ?g ?h)
       => is_var a; is_var b; is_var c; is_var d; is_var e; is_var f; is_var g; is_var h
     end.
     inversion_sigma p as [p1 p2].
     lazymatch type of p1 with existT _ ?a ?b = existT _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
-    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_existT_uncurried eq_sigT_uncurried] in * |- .
+    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_existT_uncurried eq_sigT eq_sigT_uncurried] in * |- .
     lazymatch type of p2 with existT _ ?a ?b = existT _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
     inversion_sigma p2 as [-> <-].
     cbn.
@@ -112,8 +88,26 @@ Section inversion_sigma.
     end.
     inversion_sigma p as [p1 p2].
     lazymatch type of p1 with exist _ ?a ?b = exist _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
-    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_exist_uncurried eq_sig_uncurried] in * |- .
+    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_exist_uncurried eq_sig eq_sig_uncurried] in * |- .
     lazymatch type of p2 with exist _ ?a ?b = exist _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
+    inversion_sigma p2 as [-> <-].
+    cbn.
+    fin_test_inversion_sigma.
+  Qed.
+
+  Goal forall (x y : exists a : AP, exists b : exists b : BP a, CP a b, exists d : DP a (ex_proj1 b) (ex_proj2 b), EP _ _ _ d)
+              (p : x = y), p = p.
+  Proof.
+    intros x y p; destr_sigma.
+    inversion_sigma p as [-> p]; cbn [eq_rect] in *.
+    lazymatch type of p with
+    | ex_intro _ (ex_intro _ ?a ?b) (ex_intro _ ?c ?d) = ex_intro _ (ex_intro _ ?e ?f) (ex_intro _ ?g ?h)
+      => is_var a; is_var b; is_var c; is_var d; is_var e; is_var f; is_var g; is_var h
+    end.
+    inversion_sigma p as [p1 p2].
+    lazymatch type of p1 with ex_intro _ ?a ?b = ex_intro _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
+    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_ex_intro_uncurried eq_ex eq_ex_uncurried] in * |- .
+    lazymatch type of p2 with ex_intro _ ?a ?b = ex_intro _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
     inversion_sigma p2 as [-> <-].
     cbn.
     fin_test_inversion_sigma.
@@ -141,6 +135,17 @@ Section inversion_sigma.
     fin_test_inversion_sigma.
   Qed.
 
+  Goal forall (x y : exists2 a : exists a : AP, BP a, CP _ (ex_proj2 a) & CP' _ (ex_proj2 a))
+              (p : x = y), p = p.
+  Proof.
+    intros x y p; destr_sigma.
+    inversion_sigma p as [p <- <-]; cbn [eq_rect] in *.
+    lazymatch type of p with ex_intro _ ?a ?b = ex_intro _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
+    inversion_sigma p as [-> <-].
+    cbn.
+    fin_test_inversion_sigma.
+  Qed.
+
   Goal forall (x y : { a : { a : A & B a & B' a } & C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
               (p : x = y), p = p.
   Proof.
@@ -162,4 +167,80 @@ Section inversion_sigma.
     cbn.
     fin_test_inversion_sigma.
   Qed.
+
+  Goal forall (x y : exists2 a : exists2 a : AP, BP a & BP' a, CP _ (ex_proj2 (ex_of_ex2 a)) & CP' _ (ex_proj2 (ex_of_ex2 a)))
+              (p : x = y), p = p.
+  Proof.
+    intros x y p; destr_sigma.
+    inversion_sigma p as [p <- <-]; cbn [eq_rect] in *.
+    lazymatch type of p with ex_intro2 _ _ ?a ?b ?c = ex_intro2 _ _ ?d ?e ?f => is_var a; is_var b; is_var c; is_var d; is_var e; is_var f end.
+    inversion_sigma p as [-> <- <-].
+    cbn.
+    fin_test_inversion_sigma.
+  Qed.
+
+  Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : { a : A | { b : { b : B a | C a b } | { d : D a (proj1_sig b) (proj2_sig b) | E _ _ _ d } } })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : exists a : AP, exists b : exists b : BP a, CP a b, exists d : DP a (ex_proj1 b) (ex_proj2 b), EP _ _ _ d)
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : { a : { a : A & B a } & C _ (projT2 a) & C' _ (projT2 a) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : { a : { a : A & B a } | C _ (projT2 a) & C' _ (projT2 a) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+  Goal forall (x y : exists2 a : exists2 a : AP, BP a & BP' a, CP _ (ex_proj2 (ex_of_ex2 a)) & CP' _ (ex_proj2 (ex_of_ex2 a)))
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma. Qed.
+
+
+  Goal forall (x y : { a : A & { b : { b : B a & C a b } & { d : D a (projT1 b) (projT2 b) & E _ _ _ d } } })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : A | { b : { b : B a | C a b } | { d : D a (proj1_sig b) (proj2_sig b) | E _ _ _ d } } })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : exists a : AP, exists b : exists b : BP a, CP a b, exists d : DP a (ex_proj1 b) (ex_proj2 b), EP _ _ _ d)
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a } & C _ (projT2 a) & C' _ (projT2 a) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a } | C _ (projT2 a) & C' _ (projT2 a) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : { a : { a : A & B a & B' a } | C _ (projT2 (sigT_of_sigT2 a)) & C' _ (projT2 (sigT_of_sigT2 a)) })
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
+
+  Goal forall (x y : exists2 a : exists2 a : AP, BP a & BP' a, CP _ (ex_proj2 (ex_of_ex2 a)) & CP' _ (ex_proj2 (ex_of_ex2 a)))
+              (p : x = y), p = p.
+  Proof. test_inversion_sigma_in_H. Qed.
 End inversion_sigma.

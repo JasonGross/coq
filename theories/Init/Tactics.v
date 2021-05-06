@@ -265,42 +265,64 @@ Tactic Notation "dependent" "destruction" ident(H) :=
     does not lose information, i.e., does not turn a goal which is
     provable into one which requires axiom K / UIP.  *)
 
+Ltac simpl_ex_proj_in_all :=
+  cbn beta match delta [ex_proj1 ex_proj2 ex_proj3 ex_of_ex2] in *.
 Ltac simpl_proj_exist_in H :=
-  cbn [proj1_sig proj2_sig proj3_sig projT1 projT2 projT3 sig_of_sig2 sigT_of_sigT2] in H.
+  cbn beta match delta
+      [proj1_sig proj2_sig proj3_sig
+                 projT1 projT2 projT3
+                 ex_proj1 ex_proj2 ex_proj3
+                 sig_of_sig2 sigT_of_sigT2
+                 ex_of_ex2
+                 sig_of_sigT sigT_of_sig
+                 sig2_of_sigT2 sigT2_of_sig2
+      ] in H.
 Ltac induction_sigma_in_as_using H ip rect :=
   let H' := fresh H in
   induction H as [H'] using (rect _ _ _ _);
   simpl_proj_exist_in H';
-  destruct H' as ip.
+  induction H' as ip using (@ex_rect);
+  simpl_ex_proj_in_all.
 Ltac induction_sigma2_in_as_using H ip rect :=
   let H' := fresh H in
   induction H as [H'] using (rect _ _ _ _ _);
   simpl_proj_exist_in H';
-  destruct H' as ip.
+  induction H' as ip using (@ex2_rect);
+  simpl_ex_proj_in_all.
 Ltac inversion_sigma_on_as H ip :=
   lazymatch type of H with
+  | _ = ex_intro _ _ _
+    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried
   | _ = exist _ _ _
     => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
   | _ = existT _ _ _
     => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
+  | ex_intro _ _ _ = _
+    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried
   | exist _ _ _ = _
     => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
   | existT _ _ _ = _
     => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
+  | _ = ex_intro2 _ _ _ _ _
+    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried
   | _ = exist2 _ _ _ _ _
     => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
   | _ = existT2 _ _ _ _ _
     => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
+  | ex_intro2 _ _ _ _ _ = _
+    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried
   | exist2 _ _ _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_sig2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
   | existT2 _ _ _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_sigT2_rect_uncurried
+    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
   | _ = _ :> ?T
     => let sig := uconstr:(@sig) in
        let sig2 := uconstr:(@sig2) in
        let sigT := uconstr:(@sigT) in
        let sigT2 := uconstr:(@sigT2) in
-       fail 0 "Type of" H "is not an equality of recognized Σ types: expected one of" sig "," sig2 "," sigT "," sigT2 "," sigT2 "but got" T
+       let ex := uconstr:(@ex) in
+       let ex2 := uconstr:(@ex2) in
+       fail 0 "Type of" H "is not an equality of recognized Σ types: expected one of" sig "," sig2 "," sigT "," sigT2 "," ex "," ex2 "but got" T
   | _
     => fail 0 H "is not an equality of Σ types"
   end.

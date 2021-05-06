@@ -2523,11 +2523,11 @@ and an explanation of the underlying technique.
    invoking any kind of axiom asserting uniqueness of identity proofs. If you
    want to explicitly specify the hypothesis to be inverted, you can pass it as
    an argument to :tacn:`inversion_sigma`. This tactic also works for
-   :g:`sig`, :g:`sigT2`, and :g:`sig2`, and there are similar :g:`eq_sig`
+   :g:`sig`, :g:`sigT2`, :g:`sig2`, :g:`ex`, and :g:`ex2` and there are similar :g:`eq_sig`
    :g:`***_rect` induction lemmas.
 
 
-   .. exn:: Type of @ident is not an equality of recognized Σ types: expected one of sig , sig2 , sigT , sigT2 , sigT2 but got @term
+   .. exn:: Type of @ident is not an equality of recognized Σ types: expected one of sig , sig2 , sigT , sigT2 , sigT2 , ex , ex2 but got @term
 
       When applied to a hypothesis, :tacn:`inversion_sigma` can only handle equalities of the
       listed sigma types.

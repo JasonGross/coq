@@ -228,6 +228,26 @@ Definition sig2_of_sigT2 (A : Type) (P Q : A -> Prop) (X : sigT2 P Q) : sig2 P Q
 Definition sigT2_of_sig2 (A : Type) (P Q : A -> Prop) (X : sig2 P Q) : sigT2 P Q
   := existT2 P Q (proj1_sig (sig_of_sig2 X)) (proj2_sig (sig_of_sig2 X)) (proj3_sig X).
 
+(** [sig] of a predicate on [Prop]s can be turned into [ex] *)
+
+Definition ex_of_sig (A : Type) (P : A -> Prop) (X : sig P) : ex P
+  := ex_intro P (proj1_sig X) (proj2_sig X).
+
+(** [sigT] of a predicate on [Prop]s can be turned into [ex] *)
+
+Definition ex_of_sigT (A : Type) (P : A -> Prop) (X : sigT P) : ex P
+  := ex_of_sig (sig_of_sigT X).
+
+(** [sig2] of a predicate on [Prop]s can be turned into [ex2] *)
+
+Definition ex2_of_sig2 (A : Type) (P Q : A -> Prop) (X : sig2 P Q) : ex2 P Q
+  := ex_intro2 P Q (proj1_sig (sig_of_sig2 X)) (proj2_sig (sig_of_sig2 X)) (proj3_sig X).
+
+(** [sigT2] of a predicate on [Prop]s can be turned into [ex2] *)
+
+Definition ex2_of_sigT2 (A : Type) (P Q : A -> Prop) (X : sigT2 P Q) : ex2 P Q
+  := ex2_of_sig2 (sig2_of_sigT2 X).
+
 (** η Principles *)
 Definition sigT_eta {A P} (p : { a : A & P a })
   : p = existT _ (projT1 p) (projT2 p).
@@ -355,10 +375,14 @@ Section sigT.
   Definition eq_sigT_rec {A P u v} (Q : u = v :> { a : A & P a } -> Set) := eq_sigT_rect Q.
   Definition eq_sigT_ind {A P u v} (Q : u = v :> { a : A & P a } -> Prop) := eq_sigT_rec Q.
 
+  (** We want uncurried versions so [inversion_sigma] can accept
+      intropatterns, but we use [ex] types for the induction
+      hypothesis to avoid extraction errors about informative
+      inductive types having Prop instances *)
   Definition eq_sigT_rect_uncurried {A P} {u v : { a : A & P a }} (Q : u = v -> Type)
-             (f : forall pq, Q (eq_sigT_uncurried u v pq))
+             (f : forall pq : exists p : u.1 = v.1, _, Q (eq_sigT u v (ex_proj1 pq) (ex_proj2 pq)))
     : forall p, Q p
-    := eq_sigT_rect Q (fun p q => f (existT _ p q)).
+    := eq_sigT_rect Q (fun p q => f (ex_intro _ p q)).
   Definition eq_sigT_rec_uncurried {A P u v} (Q : u = v :> { a : A & P a } -> Set) := eq_sigT_rect_uncurried Q.
   Definition eq_sigT_ind_uncurried {A P u v} (Q : u = v :> { a : A & P a } -> Prop) := eq_sigT_rec_uncurried Q.
 
@@ -388,6 +412,9 @@ End sigT.
 
 (** Equality for [sig] *)
 Section sig.
+  (** We define this as a [Let] rather than a [Definition] to avoid
+      extraction errors about informative inductive types having Prop
+      instances *)
   Local Unset Implicit Arguments.
   (** Projecting an equality of a pair to equality of the first components *)
   Definition proj1_sig_eq {A} {P : A -> Prop} {u v : { a : A | P a }} (p : u = v)
@@ -432,10 +459,14 @@ Section sig.
   Definition eq_sig_rec {A P u v} (Q : u = v :> { a : A | P a } -> Set) := eq_sig_rect Q.
   Definition eq_sig_ind {A P u v} (Q : u = v :> { a : A | P a } -> Prop) := eq_sig_rec Q.
 
+  (** We want uncurried versions so [inversion_sigma] can accept
+      intropatterns, but we use [ex] types for the induction
+      hypothesis to avoid extraction errors about informative
+      inductive types having Prop instances *)
   Definition eq_sig_rect_uncurried {A P} {u v : { a : A | P a }} (Q : u = v -> Type)
-             (f : forall pq, Q (eq_sig_uncurried u v pq))
+             (f : forall pq : exists p : proj1_sig u = proj1_sig v, _, Q (eq_sig u v (ex_proj1 pq) (ex_proj2 pq)))
     : forall p, Q p
-    := eq_sig_rect Q (fun p q => f (exist _ p q)).
+    := eq_sig_rect Q (fun p q => f (ex_intro _ p q)).
   Definition eq_sig_rec_uncurried {A P u v} (Q : u = v :> { a : A | P a } -> Set) := eq_sig_rect_uncurried Q.
   Definition eq_sig_ind_uncurried {A P u v} (Q : u = v :> { a : A | P a } -> Prop) := eq_sig_rec_uncurried Q.
 
@@ -473,10 +504,11 @@ Section sig.
   Defined.
 End sig.
 
-(** Equality for [sigT] *)
+(** Equality for [sigT2] *)
 Section sigT2.
   (* We make [sigT_of_sigT2] a coercion so we can use [projT1], [projT2] on [sigT2] *)
   Local Coercion sigT_of_sigT2 : sigT2 >-> sigT.
+  Local Coercion ex_of_ex2 : ex2 >-> ex.
   Local Unset Implicit Arguments.
   (** Projecting an equality of a pair to equality of the first components *)
   Definition sigT_of_sigT2_eq {A} {P Q : A -> Type} {u v : { a : A & P a & Q a }} (p : u = v)
@@ -557,10 +589,14 @@ Section sigT2.
   Definition eq_sigT2_rec {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Set) := eq_sigT2_rect R.
   Definition eq_sigT2_ind {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Prop) := eq_sigT2_rec R.
 
+  (** We want uncurried versions so [inversion_sigma] can accept
+      intropatterns, but we use [ex2] types for the induction
+      hypothesis to avoid extraction errors about informative
+      inductive types having Prop instances *)
   Definition eq_sigT2_rect_uncurried {A P Q} {u v : { a : A & P a & Q a }} (R : u = v -> Type)
-             (f : forall pqr, R (eq_sigT2_uncurried u v pqr))
+             (f : forall pqr : exists2 p : u.1 = v.1, _ & _, R (eq_sigT2 u v (ex_proj1 pqr) (ex_proj2 pqr) (ex_proj3 pqr)))
     : forall p, R p
-    := eq_sigT2_rect R (fun p q r => f (existT2 _ _ p q r)).
+    := eq_sigT2_rect R (fun p q r => f (ex_intro2 _ _ p q r)).
   Definition eq_sigT2_rec_uncurried {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Set) := eq_sigT2_rect_uncurried R.
   Definition eq_sigT2_ind_uncurried {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Prop) := eq_sigT2_rec_uncurried R.
 
@@ -596,6 +632,7 @@ End sigT2.
 Section sig2.
   (* We make [sig_of_sig2] a coercion so we can use [proj1], [proj2] on [sig2] *)
   Local Coercion sig_of_sig2 : sig2 >-> sig.
+  Local Coercion ex_of_ex2 : ex2 >-> ex.
   Local Unset Implicit Arguments.
   (** Projecting an equality of a pair to equality of the first components *)
   Definition sig_of_sig2_eq {A} {P Q : A -> Prop} {u v : { a : A | P a & Q a }} (p : u = v)
@@ -676,10 +713,14 @@ Section sig2.
   Definition eq_sig2_rec {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Set) := eq_sig2_rect R.
   Definition eq_sig2_ind {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Prop) := eq_sig2_rec R.
 
+  (** We want uncurried versions so [inversion_sigma] can accept
+      intropatterns, but we use [ex2] types for the induction
+      hypothesis to avoid extraction errors about informative
+      inductive types having Prop instances *)
   Definition eq_sig2_rect_uncurried {A P Q} {u v : { a : A | P a & Q a }} (R : u = v -> Type)
-             (f : forall pqr, R (eq_sig2_uncurried u v pqr))
+             (f : forall pqr : exists2 p : proj1_sig u = proj1_sig v, _ & _, R (eq_sig2 u v (ex_proj1 pqr) (ex_proj2 pqr) (ex_proj3 pqr)))
     : forall p, R p
-    := eq_sig2_rect R (fun p q r => f (exist2 _ _ p q r)).
+    := eq_sig2_rect R (fun p q r => f (ex_intro2 _ _ p q r)).
   Definition eq_sig2_rec_uncurried {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Set) := eq_sig2_rect_uncurried R.
   Definition eq_sig2_ind_uncurried {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Prop) := eq_sig2_rec_uncurried R.
 
