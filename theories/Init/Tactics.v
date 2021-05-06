@@ -322,9 +322,9 @@ Ltac inversion_sigma_on_as H ip :=
        let sigT2 := uconstr:(@sigT2) in
        let ex := uconstr:(@ex) in
        let ex2 := uconstr:(@ex2) in
-       fail 0 "Type of" H "is not an equality of recognized Σ types: expected one of" sig "," sig2 "," sigT "," sigT2 "," ex "," ex2 "but got" T
+       fail 0 "Type" "of" H "is" "not" "an" "equality" "of" "recognized" "Σ" "types:" "expected" "one" "of" sig "," sig2 "," sigT "," sigT2 "," ex "," ex2 "but" "got" T
   | _
-    => fail 0 H "is not an equality of Σ types"
+    => fail 0 H "is" "not" "an" "equality" "of" "Σ" "types"
   end.
 Ltac inversion_sigma_on H := inversion_sigma_on_as H ipattern:([]).
 Ltac inversion_sigma_step :=
