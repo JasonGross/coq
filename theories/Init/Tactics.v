@@ -338,8 +338,7 @@ Ltac lookup_inversion_sigma_rect H :=
   end.
 Ltac inversion_sigma_on_as H ip :=
   let rect := lookup_inversion_sigma_rect H in
-  induction H as ip using rect;
-  simpl_proj_exist_in_all.
+  induction H as ip using rect.
 Ltac inversion_sigma_on H := inversion_sigma_on_as H ipattern:([]).
 Ltac inversion_sigma_step :=
   match goal with
