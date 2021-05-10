@@ -212,6 +212,8 @@ Section Projections2.
 
 End Projections2.
 
+Local Notation "x .3" := (projT3 x) (at level 1, left associativity, format "x .3").
+
 (** [sigT] of a predicate is equivalent to [sig] *)
 
 Definition sig_of_sigT (A : Type) (P : A -> Prop) (X : sigT P) : sig P
@@ -315,7 +317,7 @@ Section sigT.
   Lemma eq_existT_curried {A : Type} {P : A -> Type} {u1 v1 : A} {u2 : P u1} {v2 : P v1}
              (p : u1 = v1) (q : rew p in u2 = v2) : (u1; u2) = (v1; v2).
   Proof.
-    destruct p, q. reflexivity.
+    apply eq_sigT_uncurried; exists p; exact q.
   Defined.
 
   Local Notation "(= u ; v )" := (eq_existT_curried u v) (at level 0, format "(= u ;  '/  ' v )").
@@ -350,6 +352,16 @@ Section sigT.
     : u = v
     := eq_sigT_uncurried u v (existT _ p q).
 
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_existT_l {A : Type} {P : A -> Type} {u1 : A} {u2 : P u1} {v : { a : A & P a }}
+             (p : u1 = v.1) (q : rew p in u2 = v.2) : (u1; u2) = v
+    := eq_sigT (u1; u2) v p q.
+  Definition eq_existT_r {A : Type} {P : A -> Type} {u : { a : A & P a }} {v1 : A} {v2 : P v1}
+             (p : u.1 = v1) (q : rew p in u.2 = v2) : u = (v1; v2)
+    := eq_sigT u (v1; v2) p q.
+
   (** Equality of [sigT] when the property is an hProp *)
   Definition eq_sigT_hprop {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : { a : A & P a })
@@ -374,6 +386,22 @@ Section sigT.
   Proof. intro p; specialize (f (projT1_eq p) (projT2_eq p)); destruct u, p; exact f. Defined.
   Definition eq_sigT_rec {A P u v} (Q : u = v :> { a : A & P a } -> Set) := eq_sigT_rect Q.
   Definition eq_sigT_ind {A P u v} (Q : u = v :> { a : A & P a } -> Prop) := eq_sigT_rec Q.
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_sigT_rect_existT_l {A P} {u1 u2 v} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_existT_l A P u1 u2 v p q))
+    : forall p, Q p
+    := eq_sigT_rect Q f.
+  Definition eq_sigT_rect_existT_r {A P} {u v1 v2} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_existT_r A P u v1 v2 p q))
+    : forall p, Q p
+    := eq_sigT_rect Q f.
+  Definition eq_sigT_rect_existT {A P} {u1 u2 v1 v2} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_existT_curried A P u1 v1 u2 v2 p q))
+    : forall p, Q p
+    := eq_sigT_rect Q f.
 
   (** We want uncurried versions so [inversion_sigma] can accept
       intropatterns, but we use [ex] types for the induction
@@ -409,6 +437,7 @@ Section sigT.
     destruct H, u; reflexivity.
   Defined.
 End sigT.
+Global Arguments eq_existT_curried A P _ _ _ _ !p !q / .
 
 (** Equality for [sig] *)
 Section sig.
@@ -445,11 +474,27 @@ Section sig.
     apply eq_exist_uncurried; exact pq.
   Defined.
 
+  Lemma eq_exist_curried {A : Type} {P : A -> Prop} {u1 v1 : A} {u2 : P u1} {v2 : P v1}
+             (p : u1 = v1) (q : rew p in u2 = v2) : exist P u1 u2 = exist P v1 v2.
+  Proof.
+    apply eq_sig_uncurried; exists p; exact q.
+  Defined.
+
   (** Curried version of proving equality of sigma types *)
   Definition eq_sig {A : Type} {P : A -> Prop} (u v : { a : A | P a })
              (p : proj1_sig u = proj1_sig v) (q : rew p in proj2_sig u = proj2_sig v)
     : u = v
     := eq_sig_uncurried u v (exist _ p q).
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_exist_l {A : Type} {P : A -> Prop} {u1 : A} {u2 : P u1} {v : { a : A | P a }}
+             (p : u1 = proj1_sig v) (q : rew p in u2 = proj2_sig v) : exist _ u1 u2 = v
+    := eq_sig (exist _ u1 u2) v p q.
+  Definition eq_exist_r {A : Type} {P : A -> Prop} {u : { a : A | P a }} {v1 : A} {v2 : P v1}
+             (p : proj1_sig u = v1) (q : rew p in proj2_sig u = v2) : u = exist _ v1 v2
+    := eq_sig u (exist _ v1 v2) p q.
 
   (** Induction principle for [@eq (sig _)] *)
   Definition eq_sig_rect {A P} {u v : { a : A | P a }} (Q : u = v -> Type)
@@ -458,6 +503,22 @@ Section sig.
   Proof. intro p; specialize (f (proj1_sig_eq p) (proj2_sig_eq p)); destruct u, p; exact f. Defined.
   Definition eq_sig_rec {A P u v} (Q : u = v :> { a : A | P a } -> Set) := eq_sig_rect Q.
   Definition eq_sig_ind {A P u v} (Q : u = v :> { a : A | P a } -> Prop) := eq_sig_rec Q.
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_sig_rect_exist_l {A P} {u1 u2 v} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_exist_l A P u1 u2 v p q))
+    : forall p, Q p
+    := eq_sig_rect Q f.
+  Definition eq_sig_rect_exist_r {A P} {u v1 v2} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_exist_r A P u v1 v2 p q))
+    : forall p, Q p
+    := eq_sig_rect Q f.
+  Definition eq_sig_rect_exist {A P} {u1 u2 v1 v2} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_exist_curried A P u1 v1 u2 v2 p q))
+    : forall p, Q p
+    := eq_sig_rect Q f.
 
   (** We want uncurried versions so [inversion_sigma] can accept
       intropatterns, but we use [ex] types for the induction
@@ -503,6 +564,7 @@ Section sig.
     destruct H, u; reflexivity.
   Defined.
 End sig.
+Global Arguments eq_exist_curried A P _ _ _ _ !p !q / .
 
 (** Equality for [sigT2] *)
 Section sigT2.
@@ -525,7 +587,7 @@ Section sigT2.
 
   (** Projecting an equality of a pair to equality of the third components *)
   Definition projT3_eq {A} {P Q : A -> Type} {u v : { a : A & P a & Q a }} (p : u = v)
-    : rew projT1_of_sigT2_eq p in projT3 u = projT3 v
+    : rew projT1_of_sigT2_eq p in u.3 = v.3
     := rew dependent p in eq_refl.
 
   (** Equality of [sigT2] is itself a [sigT2] (forwards-reasoning version) *)
@@ -543,20 +605,36 @@ Section sigT2.
   (** Equality of [sigT2] is itself a [sigT2] (backwards-reasoning version) *)
   Definition eq_sigT2_uncurried {A : Type} {P Q : A -> Type} (u v : { a : A & P a & Q a })
              (pqr : { p : u.1 = v.1
-                    & rew p in u.2 = v.2 & rew p in projT3 u = projT3 v })
+                    & rew p in u.2 = v.2 & rew p in u.3 = v.3 })
     : u = v.
   Proof.
     destruct u as [u1 u2 u3], v as [v1 v2 v3]; simpl in *.
     apply eq_existT2_uncurried; exact pqr.
   Defined.
 
+  Lemma eq_existT2_curried {A : Type} {P Q : A -> Type} {u1 v1 : A} {u2 : P u1} {v2 : P v1} {u3 : Q u1} {v3 : Q v1}
+             (p : u1 = v1) (q : rew p in u2 = v2) (r : rew p in u3 = v3) : existT2 P Q u1 u2 u3 = existT2 P Q v1 v2 v3.
+  Proof.
+    apply eq_sigT2_uncurried; exists p; exact q + exact r.
+  Defined.
+
   (** Curried version of proving equality of sigma types *)
   Definition eq_sigT2 {A : Type} {P Q : A -> Type} (u v : { a : A & P a & Q a })
              (p : u.1 = v.1)
              (q : rew p in u.2 = v.2)
-             (r : rew p in projT3 u = projT3 v)
+             (r : rew p in u.3 = v.3)
     : u = v
     := eq_sigT2_uncurried u v (existT2 _ _ p q r).
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_existT2_l {A : Type} {P Q : A -> Type} {u1 : A} {u2 : P u1} {u3 : Q u1} {v : { a : A & P a & Q a }}
+             (p : u1 = v.1) (q : rew p in u2 = v.2) (r : rew p in u3 = v.3) : existT2 P Q u1 u2 u3 = v
+    := eq_sigT2 (existT2 P Q u1 u2 u3) v p q r.
+  Definition eq_existT2_r {A : Type} {P Q : A -> Type} {u : { a : A & P a & Q a }} {v1 : A} {v2 : P v1} {v3 : Q v1}
+             (p : u.1 = v1) (q : rew p in u.2 = v2) (r : rew p in u.3 = v3) : u = existT2 P Q v1 v2 v3
+    := eq_sigT2 u (existT2 P Q v1 v2 v3) p q r.
 
   (** Equality of [sigT2] when the second property is an hProp *)
   Definition eq_sigT2_hprop {A P Q} (Q_hprop : forall (x : A) (p q : Q x), p = q)
@@ -572,7 +650,7 @@ Section sigT2.
              (u v : { a : A & P a & Q a })
     : u = v
       <-> { p : u.1 = v.1
-          & rew p in u.2 = v.2 & rew p in projT3 u = projT3 v }.
+          & rew p in u.2 = v.2 & rew p in u.3 = v.3 }.
   Proof.
     split; [ intro; subst; exists eq_refl; reflexivity | apply eq_sigT2_uncurried ].
   Defined.
@@ -588,6 +666,22 @@ Section sigT2.
   Defined.
   Definition eq_sigT2_rec {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Set) := eq_sigT2_rect R.
   Definition eq_sigT2_ind {A P Q u v} (R : u = v :> { a : A & P a & Q a } -> Prop) := eq_sigT2_rec R.
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_sigT2_rect_existT2_l {A P Q} {u1 u2 u3 v} (R : _ -> Type)
+             (f : forall p q r, R (@eq_existT2_l A P Q u1 u2 u3 v p q r))
+    : forall p, R p
+    := eq_sigT2_rect R f.
+  Definition eq_sigT2_rect_existT2_r {A P Q} {u v1 v2 v3} (R : _ -> Type)
+             (f : forall p q r, R (@eq_existT2_r A P Q u v1 v2 v3 p q r))
+    : forall p, R p
+    := eq_sigT2_rect R f.
+  Definition eq_sigT2_rect_existT2 {A P Q} {u1 u2 u3 v1 v2 v3} (R : _ -> Type)
+             (f : forall p q r, R (@eq_existT2_curried A P Q u1 v1 u2 v2 u3 v3 p q r))
+    : forall p, R p
+    := eq_sigT2_rect R f.
 
   (** We want uncurried versions so [inversion_sigma] can accept
       intropatterns, but we use [ex2] types for the induction
@@ -608,7 +702,7 @@ Section sigT2.
 
   (** Non-dependent classification of equality of [sigT] *)
   Definition eq_sigT2_nondep {A B C : Type} (u v : { a : A & B & C })
-             (p : u.1 = v.1) (q : u.2 = v.2) (r : projT3 u = projT3 v)
+             (p : u.1 = v.1) (q : u.2 = v.2) (r : u.3 = v.3)
     : u = v
     := @eq_sigT2 _ _ _ u v p (eq_trans (rew_const _ _) q) (eq_trans (rew_const _ _) r).
 
@@ -622,11 +716,12 @@ Section sigT2.
           (R y)
           (rew H in u.1)
           (rew dependent H in u.2)
-          (rew dependent H in projT3 u).
+          (rew dependent H in u.3).
   Proof.
     destruct H, u; reflexivity.
   Defined.
 End sigT2.
+Global Arguments eq_existT2_curried A P Q _ _ _ _ _ _ !p !q !r / .
 
 (** Equality for [sig2] *)
 Section sig2.
@@ -674,6 +769,12 @@ Section sig2.
     apply eq_exist2_uncurried; exact pqr.
   Defined.
 
+  Lemma eq_exist2_curried {A : Type} {P Q : A -> Prop} {u1 v1 : A} {u2 : P u1} {v2 : P v1} {u3 : Q u1} {v3 : Q v1}
+             (p : u1 = v1) (q : rew p in u2 = v2) (r : rew p in u3 = v3) : exist2 P Q u1 u2 u3 = exist2 P Q v1 v2 v3.
+  Proof.
+    apply eq_sig2_uncurried; exists p; exact q + exact r.
+  Defined.
+
   (** Curried version of proving equality of sigma types *)
   Definition eq_sig2 {A} {P Q : A -> Prop} (u v : { a : A | P a & Q a })
              (p : proj1_sig u = proj1_sig v)
@@ -681,6 +782,16 @@ Section sig2.
              (r : rew p in proj3_sig u = proj3_sig v)
     : u = v
     := eq_sig2_uncurried u v (exist2 _ _ p q r).
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_exist2_l {A : Type} {P Q : A -> Prop} {u1 : A} {u2 : P u1} {u3 : Q u1} {v : { a : A | P a & Q a }}
+             (p : u1 = proj1_sig v) (q : rew p in u2 = proj2_sig v) (r : rew p in u3 = proj3_sig v) : exist2 P Q u1 u2 u3 = v
+    := eq_sig2 (exist2 P Q u1 u2 u3) v p q r.
+  Definition eq_exist2_r {A : Type} {P Q : A -> Prop} {u : { a : A | P a & Q a }} {v1 : A} {v2 : P v1} {v3 : Q v1}
+             (p : proj1_sig u = v1) (q : rew p in proj2_sig u = v2) (r : rew p in proj3_sig u = v3) : u = exist2 P Q v1 v2 v3
+    := eq_sig2 u (exist2 P Q v1 v2 v3) p q r.
 
   (** Equality of [sig2] when the second property is an hProp *)
   Definition eq_sig2_hprop {A} {P Q : A -> Prop} (Q_hprop : forall (x : A) (p q : Q x), p = q)
@@ -712,6 +823,22 @@ Section sig2.
   Defined.
   Definition eq_sig2_rec {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Set) := eq_sig2_rect R.
   Definition eq_sig2_ind {A P Q u v} (R : u = v :> { a : A | P a & Q a } -> Prop) := eq_sig2_rec R.
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_sig2_rect_exist2_l {A P Q} {u1 u2 u3 v} (R : _ -> Type)
+             (f : forall p q r, R (@eq_exist2_l A P Q u1 u2 u3 v p q r))
+    : forall p, R p
+    := eq_sig2_rect R f.
+  Definition eq_sig2_rect_exist2_r {A P Q} {u v1 v2 v3} (R : _ -> Type)
+             (f : forall p q r, R (@eq_exist2_r A P Q u v1 v2 v3 p q r))
+    : forall p, R p
+    := eq_sig2_rect R f.
+  Definition eq_sig2_rect_exist2 {A P Q} {u1 u2 u3 v1 v2 v3} (R : _ -> Type)
+             (f : forall p q r, R (@eq_exist2_curried A P Q u1 v1 u2 v2 u3 v3 p q r))
+    : forall p, R p
+    := eq_sig2_rect R f.
 
   (** We want uncurried versions so [inversion_sigma] can accept
       intropatterns, but we use [ex2] types for the induction
@@ -751,6 +878,7 @@ Section sig2.
     destruct H, u; reflexivity.
   Defined.
 End sig2.
+Global Arguments eq_exist2_curried A P Q _ _ _ _ _ _ !p !q !r / .
 
 
 (** [sumbool] is a boolean type equipped with the justification of

@@ -938,6 +938,18 @@ Section ex.
     : u = v
     := eq_ex_uncurried u v (ex_intro _ p q).
 
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_ex_intro_l {A : Prop} {P : A -> Prop} u1 u2 (v : exists a : A, P a)
+             (p : u1 = ex_proj1 v) (q : rew p in u2 = ex_proj2 v)
+    : ex_intro P u1 u2 = v
+    := eq_ex (ex_intro P u1 u2) v p q.
+  Definition eq_ex_intro_r {A : Prop} {P : A -> Prop} (u : exists a : A, P a) v1 v2
+             (p : ex_proj1 u = v1) (q : rew p in ex_proj2 u = v2)
+    : u = ex_intro P v1 v2
+    := eq_ex u (ex_intro P v1 v2) p q.
+
   (** Induction principle for [@eq (ex _)] *)
   Definition eq_ex_eta {A : Prop} {P : A -> Prop} {u v : exists a : A, P a} (p : u = v) : p = eq_ex u v (ex_proj1_eq p) (ex_proj2_eq p).
   Proof. destruct p, u; reflexivity. Defined.
@@ -947,6 +959,22 @@ Section ex.
     := fun p => rew <- eq_ex_eta p in f _ _.
   Definition eq_ex_rec {A : Prop} {P : A -> Prop} {u v} (Q : u = v :> (exists a : A, P a) -> Set) := eq_ex_rect Q.
   Definition eq_ex_ind {A : Prop} {P : A -> Prop} {u v} (Q : u = v :> (exists a : A, P a) -> Prop) := eq_ex_rec Q.
+
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_ex_rect_ex_intro_l {A : Prop} {P : A -> Prop} {u1 u2 v} (Q : _ -> Type)
+             (f : forall p q, Q (eq_ex_intro_l (P:=P) u1 u2 v p q))
+    : forall p, Q p
+    := eq_ex_rect Q f.
+  Definition eq_ex_rect_ex_intro_r {A : Prop} {P : A -> Prop} {u v1 v2} (Q : _ -> Type)
+             (f : forall p q, Q (eq_ex_intro_r (P:=P) u v1 v2 p q))
+    : forall p, Q p
+    := eq_ex_rect Q f.
+  Definition eq_ex_rect_ex_intro {A : Prop} {P : A -> Prop} {u1 u2 v1 v2} (Q : _ -> Type)
+             (f : forall p q, Q (@eq_ex_intro A P u1 v1 u2 v2 p q))
+    : forall p, Q p
+    := eq_ex_rect Q f.
 
   Definition eq_ex_rect_uncurried {A : Prop} {P : A -> Prop} {u v : exists a : A, P a} (Q : u = v -> Type)
              (f : forall pq, Q (eq_ex u v (ex_proj1 pq) (ex_proj2 pq)))
@@ -993,6 +1021,7 @@ Section ex.
     destruct H, u; reflexivity.
   Defined.
 End ex.
+Global Arguments eq_ex_intro A P _ _ _ _ !p !q / .
 
 Section ex2_Prop.
   Variables (A:Prop) (P Q:A->Prop).
@@ -1064,6 +1093,18 @@ Section ex2.
     : ex_intro2 P Q u1 u2 u3 = ex_intro2 P Q v1 v2 v3
     := eq_ex_intro2_uncurried (ex_intro2 _ _ p q r).
 
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_ex_intro2_l {A : Prop} {P Q : A -> Prop} u1 u2 u3 (v : exists2 a : A, P a & Q a)
+             (p : u1 = ex_proj1 v) (q : rew p in u2 = ex_proj2 v) (r : rew p in u3 = ex_proj3 v)
+    : ex_intro2 P Q u1 u2 u3 = v
+    := eq_ex2 (ex_intro2 P Q u1 u2 u3) v p q r.
+  Definition eq_ex_intro2_r {A : Prop} {P Q : A -> Prop} (u : exists2 a : A, P a & Q a) v1 v2 v3
+             (p : ex_proj1 u = v1) (q : rew p in ex_proj2 u = v2) (r : rew p in ex_proj3 u = v3)
+    : u = ex_intro2 P Q v1 v2 v3
+    := eq_ex2 u (ex_intro2 P Q v1 v2 v3) p q r.
+
   (** Equality of [ex2] when the second property is an hProp *)
   Definition eq_ex2_hprop {A : Prop} {P Q : A -> Prop} (Q_hprop : forall (x : A) (p q : Q x), p = q)
              (u v : exists2 a : A, P a & Q a)
@@ -1108,6 +1149,22 @@ Section ex2.
   Definition eq_ex2_rec {A : Prop} {P Q : A -> Prop} {u v} (R : u = v :> (exists2 a : A, P a & Q a) -> Set) := eq_ex2_rect R.
   Definition eq_ex2_ind {A : Prop} {P Q : A -> Prop} {u v} (R : u = v :> (exists2 a : A, P a & Q a) -> Prop) := eq_ex2_rec R.
 
+  (** In order to have a performant [inversion_sigma], we define
+      specialized versions for when we have constructors on one or
+      both sides of the equality *)
+  Definition eq_ex2_rect_ex_intro2_l {A : Prop} {P Q : A -> Prop} {u1 u2 u3 v} (R : _ -> Type)
+             (f : forall p q r, R (eq_ex_intro2_l (P:=P) (Q:=Q) u1 u2 u3 v p q r))
+    : forall p, R p
+    := eq_ex2_rect R f.
+  Definition eq_ex2_rect_ex_intro2_r {A : Prop} {P Q : A -> Prop} {u v1 v2 v3} (R : _ -> Type)
+             (f : forall p q r, R (eq_ex_intro2_r (P:=P) (Q:=Q) u v1 v2 v3 p q r))
+    : forall p, R p
+    := eq_ex2_rect R f.
+  Definition eq_ex2_rect_ex_intro2 {A : Prop} {P Q : A -> Prop} {u1 u2 u3 v1 v2 v3} (R : _ -> Type)
+             (f : forall p q r, R (@eq_ex_intro2 A P Q u1 v1 u2 v2 u3 v3 p q r))
+    : forall p, R p
+    := eq_ex2_rect R f.
+
   Definition eq_ex2_rect_uncurried {A : Prop} {P Q : A -> Prop} {u v : exists2 a : A, P a & Q a} (R : u = v -> Type)
              (f : forall pqr : exists2 p : _ = _, _ & _, R (eq_ex2 u v (ex_proj1 pqr) (ex_proj2 pqr) (ex_proj3 pqr)))
     : forall p, R p
@@ -1142,3 +1199,4 @@ Section ex2.
     destruct H, u; reflexivity.
   Defined.
 End ex2.
+Global Arguments eq_ex_intro2 A P Q _ _ _ _ _ _ !p !q !r / .

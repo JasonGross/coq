@@ -277,44 +277,54 @@ Ltac simpl_proj_exist_in H :=
                  sig_of_sigT sigT_of_sig
                  sig2_of_sigT2 sigT2_of_sig2
       ] in H.
-Ltac induction_sigma_in_as_using H ip rect :=
-  let H' := fresh H in
-  induction H as [H'] using (rect _ _ _ _);
-  simpl_proj_exist_in H';
-  induction H' as ip using (@ex_rect);
-  simpl_ex_proj_in_all.
-Ltac induction_sigma2_in_as_using H ip rect :=
-  let H' := fresh H in
-  induction H as [H'] using (rect _ _ _ _ _);
-  simpl_proj_exist_in H';
-  induction H' as ip using (@ex2_rect);
-  simpl_ex_proj_in_all.
-Ltac inversion_sigma_on_as H ip :=
+Ltac simpl_proj_exist_in_all :=
+  cbn beta match delta
+      [proj1_sig proj2_sig proj3_sig
+                 projT1 projT2 projT3
+                 ex_proj1 ex_proj2 ex_proj3
+                 sig_of_sig2 sigT_of_sigT2
+                 ex_of_ex2
+                 sig_of_sigT sigT_of_sig
+                 sig2_of_sigT2 sigT2_of_sig2
+      ] in *.
+Ltac lookup_inversion_sigma_rect H :=
   lazymatch type of H with
+  | ex_intro _ _ _ = ex_intro _ _ _
+    => uconstr:(eq_ex_rect_ex_intro)
+  | exist _ _ _ = exist _ _ _
+    => uconstr:(eq_sig_rect_exist)
+  | existT _ _ _ = existT _ _ _
+    => uconstr:(eq_sigT_rect_existT)
   | _ = ex_intro _ _ _
-    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried
+    => uconstr:(eq_ex_rect_ex_intro_r)
   | _ = exist _ _ _
-    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
+    => uconstr:(eq_sig_rect_exist_r)
   | _ = existT _ _ _
-    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
+    => uconstr:(eq_sigT_rect_existT_r)
   | ex_intro _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_ex_rect_uncurried
+    => uconstr:(eq_ex_rect_ex_intro_l)
   | exist _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_sig_rect_uncurried
+    => uconstr:(eq_sig_rect_exist_l)
   | existT _ _ _ = _
-    => induction_sigma_in_as_using H ip @eq_sigT_rect_uncurried
+    => uconstr:(eq_sigT_rect_existT_l)
+  | ex_intro2 _ _ _ _ _ = ex_intro2 _ _ _ _ _
+    => uconstr:(eq_ex2_rect_ex_intro2)
+  | exist2 _ _ _ _ _ = exist2 _ _ _ _ _
+    => uconstr:(eq_sig2_rect_exist2)
+  | existT2 _ _ _ _ _ = existT2 _ _ _ _ _
+    => uconstr:(eq_sigT2_rect_existT2)
   | _ = ex_intro2 _ _ _ _ _
-    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried
+    => uconstr:(eq_ex2_rect_ex_intro2_r)
   | _ = exist2 _ _ _ _ _
-    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
+    => uconstr:(eq_sig2_rect_exist2_r)
   | _ = existT2 _ _ _ _ _
-    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
+    => uconstr:(eq_sigT2_rect_existT2_r)
   | ex_intro2 _ _ _ _ _ = _
-    => induction_sigma2_in_as_using H ip @eq_ex2_rect_uncurried
+    => uconstr:(eq_ex2_rect_ex_intro2_l)
   | exist2 _ _ _ _ _ = _
-    => induction_sigma2_in_as_using H ip @eq_sig2_rect_uncurried
+    => uconstr:(eq_sig2_rect_exist2_l)
   | existT2 _ _ _ _ _ = _
-    => induction_sigma2_in_as_using H ip @eq_sigT2_rect_uncurried
+    => uconstr:(eq_sigT2_rect_existT2_l)
   | _ = _ :> ?T
     => let sig := uconstr:(@sig) in
        let sig2 := uconstr:(@sig2) in
@@ -326,6 +336,10 @@ Ltac inversion_sigma_on_as H ip :=
   | _
     => fail 0 H "is" "not" "an" "equality" "of" "Σ" "types"
   end.
+Ltac inversion_sigma_on_as H ip :=
+  let rect := lookup_inversion_sigma_rect H in
+  induction H as ip using rect;
+  simpl_proj_exist_in_all.
 Ltac inversion_sigma_on H := inversion_sigma_on_as H ipattern:([]).
 Ltac inversion_sigma_step :=
   match goal with

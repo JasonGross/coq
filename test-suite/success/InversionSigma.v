@@ -70,7 +70,7 @@ total time:      1.799s
     end.
     inversion_sigma p as [p1 p2].
     lazymatch type of p1 with existT _ ?a ?b = existT _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
-    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_existT_uncurried eq_sigT eq_sigT_uncurried] in * |- .
+    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_existT_uncurried eq_sigT eq_existT_curried eq_sigT_uncurried] in * |- .
     lazymatch type of p2 with existT _ ?a ?b = existT _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
     inversion_sigma p2 as [-> <-].
     cbn.
@@ -88,7 +88,7 @@ total time:      1.799s
     end.
     inversion_sigma p as [p1 p2].
     lazymatch type of p1 with exist _ ?a ?b = exist _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
-    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_exist_uncurried eq_sig eq_sig_uncurried] in * |- .
+    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_exist_uncurried eq_sig eq_exist_curried eq_sig_uncurried] in * |- .
     lazymatch type of p2 with exist _ ?a ?b = exist _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
     inversion_sigma p2 as [-> <-].
     cbn.
@@ -106,7 +106,7 @@ total time:      1.799s
     end.
     inversion_sigma p as [p1 p2].
     lazymatch type of p1 with ex_intro _ ?a ?b = ex_intro _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
-    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_ex_intro_uncurried eq_ex eq_ex_uncurried] in * |- .
+    inversion_sigma p1 as [-> <-]; cbn [eq_rect eq_ex_intro_uncurried eq_ex_intro eq_ex eq_ex_uncurried] in * |- .
     lazymatch type of p2 with ex_intro _ ?a ?b = ex_intro _ ?c ?d => is_var a; is_var b; is_var c; is_var d end.
     inversion_sigma p2 as [-> <-].
     cbn.
