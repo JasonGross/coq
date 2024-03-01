@@ -104,9 +104,24 @@ git_download()
   local giturl="${!giturl_var}"
   local ref_var="${project}_CI_REF"
   local ref="${!ref_var}"
+  local ref_for_rebase="$ref" # might be distinct from $ref if we're in a submoudle
+  local submodule_folder_var="${project}_CI_SUBMODULE_FOLDER"
+  local submodule_folder="${!submodule_folder_var}"
 
   local ov_url=${overlays[${project}_URL]}
   local ov_ref=${overlays[${project}_REF]}
+
+  local in_subfolder=""
+
+  # if the submodule_folder is non-empty, we clone to project-PARENT and
+  # then symlink the submodule_folder to dest this allows project CI scripts
+  # to be transparent w.r.t. whether or not the project is cloned from
+  # a submodule / submodule_folder.
+  # we can't symlink until the folder exists though
+  if [[ -n "$submodule_folder" ]]; then
+    local project_dest="$dest"
+    local dest="${project_dest}-PARENT"
+  fi
 
   if [ -d "$dest" ]; then
     echo "Warning: download and unpacking of $project skipped because $dest already exists."
@@ -120,6 +135,17 @@ git_download()
         # Locally checkout the overlay and rebase on upstream
         # We act differently because merging is what will happen when the PR is merged
         # but rebasing produces something that is nicer to edit
+        #
+        # We must cd into the submodule_folder first, though, to
+        # ensure that if it is a submodule we merge in the right way
+        if [[ -n "$submodule_folder" ]]; then
+          if [ "$WITH_SUBMODULES" = 1 ]; then
+            git submodule update --init --recursive
+          fi
+          pushd "$submodule_folder"
+          in_submodule_folder=1
+          ref_for_rebase="$(git rev-parse HEAD)"
+        fi
         if [[ $CI ]]; then
             git -c pull.rebase=false -c user.email=nobody@example.invalid -c user.name=Nobody \
                 pull --no-edit --no-ff "$ov_url" "$ov_ref"
@@ -128,12 +154,15 @@ git_download()
         else
             git remote add -t "$ov_ref" -f overlay "$ov_url"
             git checkout -b "$ov_ref" overlay/"$ov_ref"
-            git rebase "$ref"
+            git rebase "$ref_for_rebase"
             git log -n 1
         fi
     fi
     if [ "$WITH_SUBMODULES" = 1 ]; then
         git submodule update --init --recursive
+    fi
+    if [ "$in_submodule_folder" = 1 ]; then
+        popd
     fi
     popd
   else # When possible, we download tarballs to reduce bandwidth and latency
@@ -151,6 +180,15 @@ git_download()
     tar xfz "$commit.tar.gz" --strip-components=1
     rm -f "$commit.tar.gz"
     popd
+  fi
+
+  # now we can create the symlinks
+  if [[ -n "$submodule_folder" ]]; then
+    if [ -e "$project_dest" ]; then
+      echo "Warning: symlinking of $dest/$submodule_folder for $project skipped because $project_dest already exists"
+    else
+      ln -s "$dest/$submodule_folder" "$project_dest"
+    fi
   fi
 }
 

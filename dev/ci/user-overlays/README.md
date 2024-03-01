@@ -65,6 +65,15 @@ named `more_efficient_tc`.
 - From the `<job name>` subdirectory, commit your changes to a new
   branch, based on the base branch name listed in `ci-basic-overlay.sh`,
   for example `coq-master` for elpi.
+  - If the project in `ci-basic-overlay.sh` includes a `submodule_directory`
+    argument (for example, the last argument of `project bedrock2
+    "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2"`),
+    you will need to navigate to the corresponding subfolder of the base
+    repository to find out what commit the project is based on. The
+    `.gitmodules` folder of the parent repo may contain a `branch =`
+    specification for some of its submodules, indicating the base branch name.
+    For example, [`bedrock2` indicates `branch = rv32i` for
+    `kami`](https://github.com/mit-plv/bedrock2/blob/8cc35c50ec7f302e621d23898b007e999116641f/.gitmodules#L7-L10).
 - If necessary, fork the external project from the project's github page.
   (Only needs to be done once, ever.)
 - Push to the external project and create a new PR.  Make sure you pick

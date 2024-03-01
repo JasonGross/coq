@@ -13,7 +13,7 @@ function is_in_projects {
     return 1
 }
 
-# project <name> <giturl> <ref> [<archiveurl>]
+# project <name> <giturl> <ref> [<archiveurl> [<submodulefolder>]]
 #   [<archiveurl>] defaults to <giturl>/archive on github.com
 #   and <giturl>/-/archive on gitlab
 function project {
@@ -21,9 +21,11 @@ function project {
   local var_ref=${1}_CI_REF
   local var_giturl=${1}_CI_GITURL
   local var_archiveurl=${1}_CI_ARCHIVEURL
+  local var_submodule_folder=${1}_CI_SUBMODULE_FOLDER
   local giturl=$2
   local ref=$3
   local archiveurl=$4
+  local submodule_folder=$5
   case $giturl in
     *github.com*) archiveurl=${archiveurl:-$giturl/archive} ;;
     *gitlab*) archiveurl=${archiveurl:-$giturl/-/archive} ;;
@@ -36,6 +38,7 @@ function project {
   : "${!var_ref:=$ref}"
   : "${!var_giturl:=$giturl}"
   : "${!var_archiveurl:=$archiveurl}"
+  : "${!var_submodule_folder:=$submodule_folder}"
 
 }
 
@@ -226,9 +229,16 @@ project bbv "https://github.com/mit-plv/bbv" "master"
 # Contact @JasonGross, @samuelgruetter on github
 
 ########################################################################
-# bedrock2
+# bedrock2, coqutil, rupicola, kami, riscv_coq
 ########################################################################
-project bedrock2 "https://github.com/mit-plv/bedrock2" "tested"
+# fiat-crypto is not guaranteed to build with the latest version of
+# bedrock2, so we use the pinned version of bedrock2 for fiat-crypto
+# overlays do not have to follow suite
+project coqutil "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/coqutil"
+project kami "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/kami"
+project riscv_coq "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/riscv-coq"
+project bedrock2 "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2"
+project rupicola "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola"
 # Contact @samuelgruetter, @andres-erbsen on github
 
 ########################################################################
