@@ -673,6 +673,8 @@ library:ci-fiat_crypto:
   - library:ci-bedrock2
   - library:ci-coqutil
   - library:ci-rupicola
+  - library:ci-kami
+  - library:ci-riscv_coq
   - plugin:ci-bignums
   - plugin:ci-rewriter
   timeout: 3h
@@ -689,6 +691,11 @@ library:ci-fiat_crypto_ocaml:
   needs:
   - build:edge+flambda
   - library:ci-coqprime
+  - library:ci-bedrock2
+  - library:ci-coqutil
+  - library:ci-rupicola
+  - library:ci-kami
+  - library:ci-riscv_coq
   - plugin:ci-bignums
   - plugin:ci-rewriter
   - library:ci-fiat_crypto
@@ -1002,6 +1009,8 @@ library:ci-rupicola:
   - build:edge+flambda
   - library:ci-bedrock2
   - library:ci-coqutil
+  - library:ci-kami
+  - library:ci-riscv_coq
 
 plugin:ci-serapi:
   extends: .ci-template-flambda
