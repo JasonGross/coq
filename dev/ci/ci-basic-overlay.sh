@@ -13,7 +13,7 @@ function is_in_projects {
     return 1
 }
 
-# project <name> <giturl> <ref> [<archiveurl> [<submodulefolder>]]
+# project <name> <giturl> <ref> [<archiveurl> [<submodulefolder> <submodule giturl> <submodule branch>]]
 #   [<archiveurl>] defaults to <giturl>/archive on github.com
 #   and <giturl>/-/archive on gitlab
 function project {
@@ -22,10 +22,14 @@ function project {
   local var_giturl=${1}_CI_GITURL
   local var_archiveurl=${1}_CI_ARCHIVEURL
   local var_submodule_folder=${1}_CI_SUBMODULE_FOLDER
+  local var_submodule_giturl=${1}_CI_SUBMODULE_GITURL
+  local var_submodule_branch=${1}_CI_SUBMODULE_BRANCH
   local giturl=$2
   local ref=$3
   local archiveurl=$4
   local submodule_folder=$5
+  local submodule_giturl=$6
+  local submodule_branch=$7
   case $giturl in
     *github.com*) archiveurl=${archiveurl:-$giturl/archive} ;;
     *gitlab*) archiveurl=${archiveurl:-$giturl/-/archive} ;;
@@ -39,6 +43,8 @@ function project {
   : "${!var_giturl:=$giturl}"
   : "${!var_archiveurl:=$archiveurl}"
   : "${!var_submodule_folder:=$submodule_folder}"
+  : "${!var_submodule_giturl:=$submodule_giturl}"
+  : "${!var_submodule_branch:=$submodule_branch}"
 
 }
 
@@ -234,11 +240,11 @@ project bbv "https://github.com/mit-plv/bbv" "master"
 # fiat-crypto is not guaranteed to build with the latest version of
 # bedrock2, so we use the pinned version of bedrock2 for fiat-crypto
 # overlays do not have to follow suite
-project coqutil "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/coqutil"
-project kami "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/kami"
-project riscv_coq "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/riscv-coq"
-project bedrock2 "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2"
-project rupicola "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola"
+project coqutil "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/coqutil" "https://github.com/mit-plv/coqutil" "master"
+project kami "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/kami" "https://github.com/mit-plv/kami" "rv32i"
+project riscv_coq "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2/deps/riscv-coq" "https://github.com/mit-plv/riscv-coq" "master"
+project bedrock2 "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola/bedrock2" "https://github.com/mit-plv/bedrock2" "master"
+project rupicola "https://github.com/mit-plv/fiat-crypto" "master" "" "rupicola" "https://github.com/mit-plv/rupicola" "master"
 # Contact @samuelgruetter, @andres-erbsen on github
 
 ########################################################################
