@@ -98,13 +98,16 @@ set -x
 git_download()
 {
   local project=$1
-  local dest="$CI_BUILD_DIR/$project"
+  local project_dest="$CI_BUILD_DIR/$project"
+  local dest="$project_dest" # will be changed later if we're in a submodule
 
   local giturl_var="${project}_CI_GITURL"
   local giturl="${!giturl_var}"
   local ref_var="${project}_CI_REF"
   local ref="${!ref_var}"
   local ref_for_rebase="$ref" # might be distinct from $ref if we're in a submoudle
+  local parent_project_var="${project}_CI_PARENT_PROJECT"
+  local parent_project="${!parent_project_var}"
   local submodule_folder_var="${project}_CI_SUBMODULE_FOLDER"
   local submodule_folder="${!submodule_folder_var}"
 
@@ -113,22 +116,36 @@ git_download()
 
   local in_subfolder=""
 
-  # if the submodule_folder is non-empty, we clone to project-PARENT and
-  # then symlink the submodule_folder to dest this allows project CI scripts
+  # if there is a parent project, we first download the parent project
+  # then symlink the submodule_folder to dest; this allows project CI scripts
   # to be transparent w.r.t. whether or not the project is cloned from
   # a submodule / submodule_folder.
-  # we can't symlink until the folder exists though
-  if [[ -n "$submodule_folder" ]]; then
-    local project_dest="$dest"
-    local dest="${project_dest}-PARENT"
+  # we can't symlink until the folder exists though.
+  if [[ -n "${parent_project}" ]]; then
+    WITH_SUBMODULES=1 git_download "${parent_project}"
+
+    # if the parent project still has its .git directory, we can reuse
+    # it (this is not the case, for example, when it comes from a
+    # downloaded CI artifact)
+    if [[ -d "${CI_BUILD_DIR}/${parent_project}/.git" ]]; then
+      local dest="${parent_project}"
+    else
+      # otherwise we must re-download the parent project
+      local dest="${project_dest}-PARENT"
+    fi
   fi
 
-  if [ -d "$dest" ]; then
-    echo "Warning: download and unpacking of $project skipped because $dest already exists."
-  elif [[ $ov_url ]] || [ "$WITH_SUBMODULES" = "1" ] || [ "$CI" = "" ]; then
-    git clone "$giturl" "$dest"
-    pushd "$dest"
-    git checkout "$ref"
+  if [ -d "$project_dest" ]; then
+    echo "Warning: download and unpacking of $project skipped because $project_dest already exists."
+  elif [[ $ov_url ]] || [ "$WITH_SUBMODULES" = "1" ] || [ "$CI" = "" ] || [[ -n "${parent_project}" ]]; then
+    if [ ! -d "$dest" ]; then
+      echo "Notice: download and unpacking of $parent_project skipped because $dest already exists."
+      pushd "$dest"
+    else
+      git clone "$giturl" "$dest"
+      pushd "$dest"
+      git checkout "$ref"
+    fi
     git log -n 1
     if [[ $ov_url ]]; then
         # In CI we merge into the upstream branch to stay synchronized
