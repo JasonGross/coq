@@ -98,49 +98,53 @@ set -x
 git_download()
 {
   local project=$1
-  local project_dest="$CI_BUILD_DIR/$project"
-  local dest="$project_dest" # will be changed later if we're in a submodule
+  local dest="$CI_BUILD_DIR/$project"
 
   local giturl_var="${project}_CI_GITURL"
   local giturl="${!giturl_var}"
   local ref_var="${project}_CI_REF"
   local ref="${!ref_var}"
-  local ref_for_rebase="$ref" # might be distinct from $ref if we're in a submoudle
   local parent_project_var="${project}_CI_PARENT_PROJECT"
   local parent_project="${!parent_project_var}"
   local submodule_folder_var="${project}_CI_SUBMODULE_FOLDER"
   local submodule_folder="${!submodule_folder_var}"
+  local parent_project_dest="$CI_BUILD_DIR/$parent_project"
 
   local ov_url=${overlays[${project}_URL]}
   local ov_ref=${overlays[${project}_REF]}
 
-  local in_subfolder=""
-
-  # if there is a parent project, we first download the parent project
-  # then symlink the submodule_folder to dest; this allows project CI scripts
-  # to be transparent w.r.t. whether or not the project is cloned from
-  # a submodule / submodule_folder.
-  # we can't symlink until the folder exists though.
-  if [[ -n "${parent_project}" ]]; then
-    WITH_SUBMODULES=1 git_download "${parent_project}"
-
-    # if the parent project still has its .git directory, we can reuse
-    # it (this is not the case, for example, when it comes from a
-    # downloaded CI artifact)
-    if [[ -d "${CI_BUILD_DIR}/${parent_project}/.git" ]]; then
-      local dest="${parent_project}"
-    else
-      # otherwise we must re-download the parent project
-      local dest="${project_dest}-PARENT"
-    fi
-  fi
-
-  if [ -d "$project_dest" ]; then
-    echo "Warning: download and unpacking of $project skipped because $project_dest already exists."
-  elif [[ $ov_url ]] || [ "$WITH_SUBMODULES" = "1" ] || [ "$CI" = "" ] || [[ -n "${parent_project}" ]]; then
-    if [ ! -d "$dest" ]; then
-      echo "Notice: download and unpacking of $parent_project skipped because $dest already exists."
+  if [ -d "$dest" ]; then
+    echo "Warning: download and unpacking of $project skipped because $dest already exists."
+  elif [[ $ov_url ]] || [ "$WITH_SUBMODULES" = "1" ] || [ "$CI" = "" ] || [ -n "${parent_project}" ]; then
+    if [ -n "${parent_project}" ]; then
+      # if there is a parent project, we first download the parent
+      # project then symlink the submodule_folder to dest; this allows
+      # project CI scripts to be transparent w.r.t. whether or not the
+      # project is cloned from a submodule / submodule_folder.
+      if [ -d "${parent_project_dest}" ] && [ ! -e "${parent_project_dest}/.git" ]; then
+        # if the parent project does not have its .git directory (for
+        # example, when it comes from a downloaded CI artifact and the
+        # git_download above is a no-op), we must re-download it.  we
+        # re-use git_download to get the parent project and just
+        # temporarily move the (already-existing) directory to a
+        # temporary directory
+        local parent_project_dest_temp="$(mktemp -d -p "$CI_BUILD_DIR" -t "${parent_project}.XXXXXXXX")"
+        # first we need to remove the directory created by mktemp, so
+        # we can rename
+        rm -rf "${parent_project_dest_temp}"
+        mv "${parent_project_dest}" "${parent_project_dest_temp}"
+        WITH_SUBMODULES=1 git_download "${parent_project}"
+        local orig_parent_project_dest="${parent_project_dest}"
+        parent_project_dest="${dest}-PARENT"
+        mv "${orig_parent_project_dest}" "${parent_project_dest}"
+        mv "${parent_project_dest_temp}" "${orig_parent_project_dest}"
+      else
+        WITH_SUBMODULES=1 git_download "${parent_project}"
+      fi
+      # now we can create the symlinks
+      ln -s "${parent_project_dest}/${submodule_folder}" "$dest"
       pushd "$dest"
+      ref="$(git rev-parse HEAD)"
     else
       git clone "$giturl" "$dest"
       pushd "$dest"
@@ -152,17 +156,6 @@ git_download()
         # Locally checkout the overlay and rebase on upstream
         # We act differently because merging is what will happen when the PR is merged
         # but rebasing produces something that is nicer to edit
-        #
-        # We must cd into the submodule_folder first, though, to
-        # ensure that if it is a submodule we merge in the right way
-        if [[ -n "$submodule_folder" ]]; then
-          if [ "$WITH_SUBMODULES" = 1 ]; then
-            git submodule update --init --recursive
-          fi
-          pushd "$submodule_folder"
-          in_submodule_folder=1
-          ref_for_rebase="$(git rev-parse HEAD)"
-        fi
         if [[ $CI ]]; then
             git -c pull.rebase=false -c user.email=nobody@example.invalid -c user.name=Nobody \
                 pull --no-edit --no-ff "$ov_url" "$ov_ref"
@@ -171,15 +164,12 @@ git_download()
         else
             git remote add -t "$ov_ref" -f overlay "$ov_url"
             git checkout -b "$ov_ref" overlay/"$ov_ref"
-            git rebase "$ref_for_rebase"
+            git rebase "$ref"
             git log -n 1
         fi
     fi
     if [ "$WITH_SUBMODULES" = 1 ]; then
         git submodule update --init --recursive
-    fi
-    if [ "$in_submodule_folder" = 1 ]; then
-        popd
     fi
     popd
   else # When possible, we download tarballs to reduce bandwidth and latency
@@ -197,15 +187,6 @@ git_download()
     tar xfz "$commit.tar.gz" --strip-components=1
     rm -f "$commit.tar.gz"
     popd
-  fi
-
-  # now we can create the symlinks
-  if [[ -n "$submodule_folder" ]]; then
-    if [ -e "$project_dest" ]; then
-      echo "Warning: symlinking of $dest/$submodule_folder for $project skipped because $project_dest already exists"
-    else
-      ln -s "$dest/$submodule_folder" "$project_dest"
-    fi
   fi
 }
 
