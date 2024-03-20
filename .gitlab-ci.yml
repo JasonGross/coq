@@ -193,6 +193,7 @@ before_script:
     paths:
       - _build_ci
     exclude: # reduce artifact size
+      - _build_ci/**/.git # must exclude .git directory as well to avoid empty directories messing up the test in ci-common.sh
       - _build_ci/**/.git/**/*
     when: always
   needs:
