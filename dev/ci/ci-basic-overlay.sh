@@ -40,6 +40,9 @@ function project {
 }
 
 # subproject <name> <parent project> <submodulefolder> <submodule giturl> <submodule branch>
+# In the case of nested submodules, each subproject should be declared
+# a subproject of its immediate parent, to ensure overlays are applied
+# in the right order
 function subproject {
   local var_parent_project=${1}_CI_PARENT_PROJECT
   local var_submodule_folder=${1}_CI_SUBMODULE_FOLDER
@@ -213,11 +216,11 @@ project fiat_crypto "https://github.com/mit-plv/fiat-crypto" "master"
 # fiat-crypto is not guaranteed to build with the latest version of
 # bedrock2, so we use the pinned version of bedrock2 for fiat-crypto
 # overlays do not have to follow suite
-subproject coqutil fiat_crypto "rupicola/bedrock2/deps/coqutil" "https://github.com/mit-plv/coqutil" "master"
-subproject kami fiat_crypto "rupicola/bedrock2/deps/kami" "https://github.com/mit-plv/kami" "rv32i"
-subproject riscv_coq fiat_crypto "rupicola/bedrock2/deps/riscv-coq" "https://github.com/mit-plv/riscv-coq" "master"
-subproject bedrock2 fiat_crypto "rupicola/bedrock2" "https://github.com/mit-plv/bedrock2" "master"
 subproject rupicola fiat_crypto "rupicola" "https://github.com/mit-plv/rupicola" "master"
+subproject bedrock2 rupicola "bedrock2" "https://github.com/mit-plv/bedrock2" "master"
+subproject coqutil bedrock2 "deps/coqutil" "https://github.com/mit-plv/coqutil" "master"
+subproject kami bedrock2 "deps/kami" "https://github.com/mit-plv/kami" "rv32i"
+subproject riscv_coq bedrock2 "deps/riscv-coq" "https://github.com/mit-plv/riscv-coq" "master"
 # Contact @samuelgruetter, @andres-erbsen on github
 
 ########################################################################
