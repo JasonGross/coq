@@ -89,16 +89,18 @@ for overlay in "${ci_dir}"/user-overlays/*.sh; do
 done
 set -x
 
-# [git_download project] will download [project] and unpack it
-# in [$CI_BUILD_DIR/project] if the folder does not exist already;
-# if it does, it will do nothing except print a warning (this can be
-# useful when building locally).
-# Note: when there is an overlay, $WITH_SUBMODULES is set to 1 or $CI is unset or empty
-# (local build), it uses git clone to perform the download.
+# [git_download <project> [<destination>]] will download <project> and
+# unpack it in <destination> (if given; default:
+# $CI_BUILD_DIR/<project>) if the folder does not exist already; if it
+# does, it will do nothing except print a warning (this can be useful
+# when building locally).
+# Note: when there is an overlay, $WITH_SUBMODULES is set to 1 or $CI
+# is unset or empty (local build), it uses git clone to perform the
+# download.
 git_download()
 {
   local project=$1
-  local dest="$CI_BUILD_DIR/$project"
+  local dest="${2:-$CI_BUILD_DIR/$project}"
 
   local giturl_var="${project}_CI_GITURL"
   local giturl="${!giturl_var}"
@@ -108,10 +110,24 @@ git_download()
   local parent_project="${!parent_project_var}"
   local submodule_folder_var="${project}_CI_SUBMODULE_FOLDER"
   local submodule_folder="${!submodule_folder_var}"
-  local parent_project_dest="$CI_BUILD_DIR/$parent_project"
 
   local ov_url=${overlays[${project}_URL]}
   local ov_ref=${overlays[${project}_REF]}
+
+  local dest_prefix="$(dirname "$dest")/"
+  if [ "${CI}${USE_CI_DIRECTORY_STRUCTURE}" = "" ]; then
+    # we can reuse the parent project download when not on CI
+    local parent_project_dest="$CI_BUILD_DIR/$parent_project"
+    # we use relative symlinks so they are relocatable
+    local parent_project_relative_dest="${parent_project_dest#$dest_prefix}"
+  else
+    # on CI, we need to ensure that there's no overlap in directory tree
+    # between sibling jobs, since otherwise they will scribble over
+    # each others .v timestamps and result in duplicated builds
+    local parent_project_dest="${dest}-PARENT-${parent_project}"
+    # we use relative symlinks so they are relocatable
+    local parent_project_relative_dest="${parent_project_dest#$dest_prefix}"
+  fi
 
   if [ -d "$dest" ]; then
     echo "Warning: download and unpacking of $project skipped because $dest already exists."
@@ -121,28 +137,11 @@ git_download()
       # project then symlink the submodule_folder to dest; this allows
       # project CI scripts to be transparent w.r.t. whether or not the
       # project is cloned from a submodule / submodule_folder.
-      if [ -d "${parent_project_dest}" ] && [ ! -e "${parent_project_dest}/.git" ]; then
-        # if the parent project does not have its .git directory (for
-        # example, when it comes from a downloaded CI artifact and the
-        # git_download above is a no-op), we must re-download it.  we
-        # re-use git_download to get the parent project and just
-        # temporarily move the (already-existing) directory to a
-        # temporary directory
-        local parent_project_dest_temp="$(mktemp -d -p "$CI_BUILD_DIR" -t "${parent_project}.XXXXXXXX")"
-        # first we need to remove the directory created by mktemp, so
-        # we can rename
-        rm -rf "${parent_project_dest_temp}"
-        mv "${parent_project_dest}" "${parent_project_dest_temp}"
-        WITH_SUBMODULES=1 git_download "${parent_project}"
-        local orig_parent_project_dest="${parent_project_dest}"
-        parent_project_dest="${dest}-PARENT"
-        mv "${orig_parent_project_dest}" "${parent_project_dest}"
-        mv "${parent_project_dest_temp}" "${orig_parent_project_dest}"
-      else
-        WITH_SUBMODULES=1 git_download "${parent_project}"
+      if [ ! -d "${parent_project_dest}" ]; then
+        WITH_SUBMODULES=1 git_download "${parent_project}" "${parent_project_dest}"
       fi
       # now we can create the symlinks
-      ln -s "${parent_project_dest}/${submodule_folder}" "$dest"
+      ln -s "${parent_project_relative_dest}/${submodule_folder}" "$dest"
       pushd "$dest"
       ref="$(git rev-parse HEAD)"
     else
