@@ -104,6 +104,10 @@ git_download()
   local giturl="${!giturl_var}"
   local ref_var="${project}_CI_REF"
   local ref="${!ref_var}"
+  local subprojects_var="${project}_CI_SUBPROJECTS"
+  # IMPORTANT: no quotes in the following, so we get an array from a
+  # space-separated list
+  local subprojects=(${!subprojects_var})
   local parent_project_var="${project}_CI_PARENT_PROJECT"
   local parent_project="${!parent_project_var}"
   local submodule_folder_var="${project}_CI_SUBMODULE_FOLDER"
@@ -115,34 +119,18 @@ git_download()
 
   if [ -d "$dest" ]; then
     echo "Warning: download and unpacking of $project skipped because $dest already exists."
-  elif [[ $ov_url ]] || [ "$WITH_SUBMODULES" = "1" ] || [ "$CI" = "" ] || [ -n "${parent_project}" ]; then
+  elif [ -n "${parent_project}" ] && [ ! -d "${parent_project_dest}" ]; then
+    # if there is a parent project, we first download the parent
+    # project then symlink the submodule_folder to dest; this allows
+    # project CI scripts to be transparent w.r.t. whether or not the
+    # project is cloned from a submodule / submodule_folder.  Note
+    # that this will recursively invoke git_download with the current
+    # subproject after downloading the parent project, which will fall
+    # through to the next case of the if.
+    WITH_SUBMODULES=1 git_download "${parent_project}"
+  elif [[ $ov_url ]] || [ "$WITH_SUBMODULES" = "1" ] || [ "$CI" = "" ] || [ -n "${parent_project}" ] || [ "${#subprojects[@]}" -ne 0 ]; then
     if [ -n "${parent_project}" ]; then
-      # if there is a parent project, we first download the parent
-      # project then symlink the submodule_folder to dest; this allows
-      # project CI scripts to be transparent w.r.t. whether or not the
-      # project is cloned from a submodule / submodule_folder.
-      if [ -d "${parent_project_dest}" ] && [ ! -e "${parent_project_dest}/.git" ]; then
-        # if the parent project does not have its .git directory (for
-        # example, when it comes from a downloaded CI artifact and the
-        # git_download above is a no-op), we must re-download it.  we
-        # re-use git_download to get the parent project and just
-        # temporarily move the (already-existing) directory to a
-        # temporary directory
-        local parent_project_dest_temp="$(mktemp -d -p "$CI_BUILD_DIR" -t "${parent_project}.XXXXXXXX")"
-        # first we need to remove the directory created by mktemp, so
-        # we can rename
-        rm -rf "${parent_project_dest_temp}"
-        mv "${parent_project_dest}" "${parent_project_dest_temp}"
-        WITH_SUBMODULES=1 git_download "${parent_project}"
-        local orig_parent_project_dest="${parent_project_dest}"
-        parent_project_dest="${dest}-PARENT"
-        mv "${orig_parent_project_dest}" "${parent_project_dest}"
-        mv "${parent_project_dest_temp}" "${orig_parent_project_dest}"
-      else
-        WITH_SUBMODULES=1 git_download "${parent_project}"
-      fi
-      # now we can create the symlinks
-      ln -s "${parent_project_dest}/${submodule_folder}" "$dest"
+      ln -s "${parent_project}/${submodule_folder}" "$dest"
       pushd "$dest"
       ref="$(git rev-parse HEAD)"
     else
@@ -172,6 +160,9 @@ git_download()
         git submodule update --init --recursive
     fi
     popd
+    for subproject in "${subprojects[@]}"; do
+      git_download "$subproject"
+    done
   else # When possible, we download tarballs to reduce bandwidth and latency
     local archiveurl_var="${project}_CI_ARCHIVEURL"
     local archiveurl="${!archiveurl_var}"

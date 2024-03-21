@@ -48,10 +48,13 @@ function subproject {
   local var_submodule_folder=${1}_CI_SUBMODULE_FOLDER
   local var_submodule_giturl=${1}_CI_SUBMODULE_GITURL
   local var_submodule_branch=${1}_CI_SUBMODULE_BRANCH
+  local var_parent_subprojects=${2}_CI_SUBPROJECTS
   local parent_project=$2
   local submodule_folder=$3
   local submodule_giturl=$4
   local submodule_branch=$5
+  # dynamic variable so we can unconditionally update !var_parent_subprojects
+  local -n parent_subprojects="$var_parent_subprojects"
 
   # register the project in the list of projects
   projects[${#projects[*]}]=$1
@@ -60,6 +63,8 @@ function subproject {
   : "${!var_submodule_folder:=$submodule_folder}"
   : "${!var_submodule_giturl:=$submodule_giturl}"
   : "${!var_submodule_branch:=$submodule_branch}"
+  # we assume there are never spaces in project names
+  parent_subprojects="$parent_subprojects $1"
 }
 
 ########################################################################
