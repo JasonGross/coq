@@ -46,3 +46,8 @@ reflexivity.
 Qed.
 
 Check id'@{Set} 0.
+
+(* Test dependent types - issue fix *)
+Derive (X : Type) (l : list X) in (l = l) as foo_dep.
+exact (eq_refl (@nil unit)).
+Defined.

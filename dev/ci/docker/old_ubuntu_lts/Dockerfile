@@ -30,6 +30,8 @@ RUN apt-get update -qq && apt-get install --no-install-recommends -y -qq \
         wdiff \
         # Required for fiat-crypto and Coqtail
         python-is-python3 python3-pytest \
+        # for coq-tools
+        python3-venv \
       && rm -rf /var/lib/apt/lists /usr/share/doc
 
 # We need to install OPAM 2.0 manually for now.

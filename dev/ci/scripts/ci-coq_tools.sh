@@ -15,5 +15,6 @@ jason_msg() {
 }
 
 ( cd "${CI_BUILD_DIR}/coq_tools"
+  python -m venv .venv && . .venv/bin/activate && python -m pip install .
   make check || jason_msg $?
 )
