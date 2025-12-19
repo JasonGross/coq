@@ -184,6 +184,7 @@ val univ_flexible_alg : rigid
 val merge : ?loc:Loc.t -> sideff:bool -> rigid -> t -> PConstraints.ContextSet.t -> t
 val merge_sort_variables : ?loc:Loc.t -> sideff:bool -> t -> QGraph.constraint_source -> Sorts.QVar.Set.t -> Sorts.ElimConstraints.t -> t
 val merge_sort_context : ?loc:Loc.t -> sideff:bool -> rigid -> QGraph.constraint_source -> t -> UnivGen.sort_context_set -> t
+val merge_universe_context : ?loc:Loc.t -> sideff:bool -> rigid -> t -> Univ.ContextSet.t -> t
 
 val demote_global_univs : Univ.ContextSet.t -> t -> t
 (** After declaring global universes, call this if you want to keep using the UState.
