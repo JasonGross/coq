@@ -45,6 +45,14 @@ let { Goptions.get = should_gname } =
     ~value:false
     ()
 
+let () =
+  Goptions.declare_bool_option
+    { Goptions.optstage = Summary.Stage.Interp;
+      Goptions.optdepr  = None;
+      Goptions.optkey   = ["Printing";"Fully";"Qualified"];
+      Goptions.optread  = Nametab.print_fully_qualified;
+      Goptions.optwrite = Nametab.set_print_fully_qualified }
+
 let print_goal_name sigma ev =
   should_gname () || Evd.evar_has_ident ev sigma
 
