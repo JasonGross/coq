@@ -212,6 +212,12 @@ val shortest_qualid_of_abbreviation : ?loc:Loc.t -> Id.Set.t -> Globnames.abbrev
     @raise Not_found when the reference is not in the global tables. *)
 val pr_global_env : Id.Set.t -> GlobRef.t -> Pp.t
 
+(** Fully qualified printing control. When enabled, [pr_global_env] uses
+    fully qualified names instead of shortest names. The flag is controlled
+    by the "Printing Fully Qualified" option declared in printer.ml. *)
+val print_fully_qualified : unit -> bool
+val set_print_fully_qualified : bool -> unit
+
 (** Returns in particular the dirpath or the basename of the full path
    associated to global reference *)
 
