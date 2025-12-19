@@ -42,6 +42,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: brew install gnu-time
 
+      - name: APT update
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update
+
       - name: 🔭 Checkout code
         uses: actions/checkout@v4
 

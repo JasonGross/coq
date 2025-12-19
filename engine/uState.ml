@@ -1274,6 +1274,9 @@ let merge_sort_variables ?loc ~sideff uctx src qvars csts =
   let sort_variables = QState.merge_constraints (merge_elim_constraints src uctx csts) sort_variables in
   { uctx with sort_variables; names }
 
+let merge_universe_context ?loc ~sideff rigid uctx (us, ucst) =
+  merge ?loc ~sideff rigid uctx (us, (Sorts.ElimConstraints.empty, ucst))
+
 let merge_sort_context ?loc ~sideff rigid src uctx ((qvars,levels),csts) =
   let uctx = merge_sort_variables ?loc ~sideff uctx src qvars (PConstraints.qualities csts) in
   merge ?loc ~sideff rigid uctx (levels,csts)

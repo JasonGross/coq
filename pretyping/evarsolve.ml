@@ -140,15 +140,14 @@ let refresh_universes ?(allowed_evars=AllowedEvars.all) ?(status=univ_rigid) ?(o
         (match Univ.Universe.level u with
         | None -> refresh_sort status ~direction s
         | Some l ->
-           (match Evd.universe_rigidity !evdref l with
-            | UnivRigid ->
-              if not onlyalg && (not (Univ.Level.is_set l) || (refreshset && not direction))
-              then refresh_sort status ~direction s
-               else t
-            | UnivFlexible alg ->
-               (if alg then
-                  evdref := Evd.make_nonalgebraic_variable !evdref l);
-               t))
+          (if Univ.Level.Set.mem l (fst @@ Evd.universe_context_set !evdref) then
+             let () = if UState.is_algebraic l (Evd.ustate !evdref) then
+                 evdref := Evd.make_nonalgebraic_variable !evdref l
+             in
+             t
+           else if not onlyalg && (not (Univ.Level.is_set l) || (refreshset && not direction))
+           then refresh_sort status ~direction s
+           else t))
       | Set when refreshset && not direction ->
        (* Cannot make a universe "lower" than "Set",
           only refreshing when we want higher universes. *)

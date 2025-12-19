@@ -584,8 +584,6 @@ val new_sort_variable : ?loc:Loc.t -> rigid -> evar_map -> evar_map * esorts
 
 val add_forgotten_univ : evar_map -> Univ.Level.t -> evar_map
 
-val universe_rigidity : evar_map -> Univ.Level.t -> rigid
-
 val make_nonalgebraic_variable : evar_map -> Univ.Level.t -> evar_map
 (** See [UState.make_nonalgebraic_variable]. *)
 

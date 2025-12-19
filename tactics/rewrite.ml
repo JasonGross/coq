@@ -1421,9 +1421,7 @@ module Strategies =
       let (ctx, lemma) = Autorewrite.RewRule.rew_lemma hint in
       let subst, ctx = UnivGen.fresh_sort_context_instance ctx in
       let lemma = Vars.subst_univs_level_constr subst (EConstr.of_constr lemma) in
-      (* XXX sorts lost, but UState.merge_sort_context is too strict *)
-      let (qs, us), (qcst, ucst) = ctx in
-      let sigma = Evd.merge_context_set UnivRigid sigma (us, (qcst, ucst)) in
+      let sigma = Evd.merge_sort_context_set UnivRigid QGraph.Internal sigma ctx in
       (sigma, lemma)
 
     let old_hints (db : string) : strategy =
