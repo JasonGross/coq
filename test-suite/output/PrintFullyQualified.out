@@ -1,0 +1,16 @@
+A.foo
+     : nat
+B.foo
+     : nat
+Top.A.foo
+     : nat
+Top.B.foo
+     : nat
+A.foo
+     : nat
+B.foo
+     : nat
+Top.C.D.bar
+     : nat
+C.D.bar
+     : nat

@@ -72,6 +72,13 @@ let { Goptions.get = print_use_implicit_types } =
 (* Print primitive tokens, like strings *)
 let print_raw_literal = ref false
 
+(* This tells to print fully qualified names *)
+let { Goptions.get = print_fully_qualified } =
+  Goptions.declare_bool_option_and_ref
+    ~key:["Printing";"Fully";"Qualified"]
+    ~value:false
+    ()
+
 (**********************************************************************)
 
 let hole = CAst.make @@ CHole (None)
@@ -205,7 +212,12 @@ let my_extern_reference = ref default_extern_reference
 let set_extern_reference f = my_extern_reference := f
 let get_extern_reference () = !my_extern_reference
 
-let extern_reference ?loc vars l = !my_extern_reference vars l
+let extern_reference ?loc vars l =
+  if print_fully_qualified () then
+    try Libnames.qualid_of_path ?loc (Nametab.path_of_global l)
+    with Not_found -> Libnames.qualid_of_path ?loc (path_of_global l)
+  else
+    !my_extern_reference vars l
 
 (**********************************************************************)
 (* utilities                                                          *)
