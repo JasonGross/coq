@@ -22,7 +22,7 @@ open Printer
     NOTE: this function is used in the plugin paramcoq.
 *)
 val traverse :
-  Global.indirect_accessor -> Label.t -> constr ->
+  Global.indirect_accessor -> GlobRef.t -> constr ->
     (GlobRef.Set_env.t * GlobRef.Set_env.t option GlobRef.Map_env.t *
      (Label.t * Constr.rel_context * types) list GlobRef.Map_env.t)
 
