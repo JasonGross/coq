@@ -69,6 +69,8 @@ let rec check_with_def (cst, ustate) env struc (idl, wth) mp reso =
     | [] -> assert false
     | id::idl -> Label.of_id id, idl
   in
+  (* Local error helper for detailed messages, following the pattern from subtyping.ml *)
+  let error why = error_signature_mismatch [] lab why in
   try
     let modular = not (List.is_empty idl) in
     let before,spec,after = split_struc lab modular struc in
@@ -85,26 +87,28 @@ let rec check_with_def (cst, ustate) env struc (idl, wth) mp reso =
       let ctx' =
         match cb.const_universes, wth.w_univs with
         | Monomorphic, Monomorphic ->
-          let cst = match cb.const_body with
-            | Undef _ | OpaqueDef _ ->
-              let j = Typeops.infer env' wth.w_def in
-              let typ = cb.const_type in
-              let cst = infer_gen_conv_leq (cst, ustate) env' j.uj_type typ in
-              cst
-            | Def c' ->
-              infer_gen_conv (cst, ustate) env' wth.w_def c'
-            | Primitive _ | Symbol _ ->
-              error_incorrect_with_constraint lab
-          in
-          begin match cst with
-          | Result.Ok cst -> cst
-          | Result.Error (None | Some _) ->
-            error_incorrect_with_constraint lab
+          begin match cb.const_body with
+          | Undef _ | OpaqueDef _ ->
+            let j = Typeops.infer env' wth.w_def in
+            let typ = cb.const_type in
+            begin match infer_gen_conv_leq (cst, ustate) env' j.uj_type typ with
+            | Result.Ok cst -> cst
+            | Result.Error None -> error (NotConvertibleTypeField (env', j.uj_type, typ))
+            | Result.Error (Some e) -> error (IncompatibleUniverses e)
+            end
+          | Def c' ->
+            begin match infer_gen_conv (cst, ustate) env' wth.w_def c' with
+            | Result.Ok cst -> cst
+            | Result.Error None -> error NotConvertibleBodyField
+            | Result.Error (Some e) -> error (IncompatibleUniverses e)
+            end
+          | Primitive _ | Symbol _ ->
+            error NotConvertibleBodyField
           end
         | Polymorphic uctx, Polymorphic ctx ->
           let () =
             if not (UGraph.check_subtype (Environ.universes env) uctx ctx) then
-              error_incorrect_with_constraint lab
+              error (IncompatibleConstraints { got = ctx; expect = uctx })
           in
           (** Terms are compared in a context with De Bruijn universe indices *)
           let env' = Environ.push_context ~strict:false (UVars.AbstractContext.repr uctx) env in
@@ -114,18 +118,19 @@ let rec check_with_def (cst, ustate) env struc (idl, wth) mp reso =
               let typ = cb.const_type in
               begin match Conversion.conv_leq env' j.uj_type typ with
               | Result.Ok () -> ()
-              | Result.Error () -> error_incorrect_with_constraint lab
+              | Result.Error () -> error (NotConvertibleTypeField (env', j.uj_type, typ))
               end
             | Def c' ->
               begin match Conversion.conv env' wth.w_def c' with
               | Result.Ok () -> ()
-              | Result.Error () -> error_incorrect_with_constraint lab
+              | Result.Error () -> error NotConvertibleBodyField
               end
             | Primitive _ | Symbol _ ->
-              error_incorrect_with_constraint lab
+              error NotConvertibleBodyField
           in
           cst
-        | _ -> error_incorrect_with_constraint lab
+        | Monomorphic, Polymorphic _ -> error (PolymorphicStatusExpected true)
+        | Polymorphic _, Monomorphic -> error (PolymorphicStatusExpected false)
       in
       let cb' =
         { cb with

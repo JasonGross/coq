@@ -67,7 +67,6 @@ type module_typing_error =
   | NoSuchLabel of Label.t * ModPath.t
   | NotAModuleLabel of Label.t
   | NotAConstant of Label.t
-  | IncorrectWithConstraint of Label.t
   | GenerativeModuleExpected of Label.t
   | LabelMissing of Label.t * string
   | IncludeRestrictedFunctor of ModPath.t
@@ -100,9 +99,6 @@ let error_not_a_module_label s =
 
 let error_not_a_constant l =
   raise (ModuleTypingError (NotAConstant l))
-
-let error_incorrect_with_constraint l =
-  raise (ModuleTypingError (IncorrectWithConstraint l))
 
 let error_generative_module_expected l =
   raise (ModuleTypingError (GenerativeModuleExpected l))

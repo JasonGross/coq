@@ -1287,10 +1287,6 @@ let explain_not_a_module_label l =
 let explain_not_a_constant l =
   quote (Label.print l) ++ str " is not a constant."
 
-let explain_incorrect_label_constraint l =
-  str "Incorrect constraint for label " ++
-  quote (Label.print l) ++ str "."
-
 let explain_generative_module_expected l =
   str "The module " ++ Label.print l ++ str " is not generative." ++
   strbrk " Only components of generative modules can be changed" ++
@@ -1315,7 +1311,6 @@ let explain_module_error = function
   | NoSuchLabel (l,mp) -> explain_no_such_label l mp
   | NotAModuleLabel l -> explain_not_a_module_label l
   | NotAConstant l -> explain_not_a_constant l
-  | IncorrectWithConstraint l -> explain_incorrect_label_constraint l
   | GenerativeModuleExpected l -> explain_generative_module_expected l
   | LabelMissing (l,s) -> explain_label_missing l s
   | IncludeRestrictedFunctor mp -> explain_include_restricted_functor mp

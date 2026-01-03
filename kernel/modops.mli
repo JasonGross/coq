@@ -126,7 +126,6 @@ type module_typing_error =
   | NoSuchLabel of Label.t * ModPath.t
   | NotAModuleLabel of Label.t
   | NotAConstant of Label.t
-  | IncorrectWithConstraint of Label.t
   | GenerativeModuleExpected of Label.t
   | LabelMissing of Label.t * string
   | IncludeRestrictedFunctor of ModPath.t
@@ -146,8 +145,6 @@ val error_no_such_label : Label.t -> ModPath.t -> 'a
 val error_not_a_module_label : Label.t -> 'a
 
 val error_not_a_constant : Label.t -> 'a
-
-val error_incorrect_with_constraint : Label.t -> 'a
 
 val error_generative_module_expected : Label.t -> 'a
 
