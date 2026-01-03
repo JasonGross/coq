@@ -1,0 +1,13 @@
+File "./output/ModuleWithConstraintErrors.v", line 11, characters 0-46:
+The command has indeed failed with message:
+Signature components for field x do not match: expected type "nat" but
+found type "bool".
+File "./output/ModuleWithConstraintErrors.v", line 21, characters 0-48:
+The command has indeed failed with message:
+Signature components for field x do not match:
+the body of definitions differs.
+File "./output/ModuleWithConstraintErrors.v", line 29, characters 0-48:
+The command has indeed failed with message:
+Signature components for field x do not match:
+the universe constraints are inconsistent: Cannot enforce Set < Set
+because Set = Set.
