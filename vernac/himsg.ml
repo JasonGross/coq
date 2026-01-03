@@ -1295,8 +1295,8 @@ let explain_with_constraint_error = function
       str "but found type" ++ spc () ++ actual
   | WithBodyMismatch (env, actual, expected) ->
       let sigma = Evd.from_env env in
-      let actual = Printer.pr_constr_env env sigma (EConstr.of_constr actual) in
-      let expected = Printer.pr_constr_env env sigma (EConstr.of_constr expected) in
+      let actual = Printer.pr_constr_env env sigma actual in
+      let expected = Printer.pr_constr_env env sigma expected in
       str "expected body" ++ spc () ++ expected ++ spc () ++
       str "but found body" ++ spc () ++ actual
   | WithUniverseMismatch incon ->
