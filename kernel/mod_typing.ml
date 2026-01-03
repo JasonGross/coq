@@ -94,17 +94,29 @@ let rec check_with_def (cst, ustate) env struc (idl, wth) mp reso =
             | Def c' ->
               infer_gen_conv (cst, ustate) env' wth.w_def c'
             | Primitive _ | Symbol _ ->
-              error_incorrect_with_constraint lab
+              error_signature_mismatch [] lab NotConvertibleBodyField
           in
           begin match cst with
           | Result.Ok cst -> cst
-          | Result.Error (None | Some _) ->
-            error_incorrect_with_constraint lab
+          | Result.Error None ->
+            (* Type mismatch *)
+            (match cb.const_body with
+            | Undef _ | OpaqueDef _ ->
+              let j = Typeops.infer env' wth.w_def in
+              error_signature_mismatch [] lab (NotConvertibleTypeField (env', j.uj_type, cb.const_type))
+            | Def _ ->
+              error_signature_mismatch [] lab NotConvertibleBodyField
+            | Primitive _ | Symbol _ ->
+              error_signature_mismatch [] lab NotConvertibleBodyField)
+          | Result.Error (Some (Conversion.Univ e)) ->
+            error_signature_mismatch [] lab (IncompatibleUniverses e)
+          | Result.Error (Some (Conversion.Qual e)) ->
+            error_signature_mismatch [] lab (IncompatibleQualities e)
           end
         | Polymorphic uctx, Polymorphic ctx ->
           let () =
             if not (UGraph.check_subtype (Environ.universes env) uctx ctx) then
-              error_incorrect_with_constraint lab
+              error_signature_mismatch [] lab (IncompatibleUnivConstraints { got = ctx; expect = uctx })
           in
           (** Terms are compared in a context with De Bruijn universe indices *)
           let env' = Environ.push_context ~strict:false QGraph.Internal (UVars.AbstractContext.repr uctx) env in
@@ -114,18 +126,22 @@ let rec check_with_def (cst, ustate) env struc (idl, wth) mp reso =
               let typ = cb.const_type in
               begin match Conversion.conv_leq env' j.uj_type typ with
               | Result.Ok () -> ()
-              | Result.Error () -> error_incorrect_with_constraint lab
+              | Result.Error () -> 
+                error_signature_mismatch [] lab (NotConvertibleTypeField (env', j.uj_type, typ))
               end
             | Def c' ->
               begin match Conversion.conv env' wth.w_def c' with
               | Result.Ok () -> ()
-              | Result.Error () -> error_incorrect_with_constraint lab
+              | Result.Error () -> error_signature_mismatch [] lab NotConvertibleBodyField
               end
             | Primitive _ | Symbol _ ->
-              error_incorrect_with_constraint lab
+              error_signature_mismatch [] lab NotConvertibleBodyField
           in
           cst
-        | _ -> error_incorrect_with_constraint lab
+        | Monomorphic, Polymorphic _ -> 
+          error_signature_mismatch [] lab (PolymorphicStatusExpected true)
+        | Polymorphic _, Monomorphic -> 
+          error_signature_mismatch [] lab (PolymorphicStatusExpected false)
       in
       let cb' =
         { cb with
