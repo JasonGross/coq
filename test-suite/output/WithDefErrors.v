@@ -26,3 +26,15 @@ Module Type T4.
 End T4.
 Definition y4 := Type.
 Fail Module Type T4' := T4 with Definition x := y4.
+
+(* Test 5: Cannot constrain a primitive *)
+Module Type T5.
+  Primitive int := #int63_type.
+End T5.
+Fail Module Type T5' := T5 with Definition int := nat.
+
+(* Test 6: Cannot constrain a symbol *)
+Module Type T6.
+  #[universes(polymorphic)] Symbol mysym : Type.
+End T6.
+Fail Module Type T6' := T6 with Definition mysym := nat.
