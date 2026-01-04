@@ -206,7 +206,14 @@ val path_of_universe : Univ.UGlobal.t -> full_path
 val dirpath_of_global : GlobRef.t -> DirPath.t
 val basename_of_global : GlobRef.t -> Id.t
 
-(** Printing of global references using names as short as possible.
+(** Whether to print fully qualified names for global references. *)
+val print_fully_qualified : unit -> bool
+
+(** Set the print fully qualified flag (called by Goptions). *)
+val set_print_fully_qualified : bool -> unit
+
+(** Printing of global references using names as short as possible,
+    unless [Printing Fully Qualified] is set.
     @raise Not_found when the reference is not in the global tables. *)
 val pr_global_env : Id.Set.t -> GlobRef.t -> Pp.t
 

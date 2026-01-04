@@ -33,3 +33,11 @@ Set Printing Fully Qualified.
 Check C.D.bar.
 Unset Printing Fully Qualified.
 Check C.D.bar.
+
+(* Test Search with Printing Fully Qualified *)
+Set Search Output Name Only.
+Search "True".
+Set Printing Fully Qualified.
+Search "True".
+Unset Printing Fully Qualified.
+Unset Search Output Name Only.

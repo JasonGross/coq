@@ -73,11 +73,15 @@ let { Goptions.get = print_use_implicit_types } =
 let print_raw_literal = ref false
 
 (* This tells to print fully qualified names *)
-let { Goptions.get = print_fully_qualified } =
-  Goptions.declare_bool_option_and_ref
-    ~key:["Printing";"Fully";"Qualified"]
-    ~value:false
-    ()
+let print_fully_qualified = Nametab.print_fully_qualified
+
+let () =
+  Goptions.declare_bool_option
+    { Goptions.optstage = Summary.Stage.Interp;
+      Goptions.optdepr  = None;
+      Goptions.optkey   = ["Printing";"Fully";"Qualified"];
+      Goptions.optread  = Nametab.print_fully_qualified;
+      Goptions.optwrite = Nametab.set_print_fully_qualified }
 
 (**********************************************************************)
 

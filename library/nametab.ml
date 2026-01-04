@@ -589,8 +589,20 @@ let shortest_qualid_of_universe ?loc ctx kn =
   let sp = UnivIdMap.find kn !the_univrevtab in
   UnivTab.shortest_qualid_gen ?loc (fun id -> Id.Map.mem id ctx) sp !the_univtab
 
+(* This tells to print fully qualified names - set by Goptions in constrextern *)
+let print_fully_qualified_ref = ref false
+let print_fully_qualified () = !print_fully_qualified_ref
+let set_print_fully_qualified b = print_fully_qualified_ref := b
+
 let pr_global_env env ref =
-  try pr_qualid (shortest_qualid_of_global env ref)
+  try
+    let qid =
+      if !print_fully_qualified_ref then
+        qualid_of_path (path_of_global ref)
+      else
+        shortest_qualid_of_global env ref
+    in
+    pr_qualid qid
   with Not_found as exn ->
     let exn, info = Exninfo.capture exn in
     if !Flags.in_debugger then GlobRef.print ref

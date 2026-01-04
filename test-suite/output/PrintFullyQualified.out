@@ -14,3 +14,7 @@ Top.C.D.bar
      : nat
 C.D.bar
      : nat
+I
+True
+Corelib.Init.Logic.I
+Corelib.Init.Logic.True
