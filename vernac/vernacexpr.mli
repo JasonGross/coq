@@ -71,7 +71,7 @@ type printable =
   | PrintVisibility of string option
   | PrintAbout of qualid or_by_notation * UnivNames.full_name_list option * Goal_select.t option
   | PrintImplicit of qualid or_by_notation
-  | PrintAssumptions of bool * bool * qualid or_by_notation
+  | PrintAssumptions of bool * bool * qualid or_by_notation list
   | PrintStrategy of qualid or_by_notation option
   | PrintRegistered
   | PrintRegisteredSchemes

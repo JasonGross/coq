@@ -2254,13 +2254,16 @@ let vernac_print =
     print_about_hyp_globs ref_or_by_not udecl glnumopt
   | PrintImplicit qid -> with_proof_env @@ fun env _sigma ->
     Prettyp.print_impargs env (smart_global qid)
-  | PrintAssumptions (o,t,r) -> with_proof_env_and_opaques @@ fun ~opaque_access env sigma ->
+  | PrintAssumptions (o,t,rs) -> with_proof_env_and_opaques @@ fun ~opaque_access env sigma ->
     (* Prints all the axioms and section variables used by a term *)
-    let gr = smart_global r in
-    let cstr, _ = UnivGen.fresh_global_instance env gr in
     let st = Conv_oracle.get_transp_state (Environ.oracle env) in
+    let grs = List.map (fun r ->
+      let gr = smart_global r in
+      let cstr, _ = UnivGen.fresh_global_instance env gr in
+      (gr, cstr)
+    ) rs in
     let nassums =
-      Assumptions.assumptions opaque_access st ~add_opaque:o ~add_transparent:t gr cstr in
+      Assumptions.assumptions opaque_access st ~add_opaque:o ~add_transparent:t grs in
     Printer.pr_assumptionset env sigma nassums
   | PrintStrategy r -> no_state @@ fun () -> print_strategy r
   | PrintRegistered -> no_state print_registered

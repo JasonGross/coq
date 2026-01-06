@@ -678,14 +678,14 @@ let pr_printable = function
     keyword "Print Implicit" ++ spc()  ++ pr_smart_global qid
   (* spiwack: command printing all the axioms and section variables used in a
      term *)
-  | PrintAssumptions (b, t, qid) ->
+  | PrintAssumptions (b, t, qids) ->
     let cmd = match b, t with
       | true, true -> "Print All Dependencies"
       | true, false -> "Print Opaque Dependencies"
       | false, true -> "Print Transparent Dependencies"
       | false, false -> "Print Assumptions"
     in
-    keyword cmd ++ spc() ++ pr_smart_global qid
+    keyword cmd ++ spc() ++ prlist_with_sep spc pr_smart_global qids
   | PrintNamespace dp ->
     keyword "Print Namespace" ++ DirPath.print dp
   | PrintStrategy None ->

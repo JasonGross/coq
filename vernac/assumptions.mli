@@ -12,7 +12,7 @@ open Names
 open Constr
 open Printer
 
-(** Collects all the objects on which a term directly relies, bypassing kernel
+(** Collects all the objects on which terms directly rely, bypassing kernel
     opacity, together with the recursive dependence DAG of objects.
 
     WARNING: some terms may not make sense in the environment, because they are
@@ -22,13 +22,13 @@ open Printer
     NOTE: this function is used in the plugin paramcoq.
 *)
 val traverse :
-  Global.indirect_accessor -> GlobRef.t -> constr ->
+  Global.indirect_accessor -> (GlobRef.t * constr) list ->
     (GlobRef.Set_env.t * GlobRef.Set_env.t option GlobRef.Map_env.t *
      (Label.t * Constr.rel_context * types) list GlobRef.Map_env.t)
 
 (** Collects all the assumptions (optionally including opaque definitions)
-   on which a term relies (together with their type). The above warning of
+   on which terms rely (together with their type). The above warning of
    {!traverse} also applies. *)
 val assumptions :
   ?add_opaque:bool -> ?add_transparent:bool -> Global.indirect_accessor ->
-  TransparentState.t -> GlobRef.t -> constr -> types ContextObjectMap.t
+  TransparentState.t -> (GlobRef.t * constr) list -> types ContextObjectMap.t
