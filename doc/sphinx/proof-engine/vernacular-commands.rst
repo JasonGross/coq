@@ -431,23 +431,23 @@ described elsewhere
 Requests to the environment
 -------------------------------
 
-.. cmd:: Print Assumptions @reference
+.. cmd:: Print Assumptions {+ @reference }
 
    Displays all the assumptions (axioms, parameters and
-   variables) a theorem or definition depends on.
+   variables) one or more theorems or definitions depends on.
 
-   The message "Closed under the global context" indicates that the theorem or
-   definition has no dependencies.
+   The message "Closed under the global context" indicates that all the theorems and
+   definitions have no dependencies.
 
-.. cmd:: Print Opaque Dependencies @reference
+.. cmd:: Print Opaque Dependencies {+ @reference }
 
    Displays the assumptions and opaque constants that :n:`@reference` depends on.
 
-.. cmd:: Print Transparent Dependencies @reference
+.. cmd:: Print Transparent Dependencies {+ @reference }
 
-   Displays the assumptions and  transparent constants that :n:`@reference` depends on.
+   Displays the assumptions and transparent constants that :n:`@reference` depends on.
 
-.. cmd:: Print All Dependencies @reference
+.. cmd:: Print All Dependencies {+ @reference }
 
    Displays all the assumptions and constants :n:`@reference` depends on.
 

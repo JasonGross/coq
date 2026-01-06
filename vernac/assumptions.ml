@@ -346,9 +346,11 @@ and traverse_context access current ctx accu ctxt =
           let ctx = Context.Rel.add decl ctx in
            ctx, accu) ctxt ~init:(ctx, accu))
 
-let traverse access current t =
+let traverse access grs =
   let () = modcache := MPmap.empty in
-  traverse access current Context.Rel.empty (GlobRef.Set_env.empty, GlobRef.Map_env.empty, GlobRef.Map_env.empty) t
+  List.fold_left (fun accu (gr, t) ->
+    traverse access (label_of gr) Context.Rel.empty accu t
+  ) (GlobRef.Set_env.empty, GlobRef.Map_env.empty, GlobRef.Map_env.empty) grs
 
 (** Hopefully bullet-proof function to recover the type of a constant. It just
     ignores all the universe stuff. There are many issues that can arise when
@@ -363,10 +365,10 @@ let uses_uip mib =
       && List.length (fst mip.mind_nf_lc.(0)) = List.length mib.mind_params_ctxt)
     mib.mind_packets
 
-let assumptions ?(add_opaque=false) ?(add_transparent=false) access st gr t =
+let assumptions ?(add_opaque=false) ?(add_transparent=false) access st grs =
   let open Printer in
   (* Only keep the transitive dependencies *)
-  let (_, graph, ax2ty) = traverse access (label_of gr) t in
+  let (_, graph, ax2ty) = traverse access grs in
   let open GlobRef in
   let fold obj contents accu = match obj with
   | VarRef id ->
