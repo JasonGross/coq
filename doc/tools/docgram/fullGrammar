@@ -1419,10 +1419,10 @@ printable: [
 | "Implicit" smart_global
 | [ "Sorted" | ] "Universes" OPT printunivs_subgraph OPT [ [ "With" | "Without" ] "Constraint" "Sources" ] OPT ne_string
 | "Sorts"
-| "Assumptions" smart_global
-| "Opaque" "Dependencies" smart_global
-| "Transparent" "Dependencies" smart_global
-| "All" "Dependencies" smart_global
+| "Assumptions" LIST1 smart_global
+| "Opaque" "Dependencies" LIST1 smart_global
+| "Transparent" "Dependencies" LIST1 smart_global
+| "All" "Dependencies" LIST1 smart_global
 | "Strategy" smart_global
 | "Strategies"
 | "Registered"
