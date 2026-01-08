@@ -281,7 +281,7 @@ let safe_basename_of_global r =
     | VarRef v -> v
 
 let string_of_global r =
- try string_of_qualid (Nametab.shortest_qualid_of_global Id.Set.empty r)
+ try string_of_qualid (Nametab.shortest_qualid_of_global ~force_short:true Id.Set.empty r)
  with Not_found -> Id.to_string (safe_basename_of_global r)
 
 let safe_pr_global r = str (string_of_global r)

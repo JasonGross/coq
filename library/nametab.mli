@@ -223,13 +223,18 @@ val pr_global_env : Id.Set.t -> GlobRef.t -> Pp.t
    Mylib.A.B.x that denotes the same object.
    @raise Not_found for unknown objects. *)
 
-val shortest_qualid_of_global : ?loc:Loc.t -> Id.Set.t -> GlobRef.t -> qualid
-val shortest_qualid_of_abbreviation : ?loc:Loc.t -> Id.Set.t -> Globnames.abbreviation -> qualid
-val shortest_qualid_of_modtype : ?loc:Loc.t -> ModPath.t -> qualid
-val shortest_qualid_of_module : ?loc:Loc.t -> ModPath.t -> qualid
+val shortest_qualid_of_global : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> GlobRef.t -> qualid
+(** Returns a qualid for the given global reference. If [~force_short:true] is
+    passed, always returns the shortest qualid. Otherwise (default), respects
+    the "Printing Fully Qualified" flag: when the flag is set, returns the fully
+    qualified name; when unset, returns the shortest qualid. *)
+
+val shortest_qualid_of_abbreviation : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> Globnames.abbreviation -> qualid
+val shortest_qualid_of_modtype : ?loc:Loc.t -> ?force_short:bool -> ModPath.t -> qualid
+val shortest_qualid_of_module : ?loc:Loc.t -> ?force_short:bool -> ModPath.t -> qualid
 
 (** In general we have a [UnivNames.universe_binders] around rather than a [Id.Set.t] *)
-val shortest_qualid_of_universe : ?loc:Loc.t -> 'u Id.Map.t -> Univ.UGlobal.t -> qualid
+val shortest_qualid_of_universe : ?loc:Loc.t -> ?force_short:bool -> 'u Id.Map.t -> Univ.UGlobal.t -> qualid
 
 val pr_depr_xref : Globnames.extended_global_reference -> Pp.t
 
@@ -262,8 +267,8 @@ module type NAMETREE = sig
   val remove : user_name -> t -> t
   val exists : user_name -> t -> bool
   val user_name : qualid -> t -> user_name
-  val shortest_qualid_gen : ?loc:Loc.t -> (Id.t -> bool) -> user_name -> t -> qualid
-  val shortest_qualid : ?loc:Loc.t -> Id.Set.t -> user_name -> t -> qualid
+  val shortest_qualid_gen : ?loc:Loc.t -> ?force_short:bool -> (Id.t -> bool) -> user_name -> t -> qualid
+  val shortest_qualid : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> user_name -> t -> qualid
   val find_prefixes : qualid -> t -> elt list
   val match_prefixes : qualid -> t -> elt list
 end

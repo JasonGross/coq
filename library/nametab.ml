@@ -12,6 +12,11 @@ open Names
 open Libnames
 open Globnames
 
+(* Fully qualified printing support - checked by shortest_qualid functions *)
+let print_fully_qualified_ref = ref false
+let print_fully_qualified () = !print_fully_qualified_ref
+let set_print_fully_qualified b = print_fully_qualified_ref := b
+
 type object_prefix = {
   obj_dir : DirPath.t;
   obj_mp  : ModPath.t;
@@ -94,8 +99,8 @@ module type NAMETREE = sig
   val remove : user_name -> t -> t
   val exists : user_name -> t -> bool
   val user_name : qualid -> t -> user_name
-  val shortest_qualid_gen : ?loc:Loc.t -> (Id.t -> bool) -> user_name -> t -> qualid
-  val shortest_qualid : ?loc:Loc.t -> Id.Set.t -> user_name -> t -> qualid
+  val shortest_qualid_gen : ?loc:Loc.t -> ?force_short:bool -> (Id.t -> bool) -> user_name -> t -> qualid
+  val shortest_qualid : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> user_name -> t -> qualid
   val find_prefixes : qualid -> t -> elt list
 
   (** Matches a prefix of [qualid], useful for completion *)
@@ -339,8 +344,10 @@ let exists uname tab =
   with
       Not_found -> false
 
-let shortest_qualid_gen ?loc hidden uname tab =
-  let id,dir = U.repr uname in
+let shortest_qualid_gen ?loc ?(force_short=false) hidden uname tab =
+  let id, dir = U.repr uname in
+  if not force_short && !print_fully_qualified_ref then make_qualid ?loc (DirPath.make dir) id
+  else
   let hidden = hidden id in
   let rec find_uname pos dir tree =
     let is_empty = match pos with [] -> true | _ -> false in
@@ -356,8 +363,8 @@ let shortest_qualid_gen ?loc hidden uname tab =
   let found_dir = find_uname [] dir ptab in
     make_qualid ?loc (DirPath.make found_dir) id
 
-let shortest_qualid ?loc ctx uname tab =
-  shortest_qualid_gen ?loc (fun id -> Id.Set.mem id ctx) uname tab
+let shortest_qualid ?loc ?force_short ctx uname tab =
+  shortest_qualid_gen ?loc ?force_short (fun id -> Id.Set.mem id ctx) uname tab
 
 let push_node node l =
   match node with
@@ -565,44 +572,32 @@ let path_of_universe mp =
 
 (* Shortest qualid functions **********************************************)
 
-let shortest_qualid_of_global ?loc ctx ref =
+let shortest_qualid_of_global ?loc ?force_short ctx ref =
   let open GlobRef in
   match ref with
     | VarRef id -> make_qualid ?loc DirPath.empty id
     | _ ->
-        let sp =  ExtRefMap.find (TrueGlobal ref) !the_globrevtab in
-        ExtRefTab.shortest_qualid ?loc ctx sp !the_ccitab
+        let sp = ExtRefMap.find (TrueGlobal ref) !the_globrevtab in
+        ExtRefTab.shortest_qualid ?loc ?force_short ctx sp !the_ccitab
 
-let shortest_qualid_of_abbreviation ?loc ctx kn =
+let shortest_qualid_of_abbreviation ?loc ?force_short ctx kn =
   let sp = path_of_abbreviation kn in
-    ExtRefTab.shortest_qualid ?loc ctx sp !the_ccitab
+  ExtRefTab.shortest_qualid ?loc ?force_short ctx sp !the_ccitab
 
-let shortest_qualid_of_module ?loc mp =
+let shortest_qualid_of_module ?loc ?force_short mp =
   let dir = MPmap.find mp Modules.(!nametab.modrevtab) in
-  MPDTab.shortest_qualid ?loc Id.Set.empty dir Modules.(!nametab.modtab)
+  MPDTab.shortest_qualid ?loc ?force_short Id.Set.empty dir Modules.(!nametab.modtab)
 
-let shortest_qualid_of_modtype ?loc kn =
+let shortest_qualid_of_modtype ?loc ?force_short kn =
   let sp = MPmap.find kn Modules.(!nametab.modtyperevtab) in
-    MPTab.shortest_qualid ?loc Id.Set.empty sp Modules.(!nametab.modtypetab)
+  MPTab.shortest_qualid ?loc ?force_short Id.Set.empty sp Modules.(!nametab.modtypetab)
 
-let shortest_qualid_of_universe ?loc ctx kn =
+let shortest_qualid_of_universe ?loc ?force_short ctx kn =
   let sp = UnivIdMap.find kn !the_univrevtab in
-  UnivTab.shortest_qualid_gen ?loc (fun id -> Id.Map.mem id ctx) sp !the_univtab
-
-(* This tells to print fully qualified names - set by Goptions in constrextern *)
-let print_fully_qualified_ref = ref false
-let print_fully_qualified () = !print_fully_qualified_ref
-let set_print_fully_qualified b = print_fully_qualified_ref := b
+  UnivTab.shortest_qualid_gen ?loc ?force_short (fun id -> Id.Map.mem id ctx) sp !the_univtab
 
 let pr_global_env env ref =
-  try
-    let qid =
-      if !print_fully_qualified_ref then
-        qualid_of_path (path_of_global ref)
-      else
-        shortest_qualid_of_global env ref
-    in
-    pr_qualid qid
+  try pr_qualid (shortest_qualid_of_global env ref)
   with Not_found as exn ->
     let exn, info = Exninfo.capture exn in
     if !Flags.in_debugger then GlobRef.print ref
