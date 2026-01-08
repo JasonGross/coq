@@ -1101,10 +1101,11 @@ Printing constructions in full
 
 .. flag:: Printing Fully Qualified
 
-   When this :term:`flag` is turned on, all global references (constants, inductives,
-   constructors, section variables) are printed using their fully qualified names, which include
-   the full module path. This is useful when there are multiple constants with the
-   same short name in different modules, and you want to clearly distinguish them.
+   When this :term:`flag` is turned on, all names (global references such as constants,
+   inductives, constructors, and section variables, as well as modules, module types,
+   and universes) are printed using their fully qualified paths. This is useful when
+   there are multiple objects with the same short name in different modules, and you
+   want to clearly distinguish them.
 
    For example, if you have both ``Foo.ax`` and ``Bar.ax`` defined, turning on this
    flag will ensure they are printed as ``Module.Foo.ax`` and ``Module.Bar.ax``

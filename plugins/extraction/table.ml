@@ -313,7 +313,7 @@ let safe_basename_of_global_gen table r =
 let safe_basename_of_global table r = safe_basename_of_global_gen (Some table) r
 
 let string_of_global r  =
- try string_of_qualid (Nametab.shortest_qualid_of_global Id.Set.empty r.glob)
+ try string_of_qualid (Nametab.shortest_qualid_of_global ~force_short:true Id.Set.empty r.glob)
  with Not_found -> Id.to_string (safe_basename_of_global_gen None r)
 
 let safe_pr_global r = str (string_of_global r)
