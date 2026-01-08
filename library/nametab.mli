@@ -101,16 +101,18 @@ module type NAMETAB = sig
   val remove : full_path -> elt -> unit
   (** Remove an element. *)
 
-  val shortest_qualid_gen : ?loc:Loc.t -> (Id.t -> bool) -> elt -> qualid
+  val shortest_qualid_gen : ?loc:Loc.t -> ?force_short:bool -> (Id.t -> bool) -> elt -> qualid
   (** [shortest_qualid_gen avoid v]: given an object [v] with full
       name Mylib.A.B.x, try to find the shortest among x, B.x, A.B.x
       and Mylib.A.B.x that denotes the same object.
       If [avoid] is [true] on [x] it is assumed to denote something else
       (so B.x is the shortest qualid that could be returned).
+      If [~force_short:true] is passed, always returns the shortest qualid.
+      Otherwise, respects the "Printing Fully Qualified" flag.
 
       @raise Not_found for unknown objects. *)
 
-  val shortest_qualid : ?loc:Loc.t -> Id.Set.t -> elt -> qualid
+  val shortest_qualid : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> elt -> qualid
   (** Like [shortest_qualid_gen] but using an id set instead of a closure. *)
 
   val pr : elt -> Pp.t
@@ -205,8 +207,13 @@ val path_of_global : GlobRef.t -> full_path
 
 val path_of_abbreviation : Globnames.abbreviation -> full_path
 
-val shortest_qualid_of_global : ?loc:Loc.t -> Id.Set.t -> GlobRef.t -> qualid
-val shortest_qualid_of_abbreviation : ?loc:Loc.t -> Id.Set.t -> Globnames.abbreviation -> qualid
+val shortest_qualid_of_global : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> GlobRef.t -> qualid
+(** Returns a qualid for the given global reference. If [~force_short:true] is
+    passed, always returns the shortest qualid. Otherwise (default), respects
+    the "Printing Fully Qualified" flag: when the flag is set, returns the fully
+    qualified name; when unset, returns the shortest qualid. *)
+
+val shortest_qualid_of_abbreviation : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> Globnames.abbreviation -> qualid
 
 (** Printing of global references using names as short as possible.
     @raise Not_found when the reference is not in the global tables. *)
@@ -369,9 +376,9 @@ val path_of_universe : Univ.UGlobal.t -> full_path
    Mylib.A.B.x that denotes the same object.
    @raise Not_found for unknown objects. *)
 
-val shortest_qualid_of_modtype : ?loc:Loc.t -> ModPath.t -> qualid
-val shortest_qualid_of_module : ?loc:Loc.t -> ModPath.t -> qualid
-val shortest_qualid_of_dir : ?loc:Loc.t -> GlobDirRef.t -> qualid
+val shortest_qualid_of_modtype : ?loc:Loc.t -> ?force_short:bool -> ModPath.t -> qualid
+val shortest_qualid_of_module : ?loc:Loc.t -> ?force_short:bool -> ModPath.t -> qualid
+val shortest_qualid_of_dir : ?loc:Loc.t -> ?force_short:bool -> GlobDirRef.t -> qualid
 
 (** In general we have a [UnivNames.universe_binders] around rather than a [Id.Set.t] *)
-val shortest_qualid_of_universe : ?loc:Loc.t -> 'u Id.Map.t -> Univ.UGlobal.t -> qualid
+val shortest_qualid_of_universe : ?loc:Loc.t -> ?force_short:bool -> 'u Id.Map.t -> Univ.UGlobal.t -> qualid

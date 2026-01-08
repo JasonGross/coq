@@ -339,7 +339,7 @@ let visible_ids sigma (nenv, c) =
     let g = global_of_constr c in
     if not (GlobRef.Set_env.mem g gseen) then
       let gseen = GlobRef.Set_env.add g gseen in
-      let ids = match Nametab.shortest_qualid_of_global Id.Set.empty g with
+      let ids = match Nametab.shortest_qualid_of_global ~force_short:true Id.Set.empty g with
       | short ->
         let dir, id = repr_qualid short in
         if DirPath.is_empty dir then Id.Set.add id ids else ids

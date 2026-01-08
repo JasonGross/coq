@@ -114,7 +114,7 @@ val interp_notation : ltac_notation -> notation_data
 val push_ltac : visibility -> full_path -> tacref -> unit
 val locate_ltac : qualid -> tacref
 val locate_extended_all_ltac : qualid -> tacref list
-val shortest_qualid_of_ltac : ?loc:Loc.t -> Id.Set.t -> tacref -> qualid
+val shortest_qualid_of_ltac : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> tacref -> qualid
 val path_of_ltac : tacref -> full_path
 
 val push_constructor : ?user_warns:UserWarn.t -> visibility -> full_path -> ltac_constructor -> unit
