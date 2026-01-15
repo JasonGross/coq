@@ -1201,39 +1201,23 @@ Generation of induction principles with ``Scheme``
       The name of the scheme. If not provided, the name will be determined
       automatically from the :n:`@scheme_type` and :n:`@sort_quality_or_set`.
 
-   The following :n:`@scheme_type`\s generate induction principles with
-   given properties:
+   :n:`@scheme_type`
+      Generate induction principles with given properties:
 
-   =================== =========== ===========
-    :n:`@scheme_type`   Recursive   Dependent
-   =================== =========== ===========
-    :n:`Induction`         Yes         Yes
-    :n:`Minimality`        Yes         No
-    :n:`Elimination`       No          Yes
-    :n:`Case`              No          No
-   =================== =========== ===========
+      =================== =========== ===========
+      :n:`@scheme_type`   Recursive   Dependent
+      =================== =========== ===========
+      :n:`Induction`         Yes         Yes
+      :n:`Minimality`        Yes         No
+      :n:`Elimination`       No          Yes
+      :n:`Case`              No          No
+      =================== =========== ===========
 
-   See examples of the :n:`@scheme_type`\s :ref:`here <scheme_example>`.
+      See :ref:`examples <scheme_example>` of the :n:`@scheme_type`\s.
 
    Unless attribute `register=no` is used, the scheme is automatically
    registered for use by tactics (for instance :tacn:`induction` uses
    `Induction` schemes). Use :cmd:`Register Scheme` to manually register a scheme.
-
-.. cmd:: Scheme {? Boolean } Equality for @reference
-   :name: Scheme Equality; Scheme Boolean Equality
-
-   Tries to generate a Boolean equality for :n:`@reference`. If
-   :n:`Boolean` is not specified, the command also tries to generate
-   a proof of the decidability of propositional equality over
-   :n:`@reference`.
-   If :token:`reference` involves independent constants or other
-   inductive types, we recommend defining their equality first.
-
-.. cmd:: Scheme Rewriting for @reference
-   :name: Scheme Rewriting
-
-   Tries to generate rewriting schemes such as congruence for :n:`@reference`.
-   Equivalent to setting :flag:`Rewriting Schemes` before declaring :n:`@reference`.
 
 .. example:: Induction scheme for tree and forest
 
@@ -1303,33 +1287,172 @@ Generation of induction principles with ``Scheme``
 
 .. _scheme_example:
 
-   .. example:: `Scheme` commands with various :n:`@scheme_type`\s
+.. example:: `Scheme` commands with various :n:`@scheme_type`\s
 
-      Let us demonstrate the difference between the Scheme commands.
+   Let us demonstrate the difference between the Scheme commands.
 
-      .. rocqtop:: all
+   .. rocqtop:: all
 
-         Unset Elimination Schemes.
+      Unset Elimination Schemes.
 
-         Inductive Nat :=
-         | z : Nat
-         | s : Nat -> Nat.
+      Inductive Nat :=
+      | z : Nat
+      | s : Nat -> Nat.
 
-         (* dependent, recursive *)
-         Scheme Induction for Nat Sort Set.
-         About Nat_rec.
+      (* dependent, recursive *)
+      Scheme Induction for Nat Sort Set.
+      About Nat_rec.
 
-         (* non-dependent, recursive *)
-         Scheme Minimality for Nat Sort Set.
-         About Nat_rec_nodep.
+      (* non-dependent, recursive *)
+      Scheme Minimality for Nat Sort Set.
+      About Nat_rec_nodep.
 
-         (* dependent, non-recursive *)
-         Scheme Elimination for Nat Sort Set.
-         About Nat_case.
+      (* dependent, non-recursive *)
+      Scheme Elimination for Nat Sort Set.
+      About Nat_case.
 
-         (* non-dependent, non-recursive *)
-         Scheme Case for Nat Sort Set.
-         About Nat_case_nodep.
+      (* non-dependent, non-recursive *)
+      Scheme Case for Nat Sort Set.
+      About Nat_case_nodep.
+
+Eliminators for Nested Inductive Types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When generating eliminators for a predicate `P`, if an argument is nested
+with :n:`@reference`, the `All` predicate and its theorem will be looked up with the key
+:n:`All` and :n:`AllForall`, and used to enforce `P` holds on the nested argument.
+See :ref:`examples <scheme_example_nested>`.
+
+The `All` predicate must feature a predicate `PA : A -> Type@{s;u}` for each
+strictly positive uniform-parameter `A : Type` (or more generally an arity), and
+enforces they hold for each subterm of type `A` in the body of `ind`.
+The theorem `AllForall` then states that if all the predicates `PA` hold,
+that is `forall a, PA a`, then `ind_all` holds.
+The definitions registered must be sort polymorphic to generate eliminators
+for the different sorts `Prop`, `Type`, etc.
+The `AllForall` theorem must also be transparent to ensure termination checking.
+The corresponding theory can found in :cite:`NestedInductiveTypes`.
+
+The type `unit` is used to instantiate the predicates if some parameters are
+not nested on. For instance, if `prod A B` is nested on `A` but not on `B`,
+then the predicate for `B` is instantiated with `fun _ => unit`.
+To enable the generation of cleaner eliminators for partial nesting,
+it is also possible to register partial version of `All` and `AllForall` with
+predicates only for some of the strictly positive parameters.
+The partial versions of `All` and `AllForall` will be looked up first,
+and the implementation will fallback on the general ones if they are not found.
+The partial version should be registered with `All_s` and `AllForall_s` where
+`s` is a list of `1` and `0` specifying which parameters can be nested or not.
+`1` means the parameter can be nested with the partial version, `0` that it cannot.
+For instance, to register a partial version of `All` for `prod A B` with a
+predicate on `A` but not on `B`, one should use `All_10`.
+
+.. warn:: @reference is nested using @reference. No Lemma for @reference is registered for @ident
+   :name: register-all
+
+   The `All` and `AllForall` predicate need to be registered before the
+   definition of the nested inductive type.
+   They are not generated on the fly if they are not found.
+   If they are not declared, no induction hypothesis is created for the
+   nested argument.
+
+.. _scheme_example_nested:
+
+.. example:: Nesting With Prod
+
+   The inductive type `prod` has two uniform-parameters `A, B : Type` that are
+   positive, and hence nestable.
+
+   .. rocqtop:: in reset
+
+      Inductive prod (A B : Type) : Type :=
+      | pair : A -> B -> prod A B.
+
+   The `All` predicate should then be a predicate with additional
+   parameters `PA : A -> Type@{s;u}` and `PB : B -> Type@{s';u'}`, and requires
+   `PA a` and `PB b` for `prod A PA B PB (pair a b)` to hold.
+   Its theorem will then state that if `PA` and `PB` hold, then `prod_all` holds.
+
+   .. rocqtop:: in
+
+      #[universes(polymorphic)]
+      Inductive prod_all@{sa sb ; ua ub +} A (PA : A -> Type@{sa;ua})
+         B (PB : B -> Type@{sb;ub}) : prod A B -> Type :=
+      | pair_all : forall a, PA a -> forall b, PB b -> prod_all A PA B PB (pair A B a b).
+
+      #[universes(polymorphic)]
+      Definition prod_all_forall@{sa sb ; ua ub +} A (PA : A -> Type@{sa;ua})
+         (HPA : forall a, PA a) B (PB : B -> Type@{sb;ub}) (HPB : forall b, PB b) :
+            forall (x : prod A B), prod_all A PA B PB x :=
+            fun x => match x with
+            | pair _ _ a b => pair_all A PA B PB a (HPA a) b (HPB b)
+            end.
+
+      Register Scheme prod_all as All for prod.
+      Register Scheme prod_all_forall as AllForall for prod.
+
+   When generating eliminators for a predicate `P`, if an argument is nested with
+   `prod`, the `prod_all` predicate and its theorem will be looked up, and used
+   to enforce `P` holds on the argument.
+   The type `unit` is used to instantiate the predicates if some parameters are
+   not nested on. For instance, if `prod` is nested on `A` but not on `B`, then
+   `PB` is instantiated with `fun _ => unit`.
+
+   .. rocqtop:: all
+
+      Inductive LeftTree A : Type :=
+      | Lleaf (a : A) : LeftTree A
+      | Lnode (p : prod (LeftTree A) nat) : LeftTree A.
+
+      About LeftTree_ind.
+
+   To provide better eliminators for partially nesting like `LeftTree`, it is
+   possible to regsiter partial version of `prod_all`
+
+   .. rocqtop:: in
+
+      #[universes(polymorphic)]
+      Inductive prod_all_10@{sa; ua+} A (PA : A -> Type@{sa;ua}) B : prod A B -> Type :=
+      | pair_all_10 : forall a, PA a -> forall b, prod_all_10 A PA B (pair A B a b).
+
+      #[universes(polymorphic)]
+      Definition prod_all_forall_10@{sa; ua+} A (PA : A -> Type@{sa;ua})
+         (HPA : forall a, PA a) B : forall (x : prod A B), prod_all_10 A PA B x :=
+         fun x => match x with
+         | pair _ _ a b => pair_all_10 A PA B a (HPA a) b
+         end.
+
+      Register Scheme prod_all_10 as All_10 for prod.
+      Register Scheme prod_all_forall_10 as AllForall_10 for prod.
+
+   This partial verion of the `All` predicate will then be used in priority,
+   falling back on the general version if they are not found.
+   For instance, we define `LeftTree` after the generation of `prod_all_10`,
+   `prod_all_10` will be used for generating the eliminators instead of `prod_all`.
+
+   .. rocqtop:: all
+
+      Scheme LeftTree_ind_partial := Induction for LeftTree Sort Prop.
+      About LeftTree_ind_partial.
+
+Scheme Equality, and Rewriting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. cmd:: Scheme {? Boolean } Equality for @reference
+   :name: Scheme Equality; Scheme Boolean Equality
+
+   Tries to generate a Boolean equality for :n:`@reference`. If
+   :n:`Boolean` is not specified, the command also tries to generate
+   a proof of the decidability of propositional equality over
+   :n:`@reference`.
+   If :token:`reference` involves independent constants or other
+   inductive types, we recommend defining their equality first.
+
+.. cmd:: Scheme Rewriting for @reference
+   :name: Scheme Rewriting
+
+   Tries to generate rewriting schemes such as congruence for :n:`@reference`.
+   Equivalent to setting :flag:`Rewriting Schemes` before declaring :n:`@reference`.
 
 Automatic declaration of schemes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1392,6 +1515,19 @@ Combined Scheme
 .. example::
 
   We can define the induction principles for trees and forests using:
+
+   .. rocqtop:: reset none
+
+      Axiom A : Set.
+      Axiom B : Set.
+
+   .. rocqtop:: in
+
+      Inductive tree : Set :=
+      | node : A -> forest -> tree
+      with forest : Set :=
+      | leaf : B -> forest
+      | cons : tree -> forest -> forest.
 
   .. rocqtop:: all
 

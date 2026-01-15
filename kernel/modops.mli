@@ -87,26 +87,31 @@ type signature_mismatch_error =
   | DefinitionFieldExpected
   | ModuleFieldExpected
   | ModuleTypeFieldExpected
-  | NotConvertibleInductiveField of Id.t
-  | NotConvertibleConstructorField of Id.t
-  | NotConvertibleBodyField
+  | NotConvertibleInductiveField of Id.t * (env * types * types) option
+  | NotConvertibleConstructorField of Id.t * (env * types * types) option
+  | NotConvertibleBodyField of (env * constr * constr) option
   | NotConvertibleTypeField of env * types * types
   | CumulativeStatusExpected of bool
   | PolymorphicStatusExpected of bool
-  | NotSameConstructorNamesField
-  | NotSameInductiveNameInBlockField
+  | NotSameConstructorNamesField of Id.t array * Id.t array
+  | NotSameInductiveNameInBlockField of Id.t * Id.t
   | FiniteInductiveFieldExpected of bool
-  | InductiveNumbersFieldExpected of int
-  | InductiveParamsNumberField of int
+  | InductiveNumbersFieldExpected of { got : int; expected : int }
+  | InductiveParamsNumberField of { got : int; expected : int }
   | RecordFieldExpected of bool
-  | RecordProjectionsExpected of Name.t list
-  | NotEqualInductiveAliases
-  | IncompatibleUniverses of UGraph.univ_inconsistency
-  | IncompatibleQualities of QGraph.elimination_error
+  | RecordProjectionsExpected of { expected : Name.t list; got : Name.t list }
+  | NotEqualInductiveAliases of MutInd.t * MutInd.t
+  | IncompatibleUniverses of { err : UGraph.univ_inconsistency; env : env; t1 : types; t2 : types }
+  | IncompatibleQualities of { err : QGraph.elimination_error; env : env; t1 : types; t2 : types }
   | IncompatiblePolymorphism of env * types * types
   | IncompatibleUnivConstraints of { got : UVars.AbstractContext.t; expect : UVars.AbstractContext.t }
   | IncompatibleVariance
   | NoRewriteRulesSubtyping
+
+type with_constraint_error =
+  | WithSignatureMismatch of signature_mismatch_error
+  | WithCannotConstrainPrimitive
+  | WithCannotConstrainSymbol
 
 type subtyping_trace_elt =
   | Submodule of Id.t
@@ -122,7 +127,7 @@ type module_typing_error =
   | NoSuchLabel of Id.t * ModPath.t
   | NotAModuleLabel of Id.t
   | NotAConstant of Id.t
-  | IncorrectWithConstraint of Id.t
+  | IncorrectWithConstraint of Id.t * with_constraint_error
   | GenerativeModuleExpected of Id.t
   | LabelMissing of Id.t * string
   | IncludeRestrictedFunctor of ModPath.t
@@ -143,7 +148,7 @@ val error_not_a_module_label : Id.t -> 'a
 
 val error_not_a_constant : Id.t -> 'a
 
-val error_incorrect_with_constraint : Id.t -> 'a
+val error_incorrect_with_constraint : Id.t -> with_constraint_error -> 'a
 
 val error_generative_module_expected : Id.t -> 'a
 

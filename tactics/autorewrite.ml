@@ -374,7 +374,7 @@ let one_base where conds tac_main bas =
     let sigma = Proofview.Goal.sigma gl in
     let subst, ctx' = UnivGen.fresh_sort_context_instance h.rew_ctx in
     let c' = Vars.subst_univs_level_constr subst h.rew_lemma in
-    let sigma = Evd.merge_sort_context_set Evd.univ_flexible QGraph.Internal sigma ctx' in
+    let sigma = Evd.merge_sort_context_set Evd.univ_flexible ~src:UState.Internal sigma ctx' in
     Proofview.tclTHEN (Proofview.Unsafe.tclEVARS sigma) (rewrite h.rew_l2r c' tc)
   end in
   let open Proofview.Notations in
@@ -580,7 +580,7 @@ let add_rew_rules ~locality base (lrul:raw_rew_rule list) =
   let sigma = Evd.from_env env in
   let intern tac = Gentactic.intern ~strict:true env tac in
   let map {CAst.loc;v=((c,ctx),b,t)} =
-    let sigma = Evd.merge_sort_context_set Evd.univ_rigid QGraph.Internal sigma ctx in
+    let sigma = Evd.merge_sort_context_set Evd.univ_rigid ~src:UState.Internal sigma ctx in
     let info = find_applied_relation ?loc env sigma c b in
     let pat = EConstr.Unsafe.to_constr info.hyp_pat in
     let uid = fresh_key () in

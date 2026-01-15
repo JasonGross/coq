@@ -862,19 +862,19 @@ module Strings = struct
 (** * String notation *)
 open PrimTokenNotation
 
-let qualid_of_ref n =
-  n |> Rocqlib.lib_ref |> Nametab.shortest_qualid_of_global Id.Set.empty
+let q_ref n =
+  n |> Rocqlib.lib_ref
 
-let q_list () = qualid_of_ref "core.list.type"
-let q_byte () = qualid_of_ref "core.byte.type"
+let q_list () = q_ref "core.list.type"
+let q_byte () = q_ref "core.byte.type"
 
-let unsafe_locate_ind q =
-  match Nametab.locate q with
+let force_ind q =
+  match q with
   | GlobRef.IndRef i -> i
   | _ -> raise Not_found
 
-let locate_list () = unsafe_locate_ind (q_list ())
-let locate_byte () = unsafe_locate_ind (q_byte ())
+let locate_list () = force_ind (q_list ())
+let locate_byte () = force_ind (q_byte ())
 
 (***********************************************************************)
 

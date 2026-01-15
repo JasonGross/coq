@@ -229,7 +229,8 @@ let do_sort ~poly l =
     let qs = List.fold_left  (fun qs (_, qv) -> Sorts.QVar.(Set.add (make_global qv) qs))
       Sorts.QVar.Set.empty l
     in
-    Global.push_qualities QGraph.Static (qs, Sorts.ElimConstraints.empty) (* XXX *)
+    let rigid = false in (* No constraints, rigidity does not matter *)
+    Global.push_qualities ~rigid (qs, Sorts.ElimConstraints.empty) (* XXX *)
   | true ->
     let names = CArray.map_of_list (fun (na,_) -> Name na) l in
     let qs = CArray.map_of_list (fun (_,sg) -> Sorts.Quality.global sg) l in
@@ -254,7 +255,7 @@ let do_constraint ~poly l =
   match poly with
   | false ->
     let qcst, ucst = constraints in
-    let () = Global.push_qualities QGraph.Rigid (Sorts.QVar.Set.empty, qcst) in (* XXX *)
+    let () = Global.push_qualities ~rigid:true (Sorts.QVar.Set.empty, qcst) in (* XXX *)
     Global.push_context_set (Univ.Level.Set.empty, ucst)
   | true ->
     let uctx = UVars.UContext.make

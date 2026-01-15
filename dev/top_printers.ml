@@ -278,7 +278,7 @@ let pproof p = pp(Proof.pr_proof p)
 let ppuni u = pp(Universe.raw_pr u)
 let ppuni_level u = pp (Level.raw_pr u)
 let ppqvar q = pp (QVar.raw_pr q)
-let ppesorts s = pp (Sorts.debug_print (Evd.MiniEConstr.ESorts.unsafe_to_sorts s))
+let ppesorts s = pp (Sorts.debug_print (EConstr.Unsafe.to_sorts s))
 
 (* pprelevance not directly useful since it's transparent, but used for pperelevance *)
 let pprelevance (r:Sorts.relevance) = match r with

@@ -199,20 +199,6 @@ val solve :
 (** Option telling if unification heuristics should be used. *)
 val use_unification_heuristics : unit -> bool
 
-val refine_by_tactic
-  :  name:Names.Id.t
-  -> poly:PolyFlags.t
-  -> Environ.env
-  -> Evd.evar_map
-  -> EConstr.types
-  -> unit Proofview.tactic
-  -> EConstr.constr * Evd.evar_map
-(** A variant of the above function that handles open terms as well.
-    Caveat: all effects are purged in the returned term at the end, but other
-    evars solved by side-effects are NOT purged, so that unexpected failures may
-    occur. Ideally all code using this function should be rewritten in the
-    monad. *)
-
 exception SuggestNoSuchGoals of int * t
 
 (** {6 Helpers to obtain proof state when in an interactive proof } *)

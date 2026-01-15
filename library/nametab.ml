@@ -12,6 +12,11 @@ open Names
 open Libnames
 open Globnames
 
+(* Fully qualified printing support - checked by shortest_qualid functions *)
+let print_fully_qualified_ref = ref false
+let print_fully_qualified () = !print_fully_qualified_ref
+let set_print_fully_qualified b = print_fully_qualified_ref := b
+
 (* to this type are mapped DirPath.t's in the nametab *)
 module GlobDirRef = struct
   type t =
@@ -83,7 +88,7 @@ module type NAMETREE = sig
   val find : full_path -> t -> elt
   val remove : full_path -> t -> t
   val exists : full_path -> t -> bool
-  val shortest_qualid_gen : ?loc:Loc.t -> (Id.t -> bool) -> full_path -> t -> qualid
+  val shortest_qualid_gen : ?loc:Loc.t -> ?force_short:bool -> (Id.t -> bool) -> full_path -> t -> qualid
   val find_prefixes : qualid -> t -> elt list
 
   (** Matches a prefix of [qualid], useful for completion *)
@@ -387,7 +392,9 @@ let exists uname tab =
   with
       Not_found -> false
 
-let shortest_qualid_gen ?loc hidden uname tab =
+let shortest_qualid_gen ?loc ?(force_short=false) hidden uname tab =
+  if not force_short && !print_fully_qualified_ref then qualid_of_path ?loc uname
+  else
   let dir,id = repr_path uname in
   let dir = DirPath.repr dir in
   let hidden = hidden id in
@@ -449,9 +456,9 @@ module type NAMETAB_gen = sig
 
   val remove : full_path -> elt -> write_tab
 
-  val shortest_qualid_gen : ?loc:Loc.t -> (Id.t -> bool) -> elt -> qualid read_tab
+  val shortest_qualid_gen : ?loc:Loc.t -> ?force_short:bool -> (Id.t -> bool) -> elt -> qualid read_tab
 
-  val shortest_qualid : ?loc:Loc.t -> Id.Set.t -> elt -> qualid read_tab
+  val shortest_qualid : ?loc:Loc.t -> ?force_short:bool -> Id.Set.t -> elt -> qualid read_tab
 
   val pr : elt -> Pp.t read_tab
 
@@ -532,15 +539,15 @@ module MakeTab (E:ValueType) : Functional_NAMETAB with type elt = E.t = struct
       revtab = E.Map.remove v revtab;
     }
 
-  let shortest_qualid_gen ?loc avoid v { tab; revtab } =
+  let shortest_qualid_gen ?loc ?force_short avoid v { tab; revtab } =
     match E.is_var v with
     | Some id -> make_qualid ?loc DirPath.empty id
     | None ->
       let sp = E.Map.find v revtab in
-      Tab.shortest_qualid_gen ?loc avoid sp tab
+      Tab.shortest_qualid_gen ?loc ?force_short avoid sp tab
 
-  let shortest_qualid ?loc avoid v tabs =
-    shortest_qualid_gen ?loc (fun id -> Id.Set.mem id avoid) v tabs
+  let shortest_qualid ?loc ?force_short avoid v tabs =
+    shortest_qualid_gen ?loc ?force_short (fun id -> Id.Set.mem id avoid) v tabs
 
   let pr v tab = pr_qualid (shortest_qualid Id.Set.empty v tab)
 
@@ -580,9 +587,9 @@ module MakeImperative (Tab:Functional_NAMETAB) (SI:StateInfo) ()
 
   let remove sp v = the_tab := Tab.remove sp v !the_tab
 
-  let shortest_qualid_gen ?loc f v = Tab.shortest_qualid_gen ?loc f v !the_tab
+  let shortest_qualid_gen ?loc ?force_short f v = Tab.shortest_qualid_gen ?loc ?force_short f v !the_tab
 
-  let shortest_qualid ?loc avoid v = Tab.shortest_qualid ?loc avoid v !the_tab
+  let shortest_qualid ?loc ?force_short avoid v = Tab.shortest_qualid ?loc ?force_short avoid v !the_tab
 
   let pr v = Tab.pr v !the_tab
 
@@ -812,18 +819,23 @@ let path_of_universe mp = Univs.to_path mp
 
 (* Shortest qualid functions **********************************************)
 
-let shortest_qualid_of_global ?loc ctx ref = XRefs.shortest_qualid ?loc ctx (TrueGlobal ref)
+let shortest_qualid_of_global ?loc ?force_short ctx ref =
+  XRefs.shortest_qualid ?loc ?force_short ctx (TrueGlobal ref)
 
-let shortest_qualid_of_abbreviation ?loc ctx kn = XRefs.shortest_qualid ?loc ctx (Abbrev kn)
+let shortest_qualid_of_abbreviation ?loc ?force_short ctx kn =
+  XRefs.shortest_qualid ?loc ?force_short ctx (Abbrev kn)
 
-let shortest_qualid_of_module ?loc mp = Modules.shortest_qualid ?loc Id.Set.empty mp
+let shortest_qualid_of_module ?loc ?force_short mp =
+  Modules.shortest_qualid ?loc ?force_short Id.Set.empty mp
 
-let shortest_qualid_of_modtype ?loc kn = ModTypes.shortest_qualid ?loc Id.Set.empty kn
+let shortest_qualid_of_modtype ?loc ?force_short kn =
+  ModTypes.shortest_qualid ?loc ?force_short Id.Set.empty kn
 
-let shortest_qualid_of_dir ?loc sp = OpenMods.shortest_qualid ?loc Id.Set.empty sp
+let shortest_qualid_of_dir ?loc ?force_short sp =
+  OpenMods.shortest_qualid ?loc ?force_short Id.Set.empty sp
 
-let shortest_qualid_of_universe ?loc avoid u =
-  Univs.shortest_qualid_gen ?loc (fun id -> Id.Map.mem id avoid) u
+let shortest_qualid_of_universe ?loc ?force_short avoid u =
+  Univs.shortest_qualid_gen ?loc ?force_short (fun id -> Id.Map.mem id avoid) u
 
 let pr_global_env env ref =
   try pr_qualid (shortest_qualid_of_global env ref)

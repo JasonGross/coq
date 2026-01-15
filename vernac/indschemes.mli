@@ -9,8 +9,6 @@
 (************************************************************************)
 
 open Names
-open Constr
-open Environ
 
 type resolved_scheme = Names.Id.t CAst.t * Indrec.dep_flag * Names.inductive * UnivGen.QualityOrSet.t
 
@@ -45,8 +43,6 @@ val do_scheme : register:bool -> Environ.env -> (Names.Id.t CAst.t option * Vern
 val do_scheme_equality : ?locmap:Ind_tables.Locmap.t -> Vernacexpr.equality_scheme_type -> Libnames.qualid Constrexpr.or_by_notation -> unit
 
 (** Combine a list of schemes into a conjunction of them *)
-
-val build_combined_scheme : env -> Constant.t list -> Evd.evar_map * constr * types
 
 val do_combined_scheme : lident -> Constant.t list -> unit
 

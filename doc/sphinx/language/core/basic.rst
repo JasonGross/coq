@@ -204,15 +204,15 @@ Other tokens
   The following character sequences are tokens defined in the main Rocq grammar
   (even when starting Rocq with the `-noinit` command-line flag)::
 
-    ! #[ % & ' ( () ) * + , - ->
-    . .( .. ... / : ::= := :> ; < <+ <- <:
-    <<: <= = => > >-> >= ? @ @{ [ ] _
-    `( `{ { {| | }
+    ! # #[ % %_ & ' ( () ) * + , - ->
+    . .( .. / : :: ::> := :> ; < <+ <- <:
+    <<: <= = => > >-> ? @ @{ [ ] _
+    `( `[ `{ { {| | |- }
 
   The following character sequences are tokens defined in notations or plugins
   loaded in the :term:`prelude`::
 
-    ** |- || ->
+    && ** ++ ... .1 .2 ::= <-> <> >=  /\ \/ || ^ ~
 
   Note that loading additional modules or plugins may expand the set of defined
   tokens.

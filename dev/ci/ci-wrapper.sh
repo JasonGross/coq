@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Use this script to preserve the exit code of $CI_SCRIPT when piping
-# it to `tee time-of-build.log`.  We have a separate script, because
+# it to `tee $log_file`.  We have a separate script, because
 # this only works in bash, which we don't require project-wide.
 
 set -o pipefail
@@ -9,10 +9,13 @@ set -x
 
 CI_NAME="$1"
 CI_SCRIPT="scripts/ci-${CI_NAME}.sh"
+log_file="_build_ci/${CI_NAME}.log"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # assume this script is in dev/ci/, cd to the root Rocq directory
 cd "${DIR}/../.." || exit 1
+
+mkdir -p _build_ci # needs to exist so we can write the log_file
 
 export TIMED=1
 
@@ -35,25 +38,25 @@ if [ "$COQ_CI_COLOR" = 1 ] && command -v script > /dev/null; then
     fi
     # on some macos systems OSTYPE is just "darwin", on others it's followed by version info
     if [[ "$OSTYPE" =~ ^darwin ]]; then
-        script -q /dev/null bash "${DIR}/${CI_SCRIPT}" 2>&1 | tee "$CI_NAME.log"
+        script -q /dev/null bash "${DIR}/${CI_SCRIPT}" 2>&1 | tee "$log_file"
     else
-        script --quiet --flush --return -c "bash '${DIR}/${CI_SCRIPT}'" /dev/null 2>&1 | tee "$CI_NAME.log"
+        script --quiet --flush --return -c "bash '${DIR}/${CI_SCRIPT}'" /dev/null 2>&1 | tee "$log_file"
     fi
 else
   if [ "$COQ_CI_COLOR" = 1 ]; then
     >&2 echo 'script command not available, colors will be hidden'
   fi
-  bash "${DIR}/${CI_SCRIPT}" 2>&1 | tee "$CI_NAME.log"
+  bash "${DIR}/${CI_SCRIPT}" 2>&1 | tee "$log_file"
 fi
 code=$?
 
-printf "\n%s exit code: %s\n" "$CI_NAME" "$code" >> "$CI_NAME.log"
+printf "\n%s exit code: %s\n" "$CI_NAME" "$code" >> "$log_file"
 
 # the test suite already prints a timing table
 if [ "$CI_NAME" != stdlib_test ]; then
   echo 'Aggregating timing log...'
   echo
-  tools/make-one-time-file.py --real "$CI_NAME.log"
+  tools/make-one-time-file.py --real "$log_file"
 fi
 
 # don't print error summary for coq_tools as it gets spammy, and hides jason_msg
@@ -86,7 +89,7 @@ if [ "$CI" ] && ! [ $code = 0 ] && [ "$CI_NAME" != coq_tools ]; then
   # -o: print only matched (otherwise it prints the whole file due to -z)
 
   # || true: if no error is matched by this pattern, we still want to use the error code from the build
-  < "$CI_NAME.log" tr -d "$(printf '\r')" \
+  < "$log_file" tr -d "$(printf '\r')" \
     | grep -Pzo "$file_re$codeline_re$carets_re$error_re" \
     | tr -d '\0' > errors \
     || true

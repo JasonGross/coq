@@ -429,23 +429,23 @@ described elsewhere
 Requests to the environment
 -------------------------------
 
-.. cmd:: Print Assumptions @reference
+.. cmd:: Print Assumptions {+ @reference }
 
    Displays all the assumptions (axioms, parameters and
-   variables) a theorem or definition depends on.
+   variables) one or more theorems or definitions depends on.
 
-   The message "Closed under the global context" indicates that the theorem or
-   definition has no dependencies.
+   The message "Closed under the global context" indicates that all the theorems and
+   definitions have no dependencies.
 
-.. cmd:: Print Opaque Dependencies @reference
+.. cmd:: Print Opaque Dependencies {+ @reference }
 
    Displays the assumptions and opaque constants that :n:`@reference` depends on.
 
-.. cmd:: Print Transparent Dependencies @reference
+.. cmd:: Print Transparent Dependencies {+ @reference }
 
-   Displays the assumptions and  transparent constants that :n:`@reference` depends on.
+   Displays the assumptions and transparent constants that :n:`@reference` depends on.
 
-.. cmd:: Print All Dependencies @reference
+.. cmd:: Print All Dependencies {+ @reference }
 
    Displays all the assumptions and constants :n:`@reference` depends on.
 
@@ -1096,6 +1096,21 @@ Printing constructions in full
       the goal unreadable.
 
       .. see a contrived example here: https://github.com/rocq-prover/rocq/pull/11718#discussion_r415481854
+
+.. flag:: Printing Fully Qualified
+
+   When this :term:`flag` is turned on, all names (global references such as constants,
+   inductives, constructors, and section variables, as well as modules, module types,
+   universes, etc) are printed using their fully qualified paths. This is useful when
+   there are multiple objects with the same short name in different modules, and you
+   want to clearly distinguish them.
+
+   For example, if you have both ``Foo.ax`` and ``Bar.ax`` defined, turning on this
+   flag will ensure they are printed as ``Module.Foo.ax`` and ``Module.Bar.ax``
+   respectively (where ``Module`` is the top-level module name), rather than
+   potentially ambiguous short names.
+
+   This flag is off by default.
 
 .. _controlling-typing-flags:
 

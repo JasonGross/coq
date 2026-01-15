@@ -818,7 +818,7 @@ let expand_table_key ~metas ts env sigma args = function
           let metas = Meta.meta_handler metas in
           let sk = Stack.( append_app args empty ) in
           let rhs, stack = Reductionops.apply_rules
-            (whd_betaiota_deltazeta_for_iota_state ts ~metas env sigma) env sigma (EInstance.make u) r sk
+            (fun ctx -> whd_betaiota_deltazeta_for_iota_state ts ~metas (push_rel_context ctx env) sigma) env sigma (EInstance.make u) r sk
           in
           let args' = Stack.list_of_app_stack stack
             |> (function Some l -> l | None -> assert false)
@@ -948,10 +948,13 @@ let isAllowedEvar sigma flags c = match EConstr.kind sigma c with
   | _ -> false
 
 
-let subst_defined_metas_evars sigma (bl,el) c =
+let subst_defined_metas_evars sigma (metas, bl, el) c =
   (* This seems to be performance-critical, and using the
      evar-insensitive primitives blow up the time passed in this
      function. *)
+  if Metamap.is_empty metas && List.is_empty bl && List.is_empty el then
+    Some c
+  else
   let c = EConstr.Unsafe.to_constr c in
   let rec substrec c = match Constr.kind c with
     | Meta i ->
@@ -971,10 +974,10 @@ let subst_defined_metas_evars sigma (bl,el) c =
 
 let check_compatibility env pbty flags subst tyM tyN =
   let sigma = subst.subst_sigma in
-  match subst_defined_metas_evars sigma (subst.subst_metas, []) tyM with
+  match subst_defined_metas_evars sigma (subst.subst_metam, subst.subst_metas, []) tyM with
   | None -> sigma
   | Some m ->
-  match subst_defined_metas_evars sigma (subst.subst_metas, []) tyN with
+  match subst_defined_metas_evars sigma (subst.subst_metam, subst.subst_metas, []) tyN with
   | None -> sigma
   | Some n ->
     if is_ground_term sigma m && is_ground_term sigma n then
@@ -985,10 +988,10 @@ let check_compatibility env pbty flags subst tyM tyN =
 
 let check_compatibility_ustate env pbty flags subst tyM tyN =
   let sigma = subst.subst_sigma in
-  match subst_defined_metas_evars sigma (subst.subst_metas, []) tyM with
+  match subst_defined_metas_evars sigma (subst.subst_metam, subst.subst_metas, []) tyM with
   | None -> UnivProblem.Set.empty
   | Some m ->
-  match subst_defined_metas_evars sigma (subst.subst_metas, []) tyN with
+  match subst_defined_metas_evars sigma (subst.subst_metam, subst.subst_metas, []) tyN with
   | None -> UnivProblem.Set.empty
   | Some n ->
     if is_ground_term sigma m && is_ground_term sigma n then
@@ -1023,9 +1026,8 @@ let is_eta_constructor_app env sigma ts f l1 term =
     let open Declarations in
     let mib = lookup_mind mind env in
       (match mib.mind_packets.(i).mind_record with
-      | PrimRecord info when mib.Declarations.mind_finite == Declarations.BiFinite &&
-          let (_, projs, _, _) = info in
-          Array.length projs == Array.length l1 - mib.Declarations.mind_nparams ->
+      | PrimRecord { projections ; _ } when mib.Declarations.mind_finite == Declarations.BiFinite &&
+          Array.length projections == Array.length l1 - mib.Declarations.mind_nparams ->
         (* Check that the other term is neutral *)
         is_neutral env sigma ts term
       | _ -> false)
@@ -1087,7 +1089,7 @@ let rec unify_0_with_initial_metas (subst : subst0) conv_at_top env pb flags m n
   let mk_expand_subst substn =
     let metasubst = if flags.use_metas_eagerly_in_conv_on_closed_terms then substn.subst_metas else subst.subst_metas in
     let evarsubst = if flags.use_evars_eagerly_in_conv_on_closed_terms then substn.subst_evars else subst.subst_evars in
-    (metasubst, evarsubst)
+    (substn.subst_metam, metasubst, evarsubst)
   in
   let rec unirec_rec (curenv,nb as curenvnb) pb opt (substn : subst0) ?(nargs=0) curm curn =
     let { subst_sigma = sigma; subst_metas = metasubst; subst_evars = evarsubst } = substn in

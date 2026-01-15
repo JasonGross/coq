@@ -317,10 +317,12 @@ let print_type_in_type env ref =
 let print_primitive_record recflag mipv =
   let mipv = Array.to_list mipv in
   mipv |> List.concat_map @@ fun mip -> match mip.mind_record with
-  | PrimRecord _ ->
+  | PrimRecord { has_eta; _ } ->
     let eta = match recflag with
-      | CoFinite | Finite -> str" without eta conversion"
-      | BiFinite -> str " with eta conversion"
+      | CoFinite | Finite -> str " without eta conversion"
+      | BiFinite -> match has_eta with
+                    | NoEta -> str " without eta conversion"
+                    | AlwaysEta -> str " with eta conversion"
     in
     [Id.print mip.mind_typename ++ str" has primitive projections" ++ eta ++ str"."]
   | FakeRecord | NotRecord -> []

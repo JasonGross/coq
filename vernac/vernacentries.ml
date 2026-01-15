@@ -2092,7 +2092,7 @@ let check_may_eval env sigma redexp rc =
       Evarutil.j_nf_evar sigma (Retyping.get_judgment_of env sigma c)
     else
       let env = Evarutil.nf_env_evar sigma env in
-      let env = Environ.push_qualities QGraph.Static (qs, fst csts) env in (* XXX *)
+      let env = Environ.push_qualities ~rigid:false (qs, fst csts) env in (* XXX *)
       let env = Environ.push_context_set (us, snd csts) env in
       let c = EConstr.to_constr sigma c in
       let env = Safe_typing.push_private_constants env (Evd.seff_private @@ Evd.eval_side_effects sigma) in
@@ -2137,7 +2137,7 @@ let vernac_global_check c =
   let sigma = Evd.collapse_sort_variables sigma in
   let senv = Global.safe_env() in
   let (qs, us), (qcst, ucst) as uctx = Evd.sort_context_set sigma in
-  let senv = Safe_typing.push_qualities QGraph.Static (qs, qcst) senv in (* XXX *)
+  let senv = Safe_typing.push_qualities ~rigid:false (qs, qcst) senv in (* XXX *)
   let senv = Safe_typing.push_context_set ~strict:false (us, ucst) senv in
   let c = EConstr.to_constr sigma c in
   let j = Safe_typing.typing senv c in
@@ -2276,13 +2276,12 @@ let vernac_print =
     print_about_hyp_globs ref_or_by_not udecl glnumopt
   | PrintImplicit qid -> with_proof_env @@ fun env _sigma ->
     Prettyp.print_impargs env (smart_global qid)
-  | PrintAssumptions (o,t,r) -> with_proof_env_and_opaques @@ fun ~opaque_access env sigma ->
+  | PrintAssumptions (o,t,rs) -> with_proof_env_and_opaques @@ fun ~opaque_access env sigma ->
     (* Prints all the axioms and section variables used by a term *)
-    let gr = smart_global r in
-    let cstr, _ = UnivGen.fresh_global_instance env gr in
     let st = Conv_oracle.get_transp_state (Environ.oracle env) in
+    let grs = List.map smart_global rs in
     let nassums =
-      Assumptions.assumptions opaque_access st ~add_opaque:o ~add_transparent:t gr cstr in
+      Assumptions.assumptions opaque_access st ~add_opaque:o ~add_transparent:t grs in
     Printer.pr_assumptionset env sigma nassums
   | PrintStrategy r -> no_state @@ fun () -> print_strategy r
   | PrintRegistered -> no_state print_registered
@@ -2355,8 +2354,16 @@ let vernac_register ~atts qid r =
   | RegisterScheme { inductive; scheme_kind } ->
     let local = Attributes.parse hint_locality_default_superglobal atts in
     let scheme_kind_s = Libnames.string_of_qualid scheme_kind in
-    let () = if not (Ind_tables.is_declared_scheme_object scheme_kind_s) then
-        warn_unknown_scheme_kind ?loc:scheme_kind.loc scheme_kind
+    (* Specific test for the All and AllForall keys, as there are an infinite number of them *)
+    let test_all prefix s =
+      String.starts_with ~prefix s &&
+      String.for_all (function '0' | '1' -> true | _ -> false) @@
+        String.sub s (String.length prefix) (String.length s - String.length prefix)
+    in
+    let () =
+      if not (Ind_tables.is_declared_scheme_object scheme_kind_s
+          || test_all "All_" scheme_kind_s || test_all "AllForall_" scheme_kind_s) then
+      warn_unknown_scheme_kind ?loc:scheme_kind.loc scheme_kind
     in
     let ind = Smartlocate.global_inductive_with_alias inductive in
     Dumpglob.add_glob ?loc:inductive.loc (IndRef ind);

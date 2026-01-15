@@ -69,7 +69,7 @@ val add_univ_constraints : Univ.UnivConstraints.t -> unit
 val push_context_set : Univ.ContextSet.t -> unit
 
 (** Extra sort qualities *)
-val push_qualities : QGraph.constraint_source -> Sorts.QContextSet.t -> unit
+val push_qualities : rigid:bool -> Sorts.QContextSet.t -> unit
 
 (** Non-interactive modules and module types *)
 

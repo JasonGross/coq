@@ -727,7 +727,7 @@ let rec match_arg_pattern whrec env sigma ctx psubst p t =
   | EHole i -> Partial_subst.add_term i t' psubst
   | EHoleIgnored -> psubst
   | ERigid (ph, es) ->
-      let t, stk = whrec (t, Stack.empty) in
+      let t, stk = whrec ctx (t, Stack.empty) in
       let psubst = match_rigid_arg_pattern whrec env sigma ctx psubst ph t in
       let psubst, stk = apply_rule whrec env sigma ctx psubst es stk in
       if Stack.is_empty stk then psubst else raise PatternFailure
@@ -818,7 +818,7 @@ let rec apply_rules whrec env sigma u r stk =
       (rhs', stk)
     with PatternFailure -> apply_rules whrec env sigma u rs stk
 
-let whd_state_gen flags ?metas env sigma =
+let rec whd_state_gen flags ?metas env sigma =
   let open Context.Named.Declaration in
   let rec whrec (x, stack) : state =
     let () =
@@ -867,7 +867,11 @@ let whd_state_gen flags ?metas env sigma =
           whrec (a,Stack.Primitive(p,const,before,kargs)::after)
        | exception NotEvaluableConst (HasRules (u', b, r)) ->
           begin try
-            let rhs, stack = apply_rules whrec env sigma u r stack in
+            let red_fun ctx =
+              let env = push_rel_context ctx env in
+              whd_state_gen flags ?metas env sigma
+            in
+            let rhs, stack = apply_rules red_fun env sigma u r stack in
             whrec (rhs, stack)
           with PatternFailure ->
             if not b then fold () else
@@ -1216,13 +1220,13 @@ let checked_sort_cmp_universes pb s0 s1 univs =
   | CONV -> check_eq univs s0 s1
 
 let check_convert_instances ~flex:_ u u' univs =
-  let csts = UVars.enforce_eq_instances u u' (Sorts.QCumulConstraints.empty,UnivConstraints.empty) in
-  if Evd.check_quconstraints univs csts then Result.Ok univs else Result.Error None
+  let csts = UVars.enforce_eq_instances u u' (Sorts.ElimConstraints.empty, UnivConstraints.empty) in
+  if Evd.check_poly_constraints univs csts then Result.Ok univs else Result.Error None
 
 (* general conversion and inference functions *)
 let check_inductive_instances cv_pb variance u1 u2 univs =
   let csts = get_cumulativity_constraints cv_pb variance u1 u2 in
-  if (Evd.check_quconstraints univs csts) then Result.Ok univs
+  if (Evd.check_poly_constraints univs csts) then Result.Ok univs
   else Result.Error None
 
 let checked_universes =
@@ -1617,7 +1621,8 @@ let whd_betaiota_deltazeta_for_iota_state ts ?metas env sigma s =
       match kind sigma t with
       | Const (cst, u) when is_symbol env sigma cst ->
         let r = Environ.lookup_rewrite_rules cst env in
-        begin match apply_rules whrec env sigma u r stack with
+        let red_fun ctx = whd_state_gen RedFlags.all ?metas (push_rel_context ctx env) sigma in
+        begin match apply_rules red_fun env sigma u r stack with
         | r -> Some r
         | exception PatternFailure -> None
         end
@@ -1664,21 +1669,75 @@ let is_arity env sigma c =
 
 module Infer = struct
 
+open Sorts
+
+let get_algebraic = function
+| Prop | SProp -> assert false
+| Set -> Universe.type0
+| QSort (_, u) | Type u -> u
+
+let is_impredicative_sort = function
+| Prop | SProp -> true
+| _ -> false
+(* Only used for universe level comparisons, so impredicative set is still fine *)
+
+(* XXX Despite their names, we force sort quality equality in the functions
+   below. We should use a different data structure of constraints here *)
+let enforce_eq_sort s1 s2 (qcsts, ucsts as cst) = match s1, s2 with
+| QSort (q1, u1), s2 ->
+  let q2 = quality s2 in
+  let qcsts = Sorts.ElimConstraints.add (QVar q1, Sorts.ElimConstraint.Equal, q2) qcsts in
+  let ucsts = if is_impredicative_sort s2 then ucsts else UnivSubst.enforce_eq u1 (get_algebraic s2) ucsts in
+  (qcsts, ucsts)
+| s1, QSort (q2, u2) ->
+  let q1 = quality s1 in
+  let qcsts = Sorts.ElimConstraints.add (q1, Sorts.ElimConstraint.Equal, QVar q2) qcsts in
+  let ucsts = if is_impredicative_sort s2 then ucsts else UnivSubst.enforce_eq (get_algebraic s1) u2 ucsts in
+  (qcsts, ucsts)
+| (SProp, SProp) | (Prop, Prop) | (Set, Set) -> cst
+| (((Prop | Set | Type _) as s1), (Prop | SProp as s2))
+| ((Prop | SProp as s1), ((Prop | Set | Type _) as s2)) ->
+  raise (UGraph.UniverseInconsistency (None, (Eq, s1, s2, None)))
+| (Set | Type _), (Set | Type _) ->
+  let ucsts' = UnivSubst.enforce_eq (get_algebraic s1) (get_algebraic s2) ucsts in
+  if ucsts == ucsts' then cst else (qcsts, ucsts')
+
+let enforce_leq_alg_sort s1 s2 g = match s1, s2 with
+| QSort (q1, u1), s2 ->
+  let q2 = quality s2 in
+  let qcsts = Sorts.ElimConstraints.singleton (QVar q1, Sorts.ElimConstraint.Equal, q2) in
+  let ucsts, g = if is_impredicative_sort s2 then UnivConstraints.empty, g else UGraph.enforce_leq_alg u1 (get_algebraic s2) g in
+  (qcsts, ucsts), g
+| s1, QSort (q2, u2) ->
+  let q1 = quality s1 in
+  let qcsts = Sorts.ElimConstraints.singleton (q1, Sorts.ElimConstraint.Equal, QVar q2) in
+  let ucsts, g = if is_impredicative_sort s2 then UnivConstraints.empty, g else UGraph.enforce_leq_alg (get_algebraic s1) u2 g  in
+  (qcsts, ucsts), g
+| (SProp, SProp) | (Prop, Prop) | (Set, Set) -> PConstraints.empty, g
+| (Prop, (Set | Type _)) -> PConstraints.empty, g
+| (((Prop | Set | Type _) as s1), (Prop | SProp as s2))
+| ((SProp as s1), ((Prop | Set | Type _) as s2)) ->
+  raise (UGraph.UniverseInconsistency (None, (Le, s1, s2, None)))
+| (Set | Type _), (Set | Type _) ->
+  let ucsts, g = UGraph.enforce_leq_alg (get_algebraic s1) (get_algebraic s2) g in
+  (Sorts.ElimConstraints.empty, ucsts), g
+
 open Conversion
+
 let infer_eq elims (univs, cstrs as cuniv) s s' =
   if UGraph.check_eq_sort elims univs s s' then Result.Ok cuniv
   else try
-    let qcsts', ucstrs' as cstrs' = UnivSubst.enforce_eq_sort s s' Sorts.QUConstraints.empty in
-    if QGraph.check_constraints (Sorts.QCumulConstraints.to_elims qcsts') elims then
+    let qcsts', ucstrs' as cstrs' = enforce_eq_sort s s' PConstraints.empty in
+    if QGraph.check_constraints qcsts' elims then
       Result.Ok (UGraph.merge_constraints ucstrs' univs, UnivConstraints.union cstrs ucstrs')
     else Result.Error None
   with UGraph.UniverseInconsistency err -> Result.Error (Some (Univ err))
 
 let infer_leq elims (univs, cstrs as cuniv) s s' =
   if UGraph.check_leq_sort elims univs s s' then Result.Ok cuniv
-  else match UnivSubst.enforce_leq_alg_sort s s' univs with
+  else match enforce_leq_alg_sort s s' univs with
   | (qcsts, ucsts), ugraph ->
-    if QGraph.check_constraints (Sorts.QCumulConstraints.to_elims qcsts) elims then
+    if QGraph.check_constraints qcsts elims then
       Result.Ok (univs, UnivConstraints.union cstrs ucsts)
     else Result.Error None
   | exception UGraph.UniverseInconsistency err -> Result.Error (Some (Univ err))
@@ -1693,8 +1752,8 @@ let infer_convert_instances elims ~flex u u' (univs, cstrs as cuniv) =
     if UGraph.check_eq_instances elims univs u u' then Result.Ok cuniv
     else Result.Error None
   else try
-    let qcstrs, ucstrs as cstrs' = UVars.enforce_eq_instances u u' Sorts.QUConstraints.empty in
-    if QGraph.check_constraints (Sorts.QCumulConstraints.to_elims qcstrs) elims then
+    let qcstrs, ucstrs as cstrs' = UVars.enforce_eq_instances u u' PConstraints.empty in
+    if QGraph.check_constraints qcstrs elims then
       Result.Ok (UGraph.merge_constraints ucstrs univs, UnivConstraints.union cstrs ucstrs)
     else Result.Error None
   with UGraph.UniverseInconsistency err -> Result.Error (Some (Univ err))
@@ -1702,7 +1761,7 @@ let infer_convert_instances elims ~flex u u' (univs, cstrs as cuniv) =
 
 let infer_inductive_instances elims cv_pb variance u1 u2 (univs,csts) =
   let qcsts, csts' = get_cumulativity_constraints cv_pb variance u1 u2 in
-  if QGraph.check_constraints (Sorts.QCumulConstraints.to_elims qcsts) elims then
+  if QGraph.check_constraints qcsts elims then
     match UGraph.merge_constraints csts' univs with
     | univs -> Result.Ok (univs, Univ.UnivConstraints.union csts csts')
     | exception (UGraph.UniverseInconsistency err) -> Result.Error (Some (Univ err))
@@ -1716,3 +1775,13 @@ let inferred_universes elims =
 end
 
 let inferred_universes env = Infer.inferred_universes (Environ.qualities env)
+
+let eta_expand env sigma t ty =
+  of_constr @@ Reduction.eta_expand ~evars:(Evd.evar_handler sigma) env
+    (EConstr.Unsafe.to_constr t) (EConstr.Unsafe.to_constr ty)
+
+let eta_expand_instantiation env sigma inst ctxt =
+  let inst = Array.map (EConstr.Unsafe.to_constr) inst in
+  let ctxt =  List.map (EConstr.Unsafe.to_rel_decl) ctxt in
+  let eta_inst = Termops.eta_expand_instantiation ~evars:(Evd.evar_handler sigma) env inst ctxt in
+  Array.map of_constr eta_inst

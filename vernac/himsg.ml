@@ -885,18 +885,6 @@ let explain_non_linear_unification env sigma m t =
   strbrk " which would require to abstract twice on " ++
   pr_leconstr_env env sigma t ++ str "."
 
-let explain_unsatisfied_quconstraints env sigma (qcsts,ucsts) =
-  let ucsts = Univ.UnivConstraints.filter (fun cst -> not @@ UGraph.check_constraint (Evd.universes sigma) cst) ucsts in
-  let qcsts = Sorts.QCumulConstraints.filter (fun cst -> not @@ Sorts.QCumulConstraint.trivial cst) qcsts in
-  let univ_str = if Univ.UnivConstraints.is_empty ucsts
-                 then mt()
-                 else spc() ++ Univ.UnivConstraints.pr (Termops.pr_evd_level sigma) ucsts in
-  let elim_str = if Sorts.QCumulConstraints.is_empty qcsts
-                 then mt()
-                 else spc() ++ Sorts.QCumulConstraints.pr (Termops.pr_evd_qvar sigma) qcsts in
-  strbrk "Unsatisfied constraints:" ++ univ_str ++ elim_str ++
-    spc () ++ str "(maybe a bugged tactic)."
-
 let explain_unsatisfied_poly_constraints env sigma (elim_csts,univ_csts) =
   let univ_csts = Univ.UnivConstraints.filter (fun cst -> not @@ UGraph.check_constraint (Evd.universes sigma) cst) univ_csts in
   let elim_csts = Sorts.ElimConstraints.filter (fun cst -> not @@ QGraph.check_constraint (Evd.elim_graph sigma) cst) elim_csts in
@@ -918,11 +906,6 @@ let explain_unsatisfied_univ_constraints env sigma cst =
 let explain_unsatisfied_elim_constraints env sigma cst =
   strbrk "Unsatisfied elimination constraints: " ++
   Sorts.ElimConstraints.pr (Termops.pr_evd_qvar sigma) cst ++
-  spc() ++ str "(maybe a bugged tactic)."
-
-let explain_unsatisfied_qcumul_constraints env sigma cst =
-  strbrk "Unsatisfied quality cumulativity constraints: " ++
-  Sorts.QCumulConstraints.pr (Termops.pr_evd_qvar sigma) cst ++
   spc() ++ str "(maybe a bugged tactic)."
 
 let explain_undeclared_universes env sigma l =
@@ -1061,14 +1044,10 @@ let explain_type_error env sigma err =
      explain_wrong_case_info env ind ci
   | UnsatisfiedPConstraints cst ->
     explain_unsatisfied_poly_constraints env sigma cst
-  | UnsatisfiedQUConstraints cst ->
-    explain_unsatisfied_quconstraints env sigma cst
   | UnsatisfiedUnivConstraints cst ->
     explain_unsatisfied_univ_constraints env sigma cst
   | UnsatisfiedElimConstraints cst ->
     explain_unsatisfied_elim_constraints env sigma cst
-  | UnsatisfiedQCumulConstraints cst ->
-    explain_unsatisfied_qcumul_constraints env sigma cst
   | UndeclaredUniverses l ->
     explain_undeclared_universes env sigma l
   | UndeclaredQualities l ->
@@ -1197,8 +1176,9 @@ let rec explain_pretype_error env sigma err =
   | CannotUnifyOccurrences (b,c1,c2) -> explain_cannot_unify_occurrences env sigma b c1 c2
   | UnsatisfiableConstraints (c,comp) -> explain_unsatisfiable_constraints env sigma c comp
   | NotAllowedSProp -> explain_not_allowed_sprop ()
-  | NotAllowedElimination (isrec, k, (ind,u)) -> explain_elim_arity env sigma (ind, (EConstr.EInstance.kind sigma u))
-                                                  None (Some (EConstr.ESorts.kind sigma k))
+  | NotAllowedElimination (isrec, k, (ind,u)) ->
+    explain_elim_arity env sigma (ind, (EConstr.EInstance.kind sigma u))
+      None (Some (EConstr.ESorts.kind sigma k))
   | NotAllowedDependentElimination (isrec, i) -> explain_not_allowed_dependent_eliminitation env isrec i
 
 (* Module errors *)
@@ -1242,36 +1222,66 @@ let explain_not_match_error = function
     strbrk "a module is expected"
   | ModuleTypeFieldExpected ->
     strbrk "a module type is expected"
-  | NotConvertibleInductiveField id | NotConvertibleConstructorField id ->
+  | NotConvertibleInductiveField (id, None) ->
     str "types given to " ++ Id.print id ++ str " differ"
-  | NotConvertibleBodyField ->
+  | NotConvertibleInductiveField (id, Some (env, typ1, typ2)) ->
+    let typ1, typ2 = pr_explicit env (Evd.from_env env) (EConstr.of_constr typ1) (EConstr.of_constr typ2) in
+    str "types given to " ++ Id.print id ++ str " differ:" ++ spc () ++
+    str "expected" ++ spc () ++ typ2 ++ spc () ++
+    str "but found" ++ spc () ++ typ1
+  | NotConvertibleConstructorField (id, None) ->
+    str "types given to constructor " ++ Id.print id ++ str " differ"
+  | NotConvertibleConstructorField (id, Some (env, typ1, typ2)) ->
+    let typ1, typ2 = pr_explicit env (Evd.from_env env) (EConstr.of_constr typ1) (EConstr.of_constr typ2) in
+    str "types given to constructor " ++ Id.print id ++ str " differ:" ++ spc () ++
+    str "expected" ++ spc () ++ typ2 ++ spc () ++
+    str "but found" ++ spc () ++ typ1
+  | NotConvertibleBodyField None ->
     str "the body of definitions differs"
+  | NotConvertibleBodyField (Some (env, c1, c2)) ->
+    let sigma = Evd.from_env env in
+    let c1, c2 = pr_explicit env sigma (EConstr.of_constr c1) (EConstr.of_constr c2) in
+    str "the body of definitions differs:" ++ spc () ++
+    str "expected" ++ spc () ++ c2 ++ spc () ++
+    str "but found" ++ spc () ++ c1
   | NotConvertibleTypeField (env, typ1, typ2) ->
     let typ1, typ2 = pr_explicit env (Evd.from_env env) (EConstr.of_constr typ1) (EConstr.of_constr typ2) in
     str "expected type" ++ spc ()  ++
     typ2 ++ spc () ++
     str "but found type" ++ spc () ++
     typ1
-  | NotSameConstructorNamesField ->
-    str "constructor names differ"
-  | NotSameInductiveNameInBlockField ->
-    str "inductive types names differ"
+  | NotSameConstructorNamesField (got, expected) ->
+    let pr_names arr = prlist_with_sep pr_comma Id.print (Array.to_list arr) in
+    str "constructor names differ:" ++ spc () ++
+    str "expected" ++ spc () ++ pr_names expected ++ spc () ++
+    str "but found" ++ spc () ++ pr_names got
+  | NotSameInductiveNameInBlockField (got, expected) ->
+    str "inductive type names differ:" ++ spc () ++
+    str "expected" ++ spc () ++ Id.print expected ++ spc () ++
+    str "but found" ++ spc () ++ Id.print got
   | FiniteInductiveFieldExpected isfinite ->
     str "type is expected to be " ++
     str (if isfinite then "coinductive" else "inductive")
-  | InductiveNumbersFieldExpected n ->
-    str "number of inductive types differs"
-  | InductiveParamsNumberField n ->
-    str "inductive type has not the right number of parameters"
+  | InductiveNumbersFieldExpected { got; expected } ->
+    str "number of inductive types differs:" ++ spc () ++
+    str "expected" ++ spc () ++ int expected ++ spc () ++
+    str "but found" ++ spc () ++ int got
+  | InductiveParamsNumberField { got; expected } ->
+    str "number of parameters differs:" ++ spc () ++
+    str "expected" ++ spc () ++ int expected ++ spc () ++
+    str "but found" ++ spc () ++ int got
   | RecordFieldExpected isrecord ->
     str "type is expected " ++ str (if isrecord then "" else "not ") ++
     str "to be a record"
-  | RecordProjectionsExpected nal ->
-    (if List.length nal >= 2 then str "expected projection names are "
-     else str "expected projection name is ") ++
-    pr_enum (function Name id -> Id.print id | _ -> str "_") nal
-  | NotEqualInductiveAliases ->
-    str "Aliases to inductive types do not match"
+  | RecordProjectionsExpected { expected; got } ->
+    let pr_names nal = pr_enum (function Name id -> Id.print id | _ -> str "_") nal in
+    str "projection names differ:" ++ spc () ++
+    str "expected" ++ spc () ++ pr_names expected ++ spc () ++
+    str "but found" ++ spc () ++ pr_names got
+  | NotEqualInductiveAliases (got, expected) ->
+    str "aliases to inductive types do not match:" ++ spc () ++
+    str "expected" ++ spc () ++ MutInd.print expected ++ spc () ++
+    str "but found" ++ spc () ++ MutInd.print got
   | CumulativeStatusExpected b ->
     let status b = if b then str"cumulative" else str"non-cumulative" in
       str "a " ++ status b ++ str" declaration was expected, but a " ++
@@ -1280,14 +1290,22 @@ let explain_not_match_error = function
     let status b = if b then str"polymorphic" else str"monomorphic" in
       str "a " ++ status b ++ str" declaration was expected, but a " ++
         status (not b) ++ str" declaration was found"
-  | IncompatibleUniverses incon ->
-    str"the universe constraints are inconsistent: " ++
+  | IncompatibleUniverses { err; env; t1; t2 } ->
+    let sigma = Evd.from_env env in
+    let t1, t2 = pr_explicit env sigma (EConstr.of_constr t1) (EConstr.of_constr t2) in
+    str"the universe constraints are inconsistent:" ++ spc () ++
     UGraph.explain_universe_inconsistency
       Sorts.QVar.raw_pr
       UnivNames.pr_level_with_global_universes
-      incon
-  | IncompatibleQualities incon ->
-     QGraph.explain_elimination_error Sorts.QVar.raw_pr incon
+      err ++ spc () ++
+    str "when comparing" ++ spc () ++ t1 ++ spc () ++
+    str "and" ++ spc () ++ t2
+  | IncompatibleQualities { err; env; t1; t2 } ->
+    let sigma = Evd.from_env env in
+    let t1, t2 = pr_explicit env sigma (EConstr.of_constr t1) (EConstr.of_constr t2) in
+    QGraph.explain_elimination_error Sorts.QVar.raw_pr err ++ spc () ++
+    str "when comparing" ++ spc () ++ t1 ++ spc () ++
+    str "and" ++ spc () ++ t2
   | IncompatiblePolymorphism (env, t1, t2) ->
     let t1, t2 = pr_explicit env (Evd.from_env env) (EConstr.of_constr t1) (EConstr.of_constr t2) in
     str "conversion of polymorphic values generates additional constraints: " ++
@@ -1378,9 +1396,16 @@ let explain_not_a_module_label l =
 let explain_not_a_constant l =
   quote (Id.print l) ++ str " is not a constant."
 
-let explain_incorrect_label_constraint l =
-  str "Incorrect constraint for label " ++
-  quote (Id.print l) ++ str "."
+let explain_with_constraint_error = function
+  | WithSignatureMismatch sig_err -> explain_not_match_error sig_err
+  | WithCannotConstrainPrimitive ->
+      str "cannot constrain a primitive"
+  | WithCannotConstrainSymbol ->
+      str "cannot constrain a symbol"
+
+let explain_incorrect_with_constraint l err =
+  str "Incorrect constraint for label " ++ quote (Id.print l) ++ str ": " ++
+  explain_with_constraint_error err
 
 let explain_generative_module_expected l =
   str "The module " ++ Id.print l ++ str " is not generative." ++
@@ -1406,7 +1431,7 @@ let explain_module_error = function
   | NoSuchLabel (l,mp) -> explain_no_such_label l mp
   | NotAModuleLabel l -> explain_not_a_module_label l
   | NotAConstant l -> explain_not_a_constant l
-  | IncorrectWithConstraint l -> explain_incorrect_label_constraint l
+  | IncorrectWithConstraint (l, err) -> explain_incorrect_with_constraint l err
   | GenerativeModuleExpected l -> explain_generative_module_expected l
   | LabelMissing (l,s) -> explain_label_missing l s
   | IncludeRestrictedFunctor mp -> explain_include_restricted_functor mp

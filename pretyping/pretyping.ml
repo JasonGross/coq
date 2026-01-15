@@ -209,7 +209,7 @@ let glob_qvar ?loc evd : glob_qvar -> _ = function
     evd, q
   | GRawQVar q ->
     let ctx = (Sorts.QVar.Set.singleton q, Univ.Level.Set.empty), PConstraints.empty in
-    let evd = Evd.merge_sort_context_set UState.univ_rigid QGraph.Static evd ctx in
+    let evd = Evd.merge_sort_context_set UState.univ_rigid ~src:UState.Static evd ctx in
     evd, q
   | GLocalQVar {v=Name id; loc} ->
     try evd, (Evd.quality_of_name evd id)
@@ -947,7 +947,7 @@ struct
     let sigma = !sigma in
     let bound = qbound, ubound in
     let csts = Inductive.instantiate_template_constraints bound csts in
-    let sigma = Evd.add_poly_constraints QGraph.Internal sigma csts in
+    let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
     sigma, bound
 
   let template_sort boundus (s:Sorts.t) =

@@ -92,8 +92,8 @@ let check_conv_error error why state poly pb env a1 a2 =
   else match Conversion.generic_conv pb ~l2r:false TransparentState.full env state a1 a2 with
   | Result.Ok state -> state
   | Result.Error None -> error why
-  | Result.Error (Some (Univ e)) -> error (IncompatibleUniverses e)
-  | Result.Error (Some (Qual e)) -> error (IncompatibleQualities e)
+  | Result.Error (Some (Univ e)) -> error (IncompatibleUniverses { err = e; env; t1 = a1; t2 = a2 })
+  | Result.Error (Some (Qual e)) -> error (IncompatibleQualities { err = e; env; t1 = a1; t2 = a2 })
 
 let check_universes error env u1 u2 =
   match u1, u2 with
@@ -102,7 +102,9 @@ let check_universes error env u1 u2 =
     if not (UGraph.check_subtype (Environ.universes env) auctx2 auctx1) then
       error (IncompatibleUnivConstraints { got = auctx1; expect = auctx2; } )
     else
-      Environ.push_context ~strict:false QGraph.Internal (UVars.AbstractContext.repr auctx2) env
+      let () = Environ.check_ucontext (UVars.AbstractContext.repr auctx2) env in
+      let env = Environ.push_context ~strict:false (UVars.AbstractContext.repr auctx2) env in
+      env
   | Monomorphic, Polymorphic _ -> error (PolymorphicStatusExpected true)
   | Polymorphic _, Monomorphic -> error (PolymorphicStatusExpected false)
 
@@ -137,21 +139,23 @@ let check_inductive (cst, ustate) trace env mp1 l info1 mp2 mib2 subst1 subst2 r
   let inst = make_abstract_instance (Declareops.inductive_polymorphic_context mib1) in
   let mib2 =  Declareops.subst_mind_body subst2 mib2 in
   let check_inductive_type cst name t1 t2 =
-    check_conv (NotConvertibleInductiveField name)
+    check_conv (NotConvertibleInductiveField (name, Some (env, t1, t2)))
       cst (inductive_is_polymorphic mib1) CUMUL env t1 t2
   in
 
   let check_packet cst p1 p2 =
     let check f test why = let fp2 = f p2 in if not (test (f p1) fp2) then error (why fp2) in
-      check (fun p -> p.mind_consnames) (Array.equal Id.equal) (fun _ -> NotSameConstructorNamesField);
-      check (fun p -> p.mind_typename) Id.equal (fun _ -> NotSameInductiveNameInBlockField);
+      if not (Array.equal Id.equal p1.mind_consnames p2.mind_consnames) then
+        error (NotSameConstructorNamesField (p1.mind_consnames, p2.mind_consnames));
+      if not (Id.equal p1.mind_typename p2.mind_typename) then
+        error (NotSameInductiveNameInBlockField (p1.mind_typename, p2.mind_typename));
       check (fun p -> p.mind_squashed) (Option.equal squash_info_equal)
-        (fun _ -> NotConvertibleInductiveField p2.mind_typename);
+        (fun _ -> NotConvertibleInductiveField (p2.mind_typename, None));
       (* nf_lc later *)
       (* nf_arity later *)
       (* user_lc ignored *)
       (* user_arity ignored *)
-      check (fun p -> p.mind_nrealargs) Int.equal (fun _ -> NotConvertibleInductiveField p2.mind_typename); (* How can it fail since the type of inductive are checked below? [HH] *)
+      check (fun p -> p.mind_nrealargs) Int.equal (fun _ -> NotConvertibleInductiveField (p2.mind_typename, None)); (* How can it fail since the type of inductive are checked below? [HH] *)
       (* listrec ignored *)
       (* finite done *)
       (* nparams done *)
@@ -171,19 +175,24 @@ let check_inductive (cst, ustate) trace env mp1 l info1 mp2 mib2 subst1 subst2 r
         in
         assert (Int.equal (Array.length p1.mind_user_lc) 1);
         assert (Int.equal (Array.length p2.mind_user_lc) 1);
-        check (fun p ->
-            (* can nparamdecls depend on which mib we look at? *)
-            let nparamdecls = List.length mib1.mind_params_ctxt in
-            let names = names_prod_letin (p.mind_user_lc.(0)) in
-            snd (List.chop nparamdecls names)) (List.equal Name.equal)
-          (fun x -> RecordProjectionsExpected x);
+        let get_proj_names p =
+          (* can nparamdecls depend on which mib we look at? *)
+          let nparamdecls = List.length mib1.mind_params_ctxt in
+          let names = names_prod_letin (p.mind_user_lc.(0)) in
+          snd (List.chop nparamdecls names)
+        in
+        (* p1 is implementation, p2 is signature (expected) *)
+        let expected = get_proj_names p2 in
+        let got = get_proj_names p1 in
+        if not (List.equal Name.equal expected got) then
+          error (RecordProjectionsExpected { expected; got });
       end;
       cst
   in
   let mind = MutInd.make1 kn1 in
   let check_cons_types i cst p1 p2 =
     Array.fold_left3
-      (fun cst id t1 t2 -> check_conv (NotConvertibleConstructorField id) cst
+      (fun cst id t1 t2 -> check_conv (NotConvertibleConstructorField (id, Some (env, t1, t2))) cst
         (inductive_is_polymorphic mib1) CONV env t1 t2)
       cst
       p2.mind_consnames
@@ -192,7 +201,8 @@ let check_inductive (cst, ustate) trace env mp1 l info1 mp2 mib2 subst1 subst2 r
   in
   let check f test why = if not (test (f mib1) (f mib2)) then error (why (f mib2)) in
   check (fun mib -> mib.mind_finite<>CoFinite) (==) (fun x -> FiniteInductiveFieldExpected x);
-  check Declareops.mind_ntypes Int.equal (fun x -> InductiveNumbersFieldExpected x);
+  if not (Int.equal (Declareops.mind_ntypes mib1) (Declareops.mind_ntypes mib2)) then
+    error (InductiveNumbersFieldExpected { got = Declareops.mind_ntypes mib1; expected = Declareops.mind_ntypes mib2 });
   assert (List.is_empty mib1.mind_hyps && List.is_empty mib2.mind_hyps);
   assert (Array.length mib1.mind_packets >= 1
             && Array.length mib2.mind_packets >= 1);
@@ -202,15 +212,16 @@ let check_inductive (cst, ustate) trace env mp1 l info1 mp2 mib2 subst1 subst2 r
   (* at the time of checking the inductive arities in check_packet. *)
   (* Notice that we don't expect the local definitions to match: only *)
   (* the inductive types and constructors types have to be convertible *)
-  check (fun mib -> mib.mind_nparams) Int.equal (fun x -> InductiveParamsNumberField x);
+  if not (Int.equal mib1.mind_nparams mib2.mind_nparams) then
+    error (InductiveParamsNumberField { got = mib1.mind_nparams; expected = mib2.mind_nparams });
 
   begin
     let kn2' = kn_of_delta reso2 kn2 in
-    if KerName.equal kn2 kn2' ||
-       MutInd.CanOrd.equal (mind_of_delta_kn reso1 kn1)
-                    (subst_mind subst2 (MutInd.make kn2 kn2'))
+    let mind1 = mind_of_delta_kn reso1 kn1 in
+    let mind2 = subst_mind subst2 (MutInd.make kn2 kn2') in
+    if KerName.equal kn2 kn2' || MutInd.CanOrd.equal mind1 mind2
     then ()
-    else error NotEqualInductiveAliases
+    else error (NotEqualInductiveAliases (mind1, mind2))
   end;
   (* we first check simple things *)
   let cst =
@@ -255,14 +266,14 @@ let check_constant (cst, ustate) trace env l info1 cb2 subst1 subst2 =
       *)
       (match cb2.const_body with
        | Undef _ | OpaqueDef _ -> cst
-       | Primitive _ | Symbol _ -> error NotConvertibleBodyField
+       | Primitive _ | Symbol _ -> error (NotConvertibleBodyField None)
        | Def c2 ->
          (match cb1.const_body with
-          | Primitive _ | Undef _ | OpaqueDef _ | Symbol _ -> error NotConvertibleBodyField
+          | Primitive _ | Undef _ | OpaqueDef _ | Symbol _ -> error (NotConvertibleBodyField None)
           | Def c1 ->
             (* NB: cb1 might have been strengthened and appear as transparent.
                Anyway [check_conv] will handle that afterwards. *)
-            check_conv NotConvertibleBodyField cst poly CONV env c1 c2))
+            check_conv (NotConvertibleBodyField (Some (env, c1, c2))) cst poly CONV env c1 c2))
 
 let rec check_modules state trace env mp1 msb1 mp2 msb2 subst1 subst2 =
   let mty1 = module_type_of_module msb1 in

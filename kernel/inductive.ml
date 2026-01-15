@@ -412,28 +412,29 @@ type 'a allow_elimination_actions =
   ; squashed_to_set_above : 'a
   ; squashed_to_quality : Quality.t -> 'a }
 
-let is_squashed_gen g indsort_to_quality squashed_to_quality ((_,mip),u) =
+let is_squashed_gen g nf_quality ((_,mip),u) =
   let s = mip.mind_sort in
   match mip.mind_squashed with
   | None -> None
   | Some squash ->
-     let indq = indsort_to_quality u s in
-     match squash with
-     | AlwaysSquashed -> begin match s with
-                         | Set -> Some SquashToSet
-                         | _ -> Some (SquashToQuality indq)
-                         end
-     | SometimesSquashed squash ->
-        (* impredicative set squashes are always quashed,
-           so here if inds=Set it is a sort poly squash (see "foo6" in test sort_poly.v) *)
-        if Quality.Set.for_all
-             (fun q -> eliminates_to g indq (squashed_to_quality u q))
-             squash && not @@ Quality.is_qvar indq
-        then None
-        else Some (SquashToQuality indq)
+    let indq = nf_quality (UVars.subst_instance_quality u @@ Sorts.quality s) in
+    match squash with
+    | AlwaysSquashed ->
+      begin match s with
+      | Set -> Some SquashToSet
+      | _ -> Some (SquashToQuality indq)
+      end
+    | SometimesSquashed squash ->
+      (* impredicative set squashes are always quashed,
+         so here if inds=Set it is a sort poly squash (see "foo6" in test sort_poly.v) *)
+      if Quality.Set.for_all
+          (fun q -> eliminates_to g indq (nf_quality (UVars.subst_instance_quality u q)))
+          squash && not @@ Quality.is_qvar indq
+      then None
+      else Some (SquashToQuality indq)
 
-let allowed_elimination_gen g indsort_to_quality squashed_to_quality actions specifu s =
-  match is_squashed_gen g indsort_to_quality squashed_to_quality specifu with
+let allowed_elimination_gen g nf_quality actions specifu s =
+  match is_squashed_gen g nf_quality specifu with
   | None -> actions.not_squashed
   | Some SquashToSet ->
     begin match s with
@@ -442,14 +443,8 @@ let allowed_elimination_gen g indsort_to_quality squashed_to_quality actions spe
     end
   | Some (SquashToQuality indq) -> actions.squashed_to_quality indq
 
-let loc_indsort_to_quality u s = Sorts.quality (UVars.subst_instance_sort u s)
-let loc_squashed_to_quality = UVars.subst_instance_quality
-
-let is_squashed env =
-  is_squashed_gen
-    (Environ.qualities env)
-    loc_indsort_to_quality
-    loc_squashed_to_quality
+let is_squashed env specif =
+  is_squashed_gen (Environ.qualities env) Fun.id specif
 
 let is_allowed_elimination_actions g s =
   { not_squashed = true
@@ -462,8 +457,7 @@ let is_allowed_elimination_actions g s =
 let is_allowed_elimination env specifu s =
   let g = Environ.qualities env in
   allowed_elimination_gen g
-    loc_indsort_to_quality
-    loc_squashed_to_quality
+    Fun.id
     (is_allowed_elimination_actions g s)
     specifu s
 

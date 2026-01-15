@@ -48,14 +48,9 @@ val add_quality : Quality.t -> t -> t
     a constraint or calling [eliminates_to].
     Forces [Type] to eliminate to this quality. *)
 
-type constraint_source =
-  | Internal
-  | Rigid
-  | Static
-
 val merge : t -> t -> t
 
-val merge_constraints : constraint_source -> ElimConstraints.t -> t -> t
+val merge_constraints : ElimConstraints.t -> t -> t
 
 val update_dominance_if_valid : t -> ElimConstraint.t -> t option
 (** Checks if the given constraint satisfies the dominance condition:
@@ -69,17 +64,11 @@ val update_dominance_if_valid : t -> ElimConstraint.t -> t option
 val check_constraint : t -> ElimConstraint.t -> bool
 val check_constraints : ElimConstraints.t -> t -> bool
 
-val enforce_eliminates_to : constraint_source -> Quality.t -> Quality.t -> t -> t
+val enforce_eliminates_to : Quality.t -> Quality.t -> t -> t
 (** Set the first quality to eliminate to the second one in the graph.
 
     If this constraint creates a cycle that violates the constraints,
-    [QualityInconsistency] is raised.
-    On an [Internal] enforcement, it also checks whether a path is created
-    between two ground/global sorts.
-    The [Rigid] [constraint_source] should be used for constraints entered by
-    the user. It allows to create paths between ground/global sorts, but
-    disables path creation between two ground sorts.
-    No additional check is performed on a [Static] constraint. *)
+    [QualityInconsistency] is raised. *)
 
 val enforce_eq : Quality.t -> Quality.t -> t -> t
 (** Set the first quality equal to the second one in the graph.
@@ -90,6 +79,10 @@ val initial_graph : t
     [Quality.Constants.eliminates_to]. *)
 
 val update_rigids : t -> t -> t
+val check_rigid_paths : t -> unit
+val add_rigid_path : Quality.t -> Quality.t -> t -> t
+
+val is_declared : Quality.t -> t -> bool
 
 val eliminates_to : t -> Quality.t -> Quality.t -> bool
 

@@ -49,9 +49,3 @@ val pr_universe_subst : (Level.t -> Pp.t) -> universe_subst -> Pp.t
 
 val enforce_eq : Universe.t constraint_function
 val enforce_leq : Universe.t constraint_function
-
-val enforce_eq_sort : Sorts.t -> Sorts.t -> Sorts.QUConstraints.t -> Sorts.QUConstraints.t
-val enforce_leq_sort : Sorts.t -> Sorts.t -> Sorts.QUConstraints.t -> Sorts.QUConstraints.t
-
-(** Picks an arbitrary set of constraints sufficient to ensure [u <= v]. *)
-val enforce_leq_alg_sort : Sorts.t -> Sorts.t -> UGraph.t -> Sorts.QUConstraints.t * UGraph.t

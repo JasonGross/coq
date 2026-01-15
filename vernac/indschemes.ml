@@ -99,12 +99,10 @@ let define ~poly ?loc name sigma c types =
   let poly =
     PolyFlags.of_univ_poly poly (* FIXME sortpoly and cumulative not supported *)
   in
-  let univs = Evd.univ_entry ~poly sigma in
-  let entry = Declare.definition_entry ~univs ?types c in
-  let kind = Decls.(IsDefinition Scheme) in
-  let kn = Declare.declare_constant ?loc ~kind ~name (Declare.DefinitionEntry entry) in
-  Declare.definition_message name;
-  kn
+  let info = Declare.Info.make ~poly () in
+  let cinfo = Declare.CInfo.make ~name ~typ:types () in
+  let fth_ref = Declare.declare_definition ~info:info ~cinfo:cinfo ~opaque:false ~body:c sigma in
+  fth_ref
 
 (* Boolean equality *)
 
@@ -405,8 +403,6 @@ let do_mutual_induction_scheme ~register ?(force_mutual=false) env ?(isrec=true)
   let is_mutual = isrec && List.length listdecl > 1 in
   let declare decl ({CAst.v=fi; loc},dep,ind, sort) =
     let decltype = Retyping.get_type_of env sigma decl in
-    let decltype = EConstr.to_constr sigma decltype in
-    let decl = EConstr.to_constr sigma decl in
     let cst = define ?loc ~poly fi sigma decl (Some decltype) in
     let kind =
       let open Elimschemes in
@@ -425,7 +421,7 @@ let do_mutual_induction_scheme ~register ?(force_mutual=false) env ?(isrec=true)
     | None -> ()
     | Some kind ->
       (* TODO locality *)
-      DeclareScheme.declare_scheme SuperGlobal (Ind_tables.scheme_kind_name kind) (ind, Names.GlobRef.ConstRef cst)
+      DeclareScheme.declare_scheme SuperGlobal (Ind_tables.scheme_kind_name kind) (ind, cst)
   in
   let () = List.iter2 declare listdecl l in
   let lrecnames = List.map (fun ({CAst.v},_,_,_) -> v) l in
@@ -524,9 +520,9 @@ let build_combined_scheme env schemes =
   let ctx, _ =
     list_split_rev_at prods
       (List.rev_map (fun (x, y) -> Context.Rel.Declaration.LocalAssum (x, y)) ctx) in
-  let typ = List.fold_left (fun d c -> Term.mkProd_wo_LetIn c d) concl_typ ctx in
-  let body = it_mkLambda_or_LetIn concl_bod ctx in
-  let sigma = Typing.check env sigma (EConstr.of_constr body) (EConstr.of_constr typ) in
+  let typ = EConstr.of_constr @@ List.fold_left (fun d c -> Term.mkProd_wo_LetIn c d) concl_typ ctx in
+  let body = EConstr.of_constr @@ it_mkLambda_or_LetIn concl_bod ctx in
+  let sigma = Typing.check env sigma body typ in
   (sigma, body, typ)
 
 let do_combined_scheme name csts =

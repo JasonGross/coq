@@ -474,15 +474,6 @@ val definition_message : Id.t -> unit
 val assumption_message : Id.t -> unit
 val fixpoint_message : int array option -> Id.t list -> unit
 
-(** Semantics of this function is a bit dubious, use with care *)
-val build_by_tactic
-  :  Environ.env
-  -> uctx:UState.t
-  -> poly:PolyFlags.t
-  -> typ:EConstr.types
-  -> unit Proofview.tactic
-  -> Constr.constr * Constr.types option * UState.named_universes_entry * bool * UState.t
-
 (** {2 Program mode API} *)
 
 (** Rocq's Program mode support. This mode extends declarations of

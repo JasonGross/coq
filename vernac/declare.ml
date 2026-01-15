@@ -395,39 +395,6 @@ module ProofEntry = struct
     | Default { body; opaque = Opaque (uctx, eff) } -> ((body, uctx), eff), true, None
     | DeferredOpaque { body; feedback_id } -> Future.force body, true, feedback_id
 
-  let rec shrink ctx sign c t accu =
-    let open Constr in
-    let open Vars in
-    match ctx, sign with
-    | [], [] -> (c, t, accu)
-    | p :: ctx, decl :: sign ->
-      if noccurn 1 c && noccurn 1 t then
-        let c = subst1 mkProp c in
-        let t = subst1 mkProp t in
-        shrink ctx sign c t accu
-      else
-        let c = Term.mkLambda_or_LetIn p c in
-        let t = Term.mkProd_or_LetIn p t in
-        let accu = if Context.Rel.Declaration.is_local_assum p
-          then EConstr.mkVar (NamedDecl.get_id decl) :: accu
-          else accu
-        in
-        shrink ctx sign c t accu
-    | _ -> assert false
-
-  (* If [sign] is [x1:T1..xn:Tn], [c] is [fun x1:T1..xn:Tn => c']
-     and [t] is [forall x1:T1..xn:Tn, t'], returns a new [c'] and [t'],
-     where all non-dependent [xi] are removed, as well as a
-     restriction [args] of [x1..xn] such that [c' args] = [c x1..xn] *)
-  let shrink_entry sign body typ =
-    let typ = match typ with
-      | None -> assert false
-      | Some t -> t
-    in
-    let (ctx, body, typ) = Term.decompose_lambda_prod_n_decls (List.length sign) body typ in
-    let (body, typ, args) = shrink ctx sign body typ [] in
-    body, Some typ, args
-
 end
 
 let local_csts = Summary.ref ~name:"local-csts" Cset_env.empty
@@ -1803,8 +1770,6 @@ module Proof_object = struct
 
 end
 
-(* Alias *)
-module Proof_ = Proof
 module Proof = struct
 
 type nonrec closed_proof_output = closed_proof_output
@@ -2205,78 +2170,11 @@ let close_future_proof ~feedback_id proof (fpl : closed_proof_output Future.comp
 let update_sigma_univs ugraph p =
   map ~f:(Proof.update_sigma_univs ugraph) p
 
-let next = let n = ref 0 in fun () -> incr n; !n
-
 let by env tac pf =
   let pf, safe = map_fold ~f:(Proof.solve env (Goal_select.select_nth 1) None tac) pf in
   let proof, eff = register_side_effects pf.proof in
   let sideff = SideEff.concat eff pf.sideff in
   { pf with proof; sideff }, safe
-
-let build_constant_by_tactic ~name ?warn_incomplete ~sigma ~env ~sign ~poly (typ : EConstr.t) tac =
-  let loc = fallback_loc ~warn:false name None in
-  let cinfo = [CInfo.make ?loc ~name ~typ:() ()] in
-  let info = Info.make ~poly () in
-  let pinfo = Proof_info.make ~cinfo ~info () in
-  let pf = start_proof_core ~name ~pinfo sigma [Some sign, typ] in
-  let pf, status = map_fold ~f:(Proof.solve env (Goal_select.select_nth 1) None tac) pf in
-  let proof = prepare_proof ?warn_incomplete pf in
-  let (body, types) = match proof.output_entries with [p] -> p | _ -> assert false in
-  let univs =
-    let _, used_univs = universes_of_body_type ~used_univs:Univ.Level.Set.empty body types in
-    let uctx = UState.restrict proof.output_ustate used_univs in
-    UState.check_univ_decl ~poly uctx UState.default_univ_decl
-  in
-  let entry = definition_entry_core ~univs ?types body in
-  (* FIXME: return the locally introduced effects *)
-  let { Proof.sigma } = Proof.data pf.proof in
-  let sigma = Evd.set_universe_context sigma proof.output_ustate in
-  entry, status, sigma
-
-let build_by_tactic env ~uctx ~poly ~typ tac =
-  let name = Id.of_string ("temporary_proof"^string_of_int (next())) in
-  let sign = Environ.(val_of_named_context (named_context env)) in
-  let sigma = Evd.from_ctx uctx in
-  let ce, status, sigma = build_constant_by_tactic ~name ~env ~sigma ~sign ~poly typ tac in
-  let uctx = Evd.ustate sigma in
-  (* ignore side effect universes:
-     we don't reset the global env in this code path so the side effects are still present
-     cf #13271 and discussion in #18874
-     (but due to #13324 we still want to inline them) *)
-  let body = ce.proof_entry_body in
-  let effs = SideEff.make @@ Evd.eval_side_effects sigma in
-  let body, _uctx = inline_private_constants ~uctx env ((body, Univ.ContextSet.empty), effs) in
-  body, ce.proof_entry_type, ce.proof_entry_universes, status, uctx
-
-let declare_abstract ~name ~poly ~sign ~secsign ~opaque ~solve_tac env sigma concl =
-  let (const, safe, sigma') =
-    try build_constant_by_tactic ~warn_incomplete:false ~name ~poly ~env ~sigma ~sign:secsign concl solve_tac
-    with Logic_monad.TacticFailure e as src ->
-    (* if the tactic [tac] fails, it reports a [TacticFailure e],
-       which is an error irrelevant to the proof system (in fact it
-       means that [e] comes from [tac] failing to yield enough
-       success). Hence it reraises [e]. *)
-    let (_, info) = Exninfo.capture src in
-    Exninfo.iraise (e, info)
-  in
-  let sigma = Evd.drop_new_defined ~original:sigma sigma' in
-  let body = const.proof_entry_body in
-  (* EJGA: Hack related to the above call to
-     `build_constant_by_tactic` with `~opaque:Transparent`. Even if
-     the abstracted term is destined to be opaque, if we trigger the
-     `if poly && opaque && private_poly_univs ()` in `close_proof`
-     kernel will boom. This deserves more investigation. *)
-  let body, typ, args = ProofEntry.shrink_entry sign body const.proof_entry_type in
-  let ts = Environ.oracle env in
-  let cst, effs =
-    (* No side-effects in the entry, they already exist in the ambient environment *)
-    let const = { const with proof_entry_body = body; proof_entry_type = typ } in
-    declare_private_constant ~name ~opaque ~ts const (Evd.eval_side_effects sigma)
-  in
-  let sigma = Evd.emit_side_effects effs sigma in
-  let inst = instance_of_univs const.proof_entry_universes in
-  let lem = EConstr.of_constr (Constr.mkConstU (cst, inst)) in
-  sigma, lem, args, safe
 
 let get_goal_context pf i =
   let p = get pf in
@@ -2368,8 +2266,9 @@ let finish_proved_equations ~pm ~kind ~hook i entries types sigma0 =
             id
         in
         let body, opaque = match entry.proof_entry_body with Default { body; opaque } -> body, opaque | _ -> assert false in
-        let body, typ, args = ProofEntry.shrink_entry local_context body entry.proof_entry_type in
-        let entry = { entry with proof_entry_body = Default { body; opaque }; proof_entry_type = typ } in
+        let typ = match entry.proof_entry_type with None -> assert false | Some typ -> typ in
+        let body, typ, args = Subproof.shrink_entry local_context body typ in
+        let entry = { entry with proof_entry_body = Default { body; opaque }; proof_entry_type = Some typ } in
         let cst = declare_constant ~loc:None ~name:id ~kind ~typing_flags:None (DefinitionEntry entry) in
         let sigma, app = Evd.fresh_global (Global.env ()) sigma (GlobRef.ConstRef cst) in
         let sigma = Evd.define ev (EConstr.applist (app, args)) sigma in
@@ -2462,9 +2361,6 @@ end (* Proof module *)
 
 let _ = Ind_tables.declare_definition_scheme := declare_definition_scheme
 let _ = Ind_tables.register_definition_scheme := register_definition_scheme
-let _ = Abstract.declare_abstract := Proof.declare_abstract
-
-let build_by_tactic = Proof.build_by_tactic
 
 module Internal = struct
 
@@ -2574,18 +2470,18 @@ let solve_by_tac prg obls i tac =
   (* the status of [build_by_tactic] is dropped. *)
   try
     let env = Global.env () in
-    let body, types, _univs, _, uctx =
-      build_by_tactic env ~uctx ~poly ~typ:(EConstr.of_constr obl.obl_type) tac in
-    Inductiveops.control_only_guard env (Evd.from_ctx uctx) (EConstr.of_constr body);
-    Some (body, types, uctx)
+    let typ = EConstr.of_constr obl.obl_type in
+    (* If the proof is open we absorb the error and leave the obligation open *)
+    match Subproof.build_by_tactic_opt env ~uctx ~poly ~typ tac with
+    | None -> None
+    | Some (body, types, _univs, _, uctx) ->
+      let () = Inductiveops.control_only_guard env (Evd.from_ctx uctx) (EConstr.of_constr body) in
+      Some (body, types, uctx)
   with
   | Tacticals.FailError (_, s) as exn ->
     let _ = Exninfo.capture exn in
     let loc = fst obl.obl_location in
     CErrors.user_err ?loc (Lazy.force s)
-  (* If the proof is open we absorb the error and leave the obligation open *)
-  | Proof.OpenProof _ ->
-    None
   | e when CErrors.noncritical e ->
     let err = CErrors.print e in
     let loc = fst obl.obl_location in
@@ -2597,7 +2493,7 @@ let solve_and_declare_by_tac prg obls i tac =
   | None -> None
   | Some (t, ty, uctx) ->
     let obl = obls.(i) in
-    let prg, obl', _cst = declare_obligation prg obl ~body:t ~types:ty ~uctx in
+    let prg, obl', _cst = declare_obligation prg obl ~body:t ~types:(Some ty) ~uctx in
     obls.(i) <- obl';
     Some prg
 
@@ -2889,7 +2785,7 @@ let program_inference_hook env sigma ev =
     then None
     else
       let c, sigma =
-        Proof_.refine_by_tactic ~name:(Id.of_string "program_subproof")
+        Subproof.refine_by_tactic ~name:(Id.of_string "program_subproof")
           ~poly:PolyFlags.default env sigma concl (Tacticals.tclSOLVE [tac])
       in
       Some (sigma, c)

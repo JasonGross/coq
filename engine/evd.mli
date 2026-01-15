@@ -274,9 +274,7 @@ val is_undefined : evar_map -> Evar.t-> bool
 val add_univ_constraints : evar_map -> Univ.UnivConstraints.t -> evar_map
 (** Add universe constraints in an evar map. *)
 
-val add_poly_constraints : QGraph.constraint_source -> evar_map -> PConstraints.t -> evar_map
-
-val add_quconstraints : evar_map -> Sorts.QUConstraints.t -> evar_map
+val add_poly_constraints : ?src:UState.constraint_source -> evar_map -> PConstraints.t -> evar_map
 
 val undefined_map : evar_map -> undefined evar_info Evar.Map.t
 (** Access the undefined evar mapping directly. *)
@@ -606,7 +604,6 @@ val check_leq : evar_map -> esorts -> esorts -> bool
 
 val check_univ_constraints : evar_map -> Univ.UnivConstraints.t -> bool
 val check_elim_constraints : evar_map -> Sorts.ElimConstraints.t -> bool
-val check_quconstraints : evar_map -> Sorts.QUConstraints.t -> bool
 val check_poly_constraints : evar_map -> PConstraints.t -> bool
 
 val ustate : evar_map -> UState.t
@@ -635,9 +632,9 @@ val set_universe_context : evar_map -> UState.t -> evar_map
 
 val merge_universe_context_set : ?loc:Loc.t -> ?sideff:bool -> rigid -> evar_map -> Univ.ContextSet.t -> evar_map
 
-val merge_sort_context_set : ?loc:Loc.t -> ?sideff:bool -> rigid -> QGraph.constraint_source -> evar_map -> UnivGen.sort_context_set -> evar_map
+val merge_sort_context_set : ?loc:Loc.t -> ?sideff:bool -> ?src:UState.constraint_source -> rigid -> evar_map -> UnivGen.sort_context_set -> evar_map
 
-val with_sort_context_set : ?loc:Loc.t -> rigid -> QGraph.constraint_source -> evar_map -> 'a UnivGen.in_sort_context_set -> evar_map * 'a
+val with_sort_context_set : ?loc:Loc.t -> ?src:UState.constraint_source -> rigid -> evar_map -> 'a UnivGen.in_sort_context_set -> evar_map * 'a
 
 val nf_univ_variables : evar_map -> evar_map
 

@@ -302,7 +302,7 @@ val whd_betaiota_deltazeta_for_iota_state :
   TransparentState.t -> ?metas:meta_handler -> state_reduction_function
 
 exception PatternFailure
-val apply_rules : (state -> state) -> env -> evar_map -> EInstance.t ->
+val apply_rules : (rel_context -> state -> state) -> env -> evar_map -> EInstance.t ->
   Declarations.machine_rewrite_rule list -> Stack.t -> econstr * Stack.t
 
 val is_head_evar : env -> evar_map -> constr -> bool
@@ -311,3 +311,8 @@ exception AnomalyInConversion of exn
 
 (* inferred_universes just gathers the constraints. *)
 val inferred_universes : env -> (UGraph.t * Univ.UnivConstraints.t, Conversion.graph_inconsistency) Conversion.universe_compare
+
+val eta_expand : env -> evar_map -> etypes -> etypes -> etypes
+
+(* Eta expand the instantiation of a context *)
+val eta_expand_instantiation : env -> evar_map -> constr array -> rel_context -> constr array

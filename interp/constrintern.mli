@@ -100,7 +100,7 @@ type intern_env
 module Interner : sig
 
   (* the boolean is understood as "pattern_mode" *)
-  type 'a fn = Environ.env -> intern_env -> bool -> (ltac_sign * Genintern.ntnvar_status Id.Map.t) -> ?loc:Loc.t -> 'a -> glob_constr
+  type 'a fn = Environ.env -> intern_env -> (ltac_sign * Genintern.ntnvar_status Id.Map.t) -> ?loc:Loc.t -> 'a -> glob_constr
 
   type t = {
     ref : t -> (qualid * instance_expr option) fn

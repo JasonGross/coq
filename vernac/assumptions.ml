@@ -250,7 +250,20 @@ and traverse_object access (curr, data, ax2ty) body obj =
     if already_in then data, ax2ty
     else match body () (* Beware: this can be very costly *) with
     | None ->
-      GlobRef.Map_env.add obj None data, ax2ty
+      (* This is an axiom. Always traverse its type to find dependencies *)
+      let data = GlobRef.Map_env.add obj None data in
+      begin match obj with
+      | GlobRef.ConstRef kn ->
+        let cb = lookup_constant kn in
+        let typ = cb.Declarations.const_type in
+        let _, data, ax2ty =
+          traverse access obj Context.Rel.empty
+                   (GlobRef.Set_env.empty, data, ax2ty) typ in
+        data, ax2ty
+      (* VarRef, IndRef and ConstructRef don't need recursive type traversal.
+         For VarRef (section variables), the dependencies are already tracked.
+         For IndRef and ConstructRef, dependencies are handled by traverse_inductive *)
+      | GlobRef.VarRef _ | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> data, ax2ty end
     | Some body ->
       let contents,data,ax2ty =
         traverse access obj Context.Rel.empty
@@ -325,9 +338,13 @@ and traverse_context access current ctx accu ctxt =
           let ctx = Context.Rel.add decl ctx in
            ctx, accu) ctxt ~init:(ctx, accu))
 
-let traverse access current t =
+let traverse access grs =
   let () = modcache := ModPath.Map.empty in
-  traverse access current Context.Rel.empty (GlobRef.Set_env.empty, GlobRef.Map_env.empty, GlobRef.Map_env.empty) t
+  let env = Global.env () in
+  List.fold_left (fun accu gr ->
+    let t, _ = UnivGen.fresh_global_instance env gr in
+    traverse access gr Context.Rel.empty accu t
+  ) (GlobRef.Set_env.empty, GlobRef.Map_env.empty, GlobRef.Map_env.empty) grs
 
 (** Hopefully bullet-proof function to recover the type of a constant. It just
     ignores all the universe stuff. There are many issues that can arise when
@@ -342,10 +359,10 @@ let uses_uip mib =
       && List.length (fst mip.mind_nf_lc.(0)) = List.length mib.mind_params_ctxt)
     mib.mind_packets
 
-let assumptions ?(add_opaque=false) ?(add_transparent=false) access st gr t =
+let assumptions ?(add_opaque=false) ?(add_transparent=false) access st grs =
   let open Printer in
   (* Only keep the transitive dependencies *)
-  let (_, graph, ax2ty) = traverse access gr t in
+  let (_, graph, ax2ty) = traverse access grs in
   let open GlobRef in
   let fold obj contents accu = match obj with
   | VarRef id ->

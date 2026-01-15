@@ -837,14 +837,11 @@ let existential_type d n = match existential_type_opt d n with
 let add_univ_constraints d c =
   { d with universes = UState.add_univ_constraints d.universes c }
 
-let add_poly_constraints src d c =
-  { d with universes = UState.add_poly_constraints src d.universes c }
-
-let add_quconstraints d c =
-  { d with universes = UState.add_quconstraints d.universes c }
+let add_poly_constraints ?src d c =
+  { d with universes = UState.add_poly_constraints ?src d.universes c }
 
 let add_constraints d c =
-  { d with universes = UState.add_constraints QGraph.Internal d.universes c Sorts.ElimConstraints.empty }
+  { d with universes = UState.add_constraints d.universes c }
 
 (*** /Lifting... ***)
 
@@ -1046,11 +1043,11 @@ let universe_subst evd =
 let merge_universe_context_set ?loc ?(sideff=false) rigid evd uctx' =
   {evd with universes = UState.merge_universe_context ?loc ~sideff rigid evd.universes uctx'}
 
-let merge_sort_context_set ?loc ?(sideff=false) rigid src evd ctx' =
-  {evd with universes = UState.merge_sort_context ?loc ~sideff rigid src evd.universes ctx'}
+let merge_sort_context_set ?loc ?(sideff=false) ?src rigid evd ctx' =
+  {evd with universes = UState.merge_sort_context ?loc ~sideff rigid ?src evd.universes ctx'}
 
-let with_sort_context_set ?loc rigid src d (a, ctx) =
-  (merge_sort_context_set ?loc rigid src d ctx, a)
+let with_sort_context_set ?loc ?src rigid d (a, ctx) =
+  (merge_sort_context_set ?loc ?src rigid d ctx, a)
 
 let new_univ_level_variable ?loc ?name rigid evd =
   let uctx', u = UState.new_univ_variable ?loc rigid name evd.universes in
@@ -1090,7 +1087,7 @@ let lookup_constant env sigma c = match Environ.lookup_constant_opt c env with
     Environ.lookup_constant c (Safe_typing.env_of_safe_env senv)
 
 let fresh_sort_in_quality ?loc ?(rigid=univ_flexible) evd s =
-  with_sort_context_set ?loc rigid QGraph.Internal evd
+  with_sort_context_set ?loc rigid ~src:UState.Internal evd
     (UnivGen.fresh_sort_in_quality s)
 
 let fresh_instance ?loc ?names env sigma gr =
@@ -1110,20 +1107,20 @@ let fresh_instance ?loc ?names env sigma gr =
 
 let fresh_constant_instance ?loc ?(rigid=univ_flexible) env evd c =
   let (u, ctx) = fresh_instance env evd (GlobRef.ConstRef c) in
-  with_sort_context_set ?loc rigid QGraph.Internal evd ((c, u), ctx)
+  with_sort_context_set ?loc rigid ~src:UState.Internal evd ((c, u), ctx)
 
 let fresh_inductive_instance ?loc ?(rigid=univ_flexible) env evd i =
-  with_sort_context_set ?loc rigid QGraph.Internal evd (UnivGen.fresh_inductive_instance env i)
+  with_sort_context_set ?loc rigid ~src:UState.Internal evd (UnivGen.fresh_inductive_instance env i)
 
 let fresh_constructor_instance ?loc ?(rigid=univ_flexible) env evd c =
-  with_sort_context_set ?loc rigid QGraph.Internal evd (UnivGen.fresh_constructor_instance env c)
+  with_sort_context_set ?loc rigid ~src:UState.Internal evd (UnivGen.fresh_constructor_instance env c)
 
 let fresh_array_instance ?loc ?(rigid=univ_flexible) env evd =
-  with_sort_context_set ?loc rigid QGraph.Internal evd (UnivGen.fresh_array_instance env)
+  with_sort_context_set ?loc rigid ~src:UState.Internal evd (UnivGen.fresh_array_instance env)
 
 let fresh_global ?loc ?(rigid=univ_flexible) ?names env evd gr =
   let (u, ctx) = fresh_instance ?loc ?names env evd gr in
-  with_sort_context_set ?loc rigid QGraph.Internal evd (mkRef (gr, u), ctx)
+  with_sort_context_set ?loc rigid ~src:UState.Internal evd (mkRef (gr, u), ctx)
 
 let is_flexible_level evd l =
   let uctx = evd.universes in
@@ -1194,14 +1191,8 @@ let check_leq evd s s' =
 let check_univ_constraints evd csts =
   UGraph.check_constraints csts (UState.ugraph evd.universes)
 
-let check_qconstraints evd csts =
-  UState.check_qconstraints evd.universes csts
-
 let check_elim_constraints evd csts =
   UState.check_elim_constraints evd.universes csts
-
-let check_quconstraints evd (qcsts,ucsts) =
-  check_qconstraints evd qcsts && check_univ_constraints evd ucsts
 
 let check_poly_constraints evd (qcsts,ucsts) =
   check_elim_constraints evd qcsts && check_univ_constraints evd ucsts

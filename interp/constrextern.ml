@@ -94,10 +94,10 @@ let qualid_of_global = function
   (* We rely on the tacite invariant that the label of a constant is used to build its internal name *)
   | GlobRef.ConstRef cst -> Libnames.make_qualid (dirpath_of_modpath (Constant.modpath cst)) (Constant.label cst)
   (* We rely on the tacite invariant that an inductive block inherits the name of its first type *)
-  | GlobRef.IndRef (ind,1) -> Libnames.make_qualid (dirpath_of_modpath (MutInd.modpath ind)) (MutInd.label ind)
+  | GlobRef.IndRef (ind,0) -> Libnames.make_qualid (dirpath_of_modpath (MutInd.modpath ind)) (MutInd.label ind)
   (* These are hacks *)
   | GlobRef.IndRef (ind,n) -> Libnames.make_qualid (dirpath_of_modpath (MutInd.modpath ind)) (Id.of_string_soft ("<inductive:" ^ Id.to_string (MutInd.label ind) ^ ":" ^ string_of_int n ^ ">"))
-  | GlobRef.ConstructRef ((ind,1),p) -> Libnames.make_qualid (dirpath_of_modpath (MutInd.modpath ind)) (Id.of_string_soft ("<constructor:" ^ Id.to_string (MutInd.label ind) ^ ":" ^ string_of_int (p+1) ^ ">"))
+  | GlobRef.ConstructRef ((ind,0),p) -> Libnames.make_qualid (dirpath_of_modpath (MutInd.modpath ind)) (Id.of_string_soft ("<constructor:" ^ Id.to_string (MutInd.label ind) ^ ":" ^ string_of_int (p+1) ^ ">"))
   | GlobRef.ConstructRef ((ind,n),p) -> Libnames.make_qualid (dirpath_of_modpath (MutInd.modpath ind)) (Id.of_string_soft ("<constructor:" ^ Id.to_string (MutInd.label ind) ^ ":" ^ string_of_int n ^ ":" ^ string_of_int (p+1) ^ ">"))
 
 let default_extern_reference ?loc vars r =

@@ -20,15 +20,3 @@ val cache_term_by_tactic_then
   -> unit Proofview.tactic
 
 val tclABSTRACT : ?opaque:bool -> Id.t option -> unit Proofview.tactic -> unit Proofview.tactic
-
-val declare_abstract :
-  (  name:Names.Id.t
-  -> poly:PolyFlags.t
-  -> sign:EConstr.named_context
-  -> secsign:Environ.named_context_val
-  -> opaque:bool
-  -> solve_tac:unit Proofview.tactic
-  -> Environ.env
-  -> Evd.evar_map
-  -> EConstr.t
-  -> Evd.evar_map * EConstr.t * EConstr.t list * bool) ref

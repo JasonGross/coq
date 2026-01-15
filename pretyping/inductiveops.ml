@@ -264,36 +264,23 @@ let squash_elim_sort sigma squash rtnsort =
   | SquashToQuality (QVar q) ->
      add_unif_if_cannot_elim_into Evd.set_leq_sort (Sorts.qsort q Univ.Universe.type0)
 
-(* [s] is the sort of an inductive definition. *)
-let loc_indsort_to_quality sigma u s =
-  let u = (EConstr.Unsafe.to_instance u) in
-  Sorts.quality
-    (EConstr.ESorts.kind sigma
-        (EConstr.ESorts.make @@ UVars.subst_instance_sort u s))
-
-(* [q] is a quality an inductive has to be squashed to. *)
-let loc_squashed_to_quality sigma u q =
-  let u = EConstr.Unsafe.to_instance u in
-  UState.nf_quality (Evd.ustate sigma) (UVars.subst_instance_quality u q)
-
-let is_squashed sigma specifu =
+let is_squashed sigma (specif,u) =
   Inductive.is_squashed_gen
     (Evd.elim_graph sigma)
-    (loc_indsort_to_quality sigma)
-    (loc_squashed_to_quality sigma)
-    specifu
+    (UState.nf_quality (Evd.ustate sigma))
+    (specif,EConstr.Unsafe.to_instance u)
 
-let is_allowed_elimination sigma (((_,mip),_) as specifu) s =
+let is_allowed_elimination sigma ((_,mip) as specif,u) s =
   match mip.mind_record with
   | PrimRecord _ -> true
   | NotRecord | FakeRecord ->
-     let s = EConstr.ESorts.kind sigma s in
-     let g = Evd.elim_graph sigma in
-     Inductive.allowed_elimination_gen g
-        (loc_indsort_to_quality sigma)
-        (loc_squashed_to_quality sigma)
-        (Inductive.is_allowed_elimination_actions g s)
-        specifu s
+    let s = EConstr.ESorts.kind sigma s in
+    let g = Evd.elim_graph sigma in
+    Inductive.allowed_elimination_gen g
+      (UState.nf_quality (Evd.ustate sigma))
+      (Inductive.is_allowed_elimination_actions g s)
+      (specif,EConstr.Unsafe.to_instance u)
+      s
 
 let make_allowed_elimination_actions sigma s =
   Inductive.
@@ -311,17 +298,16 @@ let make_allowed_elimination_actions sigma s =
                  try Some (Evd.set_leq_sort sigma (mk sq) (mk indq))
                  with UGraph.UniverseInconsistency _ -> None }
 
-let make_allowed_elimination sigma ((_,mip),_ as specifu) s =
+let make_allowed_elimination sigma ((_,mip) as specif,u) s =
   match mip.mind_record with
   | PrimRecord _ -> Some sigma
   | NotRecord | FakeRecord ->
-     Inductive.allowed_elimination_gen
-        (Evd.elim_graph sigma)
-        (loc_indsort_to_quality sigma)
-        (loc_squashed_to_quality sigma)
-        (make_allowed_elimination_actions sigma s)
-        specifu
-        (EConstr.ESorts.kind sigma s)
+    Inductive.allowed_elimination_gen
+      (Evd.elim_graph sigma)
+      (UState.nf_quality (Evd.ustate sigma))
+      (make_allowed_elimination_actions sigma s)
+      (specif,EConstr.Unsafe.to_instance u)
+      (EConstr.ESorts.kind sigma s)
 
 (* XXX questionable for sort poly inductives *)
 let elim_sort (mib,mip) =
@@ -606,8 +592,7 @@ let compute_projections env (kn, i as ind) =
   let x = match mib.mind_packets.(i).mind_record with
   | NotRecord | FakeRecord ->
     anomaly Pp.(str "Trying to build primitive projections for a non-primitive record")
-  | PrimRecord info ->
-    let id, _, _, _ = info in
+  | PrimRecord { id ; _ } ->
     make_annot (Name id) (ERelevance.make mib.mind_packets.(i).mind_relevance)
   in
   let pkt = mib.mind_packets.(i) in
@@ -767,3 +752,30 @@ let control_only_guard env sigma c =
     raise (Pretype_errors.PretypeError
              (env, sigma,
               TypingError (Pretype_errors.of_type_error e)))
+
+(** Generalize template polymorphic universe variables, subtitute the instance,
+    and returns the context of parameters, the new evar_map, and the
+    substitution for the template variable if there is one. *)
+let paramdecls_fresh_template sigma (mib,u) =
+  match mib.mind_template with
+  | None ->
+    let params = Inductive.inductive_paramdecls (mib, EConstr.Unsafe.to_instance u) in
+    sigma, EConstr.of_rel_context params, None
+  | Some templ ->
+    assert (EConstr.EInstance.is_empty u);
+    let sigma, univs = List.fold_left_map (fun sigma -> function
+        | None -> sigma, (fun ~default -> assert false)
+        | Some s ->
+          let sigma, u = match snd (Inductive.Template.bind_kind s) with
+            | None -> sigma, Univ.Universe.type0
+            | Some _ ->
+              let sigma, u = Evd.new_univ_level_variable UState.univ_rigid sigma in
+              sigma, Univ.Universe.make u
+          in
+          sigma, fun ~default -> Inductive.TemplateUniv u)
+        sigma
+        templ.template_param_arguments
+    in
+    let csts, params, sub = Inductive.instantiate_template_universes mib univs in
+    let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
+    (sigma, EConstr.of_rel_context params, Some sub)

@@ -122,21 +122,28 @@ propositions, for instance:
    Set Primitive Projections.
    Record sProd (A B : SProp) : SProp := { sfst : A; ssnd : B }.
 
-On the other hand, to avoid having definitionally irrelevant types in
-non-:math:`\SProp` sorts (through record η-extensionality), primitive
-records in relevant sorts must have at least one relevant field.
+Primitive records in relevant sorts with fields that are only strict propositions
+are allowed but do not have η-conversion.
+This is in order to avoid having definitionally irrelevant types in
+non-:math:`\SProp` sorts (through record η-extensionality).
 
 .. rocqtop:: all
 
-   Set Warnings "+non-primitive-record".
-   Fail Record rBox (A:SProp) : Prop := rbox { runbox : A }.
+   Record rBox (A : SProp) : Prop := rbox { runbox : A }.
+
+   Goal forall (A : SProp) (r : rBox A), r = {| runbox := r.(runbox A) |}.
+   Proof. intros A r. Fail reflexivity. Abort.
+
+In contrast, primitive records in relevant sorts with at least one relevant field
+are allowed and have η-conversion.
 
 .. rocqdoc::
 
-   Record ssig (A:Type) (P:A -> SProp) : Type := { spr1 : A; spr2 : P spr1 }.
+   Record ssig (A : Type) (P : A -> SProp) : Type := { spr1 : A; spr2 : P spr1 }.
 
-Note that ``rBox`` works as an emulated record, which is equivalent to
-the Box inductive.
+   Goal forall (A : Type) (P : A -> SProp) (s : ssig A P),
+                s = {| spr1 := s.(spr1 A P); spr2 := s.(spr2 A P) |}.
+   Proof. intros A P s. reflexivity. Qed.
 
 Encodings for strict propositions
 ---------------------------------

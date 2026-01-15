@@ -115,7 +115,7 @@ let eval_flexible_term ts env evd c sk =
             try
             let r = match lookup_rewrite_rules c env with r -> r | exception Not_found -> assert false in
             let rhs_stack = Reductionops.apply_rules
-              (whd_betaiota_deltazeta_for_iota_state ts env evd) env evd u r sk
+              (fun ctx -> whd_betaiota_deltazeta_for_iota_state ts (push_rel_context ctx env) evd) env evd u r sk
             in
             Some rhs_stack
           with PatternFailure -> None
@@ -458,8 +458,9 @@ let is_applied o n = match o with FullyApplied -> true | NumArgs m -> Int.equal 
 
 let compare_heads pbty env evd ~nargs term term' =
   let check_strict evd u u' =
-    let cstrs = UVars.enforce_eq_instances u u' Sorts.QUConstraints.empty in
-    try Success (Evd.add_quconstraints evd cstrs)
+    let cstrs = UVars.enforce_eq_instances u u' PConstraints.empty in
+    (* source does not matter because no elimination constraints *)
+    try Success (Evd.add_poly_constraints ~src:UState.Static evd cstrs)
     with UGraph.UniverseInconsistency p -> UnifFailure (evd, UnifUnivInconsistency p)
   in
   match EConstr.kind evd term, EConstr.kind evd term' with

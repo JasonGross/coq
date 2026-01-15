@@ -141,7 +141,7 @@ let judge_of_applied_inductive_knowing_parameters ~check env sigma (ind, u) argj
   let sigma, paramstyp = fresh_template_context env sigma ind specif argjv in
   let u0 = EInstance.kind sigma u in
   let ty, csts = Inductive.type_of_inductive_knowing_parameters (specif, u0) paramstyp in
-  let sigma = Evd.add_poly_constraints QGraph.Internal sigma csts in
+  let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
   let funj = { uj_val = mkIndU (ind, u); uj_type = EConstr.of_constr (rename_type env ty (GR.IndRef ind)) } in
   judge_of_applied ~check env sigma funj argjv
 
@@ -151,7 +151,7 @@ let judge_of_applied_constructor_knowing_parameters ~check env sigma ((ind, _ as
   let sigma, paramstyp = fresh_template_context env sigma ind specif argjv in
   let u0 = EInstance.kind sigma u in
   let ty, csts = Inductive.type_of_constructor_knowing_parameters (cstr, u0) specif paramstyp in
-  let sigma = Evd.add_poly_constraints QGraph.Internal sigma csts in
+  let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
   let funj = { uj_val = mkConstructU (cstr, u); uj_type = (EConstr.of_constr (rename_type env ty (GR.ConstructRef cstr))) } in
   judge_of_applied ~check env sigma funj argjv
 
@@ -249,25 +249,22 @@ let unify_relevance sigma r1 r2 =
   | Relevant, Irrelevant | Irrelevant, Relevant -> None
   | Irrelevant, RelevanceVar q | RelevanceVar q, Irrelevant ->
     let sigma =
-      Evd.add_quconstraints sigma
-        (Sorts.QCumulConstraints.singleton (Sorts.Quality.qsprop, Eq, QVar q),
-         Univ.UnivConstraints.empty)
+      Evd.add_constraints sigma
+        (UnivProblem.Set.singleton (UnivProblem.QEq (Sorts.Quality.qsprop, QVar q)))
     in
     Some sigma
   | Relevant, RelevanceVar q | RelevanceVar q, Relevant ->
     let sigma =
-      Evd.add_quconstraints sigma
-        (Sorts.QCumulConstraints.singleton (Sorts.Quality.qprop, Leq, QVar q),
-         Univ.UnivConstraints.empty)
+      Evd.add_constraints sigma
+        (UnivProblem.Set.singleton (UnivProblem.QLeq (Sorts.Quality.qprop, QVar q)))
     in
     Some sigma
   | RelevanceVar q1, RelevanceVar q2 ->
     if Sorts.QVar.equal q1 q2 then Some sigma
     else
       let sigma =
-        Evd.add_quconstraints sigma
-          (Sorts.QCumulConstraints.singleton (Sorts.Quality.QVar q1, Eq, Sorts.Quality.QVar q2),
-           Univ.UnivConstraints.empty)
+        Evd.add_constraints sigma
+          (UnivProblem.Set.singleton (UnivProblem.QEq (Sorts.Quality.QVar q1, Sorts.Quality.QVar q2)))
       in
       Some sigma
 
@@ -421,7 +418,7 @@ let type_of_constant env sigma (c,u) =
   let uctx = Declareops.constant_polymorphic_context cb in
   let csts = UVars.AbstractContext.instantiate u uctx in
   let ty = CVars.subst_instance_constr u cb.const_type in
-  let sigma = Evd.add_poly_constraints QGraph.Internal sigma csts in
+  let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
   sigma, (EConstr.of_constr (rename_type env ty (GR.ConstRef c)))
 
 let type_of_inductive env sigma (ind,u) =
@@ -430,7 +427,7 @@ let type_of_inductive env sigma (ind,u) =
   let () = Reductionops.check_hyps_inclusion env sigma (GR.IndRef ind) mib.mind_hyps in
   let u = EInstance.kind sigma u in
   let ty, csts = Inductive.constrained_type_of_inductive (specif,u) in
-  let sigma = Evd.add_poly_constraints QGraph.Internal sigma csts in
+  let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
   sigma, (EConstr.of_constr (rename_type env ty (GR.IndRef ind)))
 
 let type_of_constructor env sigma ((ind,_ as ctor),u) =
@@ -439,7 +436,7 @@ let type_of_constructor env sigma ((ind,_ as ctor),u) =
   let () = Reductionops.check_hyps_inclusion env sigma (GR.IndRef ind) mib.mind_hyps in
   let u = EInstance.kind sigma u in
   let ty, csts = Inductive.constrained_type_of_constructor (ctor,u) specif in
-  let sigma = Evd.add_poly_constraints QGraph.Internal sigma csts in
+  let sigma = Evd.add_poly_constraints ~src:UState.Internal sigma csts in
   sigma, (EConstr.of_constr (rename_type env ty (GR.ConstructRef ctor)))
 
 let type_of_int env = EConstr.of_constr (Typeops.type_of_int env)

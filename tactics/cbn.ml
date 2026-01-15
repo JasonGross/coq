@@ -580,7 +580,7 @@ let rec match_arg_pattern whrec env sigma ctx psubst p t =
   | EHole i -> Partial_subst.add_term i t' psubst
   | EHoleIgnored -> psubst
   | ERigid (ph, es) ->
-      let (t, stk), _ = whrec Cst_stack.empty (t, Stack.empty) in
+      let t, stk = whrec ctx (t, Stack.empty) in
       let psubst = match_rigid_arg_pattern whrec env sigma ctx psubst ph t in
       let psubst, stk = apply_rule whrec env sigma ctx psubst es stk in
       match stk with
@@ -676,7 +676,7 @@ let rec apply_rules whrec env sigma u r stk =
 
 
 
-let whd_state_gen ?csts flags env sigma =
+let rec whd_state_gen ?csts flags env sigma =
   let open Context.Named.Declaration in
   let open ReductionBehaviour in
   let rec whrec cst_l (x, stack) =
@@ -777,7 +777,11 @@ let whd_state_gen ?csts flags env sigma =
           whrec Cst_stack.empty (a,Stack.Primitive(p,const,before,kargs,cst_l)::after)
        | exception NotEvaluableConst (HasRules (u', b, r)) ->
           begin try
-            let rhs_stack = apply_rules whrec env sigma u r stack in
+            let red_fun ctx =
+              let env = push_rel_context ctx env in
+              whd_state_gen flags env sigma
+            in
+            let rhs_stack = apply_rules red_fun env sigma u r stack in
             whrec Cst_stack.empty rhs_stack
           with PatternFailure ->
             if not b then fold () else

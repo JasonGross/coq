@@ -117,11 +117,6 @@ let enforce_func k =
   | ElimConstraint.ElimTo -> G.enforce_leq
   | ElimConstraint.Equal -> G.enforce_eq
 
-type constraint_source =
-  | Internal
-  | Rigid
-  | Static
-
 type elimination_error =
   | IllegalConstraint
   | CreatesForbiddenPath of Quality.t * Quality.t
@@ -208,26 +203,28 @@ let dominance_check g (q1,_,q2 as cstr) =
   | None -> raise (EliminationError (MultipleDominance (dom_q2() , q2, dom_q1())))
   | Some g -> g
 
-let enforce_constraint src (q1,k,q2) g =
+let check_rigid_paths g =
+  let paths = get_new_rigid_paths g.graph g.rigid_paths g.ground_and_global_sorts in
+  match paths with
+  | None -> ()
+  | Some (q1, q2) -> raise (EliminationError (CreatesForbiddenPath (q1, q2)))
+
+let add_rigid_path q1 q2 g =
+  if (Quality.is_qconst q1 && Quality.is_qconst q2) || (Quality.is_qsprop q1 && not (Quality.is_qsprop q2)) then
+    raise (EliminationError IllegalConstraint)
+  else
+    { g with rigid_paths = RigidPaths.add_elim_to q1 q2 g.rigid_paths }
+
+let enforce_constraint (q1, k, q2) g =
   match enforce_func k q1 q2 g.graph with
   | None ->
      let e = lazy (G.get_explanation (q1,to_graph_cstr k,q2) g.graph) in
      raise @@ EliminationError (QualityInconsistency (None, (k, q1, q2, Some (Path e))))
   | Some graph ->
-     let g = match src with
-       | Static -> { g with graph }
-       | Rigid ->
-          if (Quality.is_qconst q1 && Quality.is_qconst q2) ||
-               (Quality.is_qsprop q1 && not (Quality.is_qsprop q2))
-          then raise (EliminationError IllegalConstraint)
-          else { g with graph; rigid_paths = RigidPaths.add_elim_to q1 q2 g.rigid_paths }
-       | Internal ->
-          match get_new_rigid_paths g.graph g.rigid_paths g.ground_and_global_sorts with
-          | None -> { g with graph }
-          | Some (q1,q2) -> raise (EliminationError (CreatesForbiddenPath (q1, q2))) in
-     dominance_check g (q1,k,q2)
+    let g = { g with graph } in
+    dominance_check g (q1, k, q2)
 
-let merge_constraints src csts g = ElimConstraints.fold (enforce_constraint src) csts g
+let merge_constraints csts g = ElimConstraints.fold enforce_constraint csts g
 
 let check_constraint g (q1, k, q2) = check_func k g.graph q1 q2
 
@@ -237,7 +234,7 @@ exception AlreadyDeclared = G.AlreadyDeclared
 
 let add_quality q g =
   let graph = G.add q g.graph in
-  let g = enforce_constraint Static (Quality.qtype, ElimConstraint.ElimTo, q) { g with graph } in
+  let g = enforce_constraint (Quality.qtype, ElimConstraint.ElimTo, q) { g with graph } in
   let (paths,ground_and_global_sorts) =
     if Quality.is_qglobal q
     then (RigidPaths.add_elim_to Quality.qtype q g.rigid_paths, Quality.Set.add q g.ground_and_global_sorts)
@@ -248,11 +245,13 @@ let add_quality q g =
     | Quality.QConstant _ -> g.dominant in
   { g with rigid_paths = paths; ground_and_global_sorts; dominant }
 
-let enforce_eliminates_to src s1 s2 g =
-  enforce_constraint src (s1, ElimConstraint.ElimTo, s2) g
+let enforce_eliminates_to s1 s2 g =
+  enforce_constraint (s1, ElimConstraint.ElimTo, s2) g
 
 let enforce_eq s1 s2 g =
-  enforce_constraint Internal (s1, ElimConstraint.Equal, s2) g
+  let g = enforce_constraint (s1, ElimConstraint.Equal, s2) g in
+  let () = check_rigid_paths g in (* ??? *)
+  g
 
 let initial_graph =
   let g = G.empty in
@@ -303,7 +302,7 @@ let merge g g' =
   Quality.Set.fold
     (fun q -> Quality.Set.fold
              (fun q' acc -> if eliminates_to g' q q'
-                         then enforce_eliminates_to Static q q' acc
+                         then enforce_eliminates_to q q' acc
                          else acc) qs) qs g
 
 let is_empty g = QVar.Set.is_empty (qvar_domain g)
@@ -329,8 +328,11 @@ let pr_arc prq =
   | u, G.Alias v ->
     prq u  ++ str " = " ++ prq v ++ fnl ()
 
-
 let repr g = G.repr g.graph
+
+let is_declared q g = match G.check_declared g.graph (Quality.Set.singleton q) with
+| Result.Ok _ -> true
+| Result.Error _ -> false
 
 let pr_qualities prq g = pr_pmap Pp.mt (pr_arc prq) (repr g)
 
@@ -350,8 +352,8 @@ let explain_quality_inconsistency prv r =
      else
        let qualities = pstart :: List.map snd p in
        let constants = List.filter Quality.is_qconst qualities in
-       str "because it would identify" ++
-         prlist_with_sep (fun() -> spc() ++ str"and" ++ spc()) (Quality.pr prv) constants ++
+       str "because it would identify " ++
+         pr_enum (Quality.pr prv) constants ++
          spc() ++ str"which is inconsistent." ++ spc() ++
          str"This is introduced by the constraints" ++ spc() ++ Quality.pr prv pstart ++
          prlist (fun (r,v) -> spc() ++ pr_cst r ++ str" " ++ Quality.pr prv v) p

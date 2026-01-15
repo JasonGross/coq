@@ -157,7 +157,7 @@ val push_context_set :
 
 (** Adding global sort qualities *)
 
-val push_qualities : QGraph.constraint_source -> Sorts.QContextSet.t -> safe_transformer0
+val push_qualities : rigid:bool -> Sorts.QContextSet.t -> safe_transformer0
 
 (* (\** Generator of universes *\) *)
 (* val next_universe : int safe_transformer *)

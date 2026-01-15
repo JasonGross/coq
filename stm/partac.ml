@@ -11,6 +11,7 @@
 open Pp
 
 let stm_pr_err s  = Format.eprintf "%s] %s\n%!"     (Spawned.process_id ()) s
+let stm_prerr_endline s = if CDebug.(get_flag misc) then begin stm_pr_err s end else ()
 
 type response =
   | RespBuiltSubProof of (Constr.constr * UState.t)
@@ -87,8 +88,8 @@ end = struct (* {{{ *)
     `Stay ((),[])
 
   let on_marshal_error err { t_name } =
-    stm_pr_err ("Fatal marshal error (task " ^ t_name ^ "): " ^ err);
-    flush_all (); exit 1
+    stm_prerr_endline ("Fatal marshal error (task " ^ t_name ^ "): " ^ err);
+    flush_all ()
 
   let on_task_cancellation_or_expiration_or_slave_death = function
     | Some { t_goalno; t_assign; t_kill } ->

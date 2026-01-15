@@ -103,7 +103,9 @@ let process_universes env = function
     (** [ctx] must contain local universes, such that it has no impact
         on the rest of the graph (up to transitivity). *)
     let inst, auctx = UVars.abstract_universes uctx in
-    let env = Environ.push_context ~strict:false QGraph.Rigid (AbstractContext.repr auctx) env in
+    let ctx = AbstractContext.repr auctx in
+    let () = check_ucontext ctx env in
+    let env = Environ.push_context ~strict:false ctx env in
     let usubst = UVars.make_instance_subst inst in
     env, usubst, UVars.make_abstract_instance auctx, Polymorphic auctx
 
