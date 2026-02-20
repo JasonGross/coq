@@ -9,6 +9,7 @@
 (************************************************************************)
 
 From Ltac2 Require Import Init.
+From Ltac2 Require Import Std.
 
 Ltac2 Type t := inductive.
 (** An [inductive] is a name of a mutually inductive type and the index of an
@@ -77,3 +78,24 @@ Ltac2 @ external constructor_ndecls : data -> int array := "rocq-runtime.plugins
     let-bindings, e.g., applied to [Inductive Ind (A : Type) (f : A -> A) : Set
     := Constr (x : A) (y := f x)] it would return [[|2|]], because in [match t
     with Constr _ _ x y => e end], [x] and [y] are bound in [e]. *)
+
+(** {2 Scheme lookup} *)
+
+Ltac2 @ external scheme_lookup : string -> t -> Std.reference option
+  := "rocq-runtime.plugins.ltac2" "ind_scheme_lookup".
+(** [scheme_lookup kind ind] looks up the scheme registered under [kind] for
+    inductive [ind]. Returns [None] if no such scheme is registered. Common
+    scheme kind strings include ["rect_dep"], ["ind_dep"], ["rec_dep"],
+    ["sind_dep"], ["rect_nodep"], ["ind_nodep"], ["rec_nodep"], ["sind_nodep"],
+    ["case_dep"], ["case_nodep"], ["casep_dep"], ["casep_nodep"]. *)
+
+Ltac2 @ external scheme_find : string -> t -> Std.reference
+  := "rocq-runtime.plugins.ltac2" "ind_scheme_find".
+(** Like [scheme_lookup], but generates the scheme on the fly if a builder is
+    registered for the given scheme kind but the scheme has not been declared
+    yet. Throws if the scheme cannot be found or generated. *)
+
+Ltac2 @ external scheme_kind_exists : string -> bool
+  := "rocq-runtime.plugins.ltac2" "ind_scheme_kind_exists".
+(** Returns [true] if a scheme builder has been registered under the given
+    kind string. *)

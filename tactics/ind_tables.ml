@@ -244,6 +244,11 @@ let find_scheme kind (mind,i as ind) =
       let e, info = Exninfo.capture e in
       Proofview.tclZERO ~info e
 
+let force_find_scheme_string kind ind =
+  let open Proofview.Notations in
+  find_scheme kind ind >>= fun c ->
+  Proofview.tclUNIT (GlobRef.ConstRef c)
+
 let define_individual_scheme ?loc kind names ind =
   let eff = define_individual_scheme ?loc kind ~internal:false names ind Evd.empty_side_effects in
   redeclare_schemes eff
