@@ -1299,6 +1299,23 @@ let () =
   Declareops.inductive_make_projections ind mib
   |> Option.map (Array.map (fun (p,_) -> Projection.make p false))
 
+(** Ind schemes *)
+
+let () =
+  define "ind_scheme_lookup" (string @-> inductive @-> ret (option reference))
+  @@ fun kind ind ->
+  try Some (GlobRef.ConstRef (DeclareScheme.lookup_scheme kind ind)) with Not_found -> None
+
+let () =
+  define "ind_scheme_find" (string @-> inductive @-> tac reference)
+  @@ fun kind ind ->
+  Ind_tables.force_find_scheme_string kind ind
+
+let () =
+  define "ind_scheme_kind_exists" (string @-> ret bool)
+  @@ fun kind ->
+  Ind_tables.is_declared_scheme_object kind
+
 (** Proj *)
 
 let () =
