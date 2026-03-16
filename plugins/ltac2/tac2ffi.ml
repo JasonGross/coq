@@ -410,6 +410,22 @@ let reference = {
   r_to = to_reference;
 }
 
+let of_strategy_level = let open Conv_oracle in function
+| Expand -> ValInt 0
+| Opaque -> ValInt 1
+| Level n -> ValBlk (0, [| of_int n |])
+
+let to_strategy_level = let open Conv_oracle in function
+| ValInt 0 -> Expand
+| ValInt 1 -> Opaque
+| ValBlk (0, [| n |]) -> Level (to_int n)
+| _ -> assert false
+
+let strategy_level = {
+  r_of = of_strategy_level;
+  r_to = to_strategy_level;
+}
+
 type ('a, 'b) fun1 = closure
 
 let fun1 (r0 : 'a repr) (r1 : 'b repr) : ('a, 'b) fun1 repr = closure

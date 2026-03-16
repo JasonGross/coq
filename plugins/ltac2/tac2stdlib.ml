@@ -610,6 +610,11 @@ let () =
 let () =
   define "empty_transparent_state" (ret transparent_state) TransparentState.empty
 
+let () =
+  define "with_strategy"
+    (strategy_level @-> list reference @-> thunk unit @-> tac unit)
+    Tac2tactics.with_strategy
+
 (** Tactics around Evarconv unification (in [Ltac2/Unification.v]). *)
 
 let () =

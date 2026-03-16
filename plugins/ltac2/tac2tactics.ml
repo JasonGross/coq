@@ -424,6 +424,9 @@ let current_transparent_state () =
 
 let evarconv_unify state x y = Tactics.evarconv_unify ~state x y
 
+let with_strategy lvl ql tac =
+  Tactics.with_set_strategy [(lvl, ql)] (thaw Tac2ffi.unit tac)
+
 (** Inversion *)
 
 let inversion knd arg pat ids =

@@ -190,6 +190,11 @@ val of_reference : GlobRef.t -> valexpr
 val to_reference : valexpr -> GlobRef.t
 val reference : GlobRef.t repr
 
+val of_strategy_level : Conv_oracle.level -> valexpr
+val to_strategy_level : valexpr -> Conv_oracle.level
+val strategy_level : Conv_oracle.level repr
+
+
 val of_ext : 'a Val.tag -> 'a -> valexpr
 val to_ext : 'a Val.tag -> valexpr -> 'a
 val repr_ext : 'a Val.tag -> 'a repr
