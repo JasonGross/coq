@@ -14,7 +14,17 @@ module StrSet = Set.Make(String)
     - first string is the full filename, with only its extension removed
     - second string is the absolute version of the previous (via getcwd)
 *)
-let vAccu = ref ([] : (string * string) list)
+type vAccu = { acc : (string * string) list; map : string list CString.Map.t }
+
+let add_vAccu (f, f') vAccu =
+  let acc = (f, f') :: vAccu.acc in
+  let old = try CString.Map.find f' vAccu.map with Not_found -> [] in
+  let map = CString.Map.add f' (f :: old) vAccu.map in
+  { acc; map }
+
+let empty_vAccu = { acc = []; map = CString.Map.empty }
+
+let vAccu = ref empty_vAccu
 
 let separator_hack = ref true
 let filename_concat dir name =
@@ -28,12 +38,9 @@ let filename_concat dir name =
    the same naming convention *)
 let canonize f =
   let f' = filename_concat (Loadpath.absolute_dir (Filename.dirname f)) (Filename.basename f) in
-  match List.filter (fun (_,full) -> f' = full) !vAccu with
-    | (f,_) :: _ -> f
-    | _ -> f
-
-(** Queue operations *)
-let addQueue q v = q := v :: !q
+  match CString.Map.find_opt f' (!vAccu).map with
+  | None | Some [] -> f
+  | Some (f :: _) -> f
 
 type what = Library | External
 let str_of_what = function Library -> "library" | External -> "external file"
@@ -251,7 +258,7 @@ end
 
 let compute_deps st =
   let mk_dep (name, _orig_path) = Dep_info.make ~name ~deps:(find_dependencies st name) in
-  !vAccu |> CList.rev_map mk_dep
+  (!vAccu).acc |> CList.rev_map mk_dep
 
 let rec treat_file old_dirname old_name =
   let name = Filename.basename old_name
@@ -284,7 +291,7 @@ let rec treat_file old_dirname old_name =
      | base,".v" ->
        let name = file_name base dirname in
        let absname = Loadpath.absolute_file_name ~filename_concat base dirname in
-       addQueue vAccu (name, absname)
+       vAccu := add_vAccu (name, absname) !vAccu
      | _ -> ())
   | _ -> ()
 
@@ -317,7 +324,7 @@ let sort st =
         Format.printf "%s.v " file
     end
   in
-  List.iter (fun (name, _) -> loop name) !vAccu
+  List.iter (fun (name, _) -> loop name) (!vAccu).acc
 
 let add_include st (rc, r, ln) =
   if rc then
@@ -337,7 +344,7 @@ let findlib_init dirs =
 
 let init ~make_separator_hack args =
   separator_hack := make_separator_hack;
-  vAccu := [];
+  vAccu := empty_vAccu;
   if not Coq_config.has_natdynlink then Makefile.set_dyndep "no";
   let st = Loadpath.State.make ~worker:args.Args.worker ~boot:args.Args.boot in
   Makefile.set_write_vos args.Args.vos;
