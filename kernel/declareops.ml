@@ -233,6 +233,7 @@ let subst_mind_packet subst mbp =
     mind_squashed = mbp.mind_squashed;
     mind_recargs = subst_wf_paths subst mbp.mind_recargs (*wf_paths*);
     mind_relevance = mbp.mind_relevance;
+    mind_relies_on_indices_not_mattering = mbp.mind_relies_on_indices_not_mattering;
     mind_nb_constant = mbp.mind_nb_constant;
     mind_nb_args = mbp.mind_nb_args;
     mind_reloc_tbl = mbp.mind_reloc_tbl }
