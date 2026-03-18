@@ -1223,7 +1223,7 @@ let check_cumul_contraints sigma (qcst, ucst) =
   Evd.check_univ_constraints sigma ucst && Evd.check_quality_constraints sigma qcst
 
 let check_convert_instances ~flex:_ u u' univs =
-  let cst = UVars.enforce_eq_instances u u' (UVars.QPairSet.empty, UnivConstraints.empty) in
+  let cst = UVars.enforce_eq_instances u u' UVars.empty_unif_constraints in
   if check_cumul_contraints univs cst then Result.Ok univs else Result.Error None
 
 (* general conversion and inference functions *)
@@ -1723,10 +1723,6 @@ let enforce_leq_alg_sort s1 s2 g = match s1, s2 with
 
 open Conversion
 
-let check_eq_qualities qcst =
-  let check (q1, q2) = Quality.equal q1 q2 in
-  UVars.QPairSet.for_all check qcst
-
 let infer_eq (univs, cstrs as cuniv) s s' =
   if UGraph.check_eq_sort Sorts.Quality.equal univs s s' then Result.Ok cuniv
   else try
@@ -1755,8 +1751,8 @@ let infer_convert_instances ~flex u u' (univs, cstrs as cuniv) =
     if UGraph.check_eq_instances Sorts.Quality.equal univs u u' then Result.Ok cuniv
     else Result.Error None
   else try
-    let qcstrs, ucstrs as cstrs' = UVars.enforce_eq_instances u u' (UVars.QPairSet.empty, Univ.UnivConstraints.empty) in
-    if check_eq_qualities qcstrs then
+    let qcstrs, ucstrs as cstrs' = UVars.enforce_eq_instances u u' UVars.empty_unif_constraints in
+    if UVars.QUnifConstraints.is_trivial qcstrs then
       Result.Ok (UGraph.merge_constraints ucstrs univs, UnivConstraints.union cstrs ucstrs)
     else Result.Error None
   with UGraph.UniverseInconsistency err -> Result.Error (Some (Univ err))
@@ -1764,7 +1760,7 @@ let infer_convert_instances ~flex u u' (univs, cstrs as cuniv) =
 
 let infer_inductive_instances cv_pb variance u1 u2 (univs,csts) =
   let qcsts, csts' = get_cumulativity_constraints cv_pb variance u1 u2 in
-  if check_eq_qualities qcsts then
+  if UVars.QUnifConstraints.is_trivial qcsts then
     match UGraph.merge_constraints csts' univs with
     | univs -> Result.Ok (univs, Univ.UnivConstraints.union csts csts')
     | exception (UGraph.UniverseInconsistency err) -> Result.Error (Some (Univ err))
