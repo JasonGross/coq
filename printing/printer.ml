@@ -1042,6 +1042,7 @@ type axiom =
   | Guarded of GlobRef.t
   | TypeInType of GlobRef.t
   | UIP of MutInd.t
+  | IndicesNotMattering of MutInd.t
 
 type context_object =
   | Variable of Id.t (* A section variable or a Let definition *)
@@ -1059,7 +1060,8 @@ struct
     | Constant k1 , Constant k2 ->
       Constant.CanOrd.compare k1 k2
     | Positive m1 , Positive m2
-    | UIP m1, UIP m2 ->
+    | UIP m1, UIP m2
+    | IndicesNotMattering m1, IndicesNotMattering m2 ->
       MutInd.CanOrd.compare m1 m2
     | Guarded k1 , Guarded k2
     | TypeInType k1, TypeInType k2 ->
@@ -1072,6 +1074,8 @@ struct
     | _, Guarded _ -> 1
     | TypeInType _, _ -> -1
     | _, TypeInType _ -> 1
+    | UIP _, _ -> -1
+    | _, UIP _ -> 1
 
   let compare x y =
     match x , y with
@@ -1136,6 +1140,8 @@ let pr_assumptionset env sigma s =
           hov 2 (safe_pr_global env gr ++ spc () ++ strbrk"relies on an unsafe hierarchy.")
       | UIP mind ->
           hov 2 (safe_pr_inductive env mind ++ spc () ++ strbrk"relies on definitional UIP.")
+      | IndicesNotMattering mind ->
+          hov 2 (safe_pr_inductive env mind ++ spc () ++ strbrk"relies on indices not mattering.")
     in
     let fold t typ accu =
       let (v, a, o, tr) = accu in
