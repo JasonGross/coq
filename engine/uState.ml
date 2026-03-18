@@ -738,8 +738,6 @@ let unify_quality univs c s1 s2 l =
 
 let connect_quality s1 s2 l =
   let fail () =
-    if QGraph.ignore_constraints (QState.elims l.local_sorts) then l.local_sorts else
-    (* XXX CONV? *)
     sort_inconsistency (get_constraint CONV) s1 s2
   in
   { l with
