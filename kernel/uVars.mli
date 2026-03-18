@@ -32,6 +32,10 @@ sig
 
 end
 
+type variances = Variance.t array * Variance.t array
+
+val prim_array_variance : variances
+
 (** {6 Universe instances} *)
 
 module Instance :
@@ -65,7 +69,7 @@ sig
   val hash : t -> int
   (** Hash value *)
 
-  val pr : (QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:Variance.t array -> t -> Pp.t
+  val pr : (QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:variances -> t -> Pp.t
   (** Pretty-printing, no comments *)
 
   val levels : t -> Quality.Set.t * Level.Set.t
@@ -88,8 +92,8 @@ type 'a quconstraint_function = 'a -> 'a -> Sorts.QUConstraints.t -> Sorts.QUCon
 
 val enforce_eq_instances : Instance.t quconstraint_function
 
-val enforce_eq_variance_instances : Variance.t array -> Instance.t quconstraint_function
-val enforce_leq_variance_instances : Variance.t array -> Instance.t quconstraint_function
+val enforce_eq_variance_instances : variances -> Instance.t quconstraint_function
+val enforce_leq_variance_instances : variances -> Instance.t quconstraint_function
 
 type 'a puniverses = 'a * Instance.t
 val out_punivs : 'a puniverses -> 'a

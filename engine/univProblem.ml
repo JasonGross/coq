@@ -13,6 +13,7 @@ open Univ
 type t =
   | QEq of Sorts.Quality.t * Sorts.Quality.t
   | QLeq of Sorts.Quality.t * Sorts.Quality.t
+  | QConnected of Sorts.Quality.t * Sorts.Quality.t
   | ULe of Sorts.t * Sorts.t
   | UEq of Sorts.t * Sorts.t
   | ULub of Level.t * Level.t
@@ -22,14 +23,21 @@ type t =
 let is_trivial = function
   | QLeq (QConstant QProp, QConstant QType) -> true
   | QLeq (a,b) | QEq (a, b) -> Sorts.Quality.equal a b
+  | QConnected (a, b) -> UVars.QUnifConstraint.is_trivial (a, Connected, b)
   | ULe (u, v) | UEq (u, v) -> Sorts.equal u v
   | ULub (u, v) | UWeak (u, v) -> Level.equal u v
 
 let force = function
-  | QEq _ | QLeq _ | ULe _ | UEq _ | UWeak _ as cst -> cst
+  | QEq _ | QLeq _ | QConnected _ | ULe _ | UEq _ | UWeak _ as cst -> cst
   | ULub (u,v) -> UEq (Sorts.sort_of_univ @@ Universe.make u, Sorts.sort_of_univ @@ Universe.make v)
 
 let check_eq_level g u v = UGraph.check_eq_level g u v
+
+let of_qunif (a,k,b) =
+  match k with
+  | UVars.QUnifConstraint.Eq -> QEq (a, b)
+  | Le -> QLeq (a, b)
+  | Connected -> QConnected (a, b)
 
 module Set = struct
   module S = Set.Make(
@@ -43,6 +51,10 @@ module Set = struct
         if i <> 0 then i
         else Sorts.Quality.compare b b'
       | QLeq (a, b), QLeq (a', b') ->
+        let i = Sorts.Quality.compare a a' in
+        if i <> 0 then i
+        else Sorts.Quality.compare b b'
+      | QConnected (a, b), QConnected (a', b') ->
         let i = Sorts.Quality.compare a a' in
         if i <> 0 then i
         else Sorts.Quality.compare b b'
@@ -64,6 +76,8 @@ module Set = struct
       | _, QEq _ -> 1
       | QLeq _, _ -> -1
       | _, QLeq _ -> 1
+      | QConnected _, _ -> -1
+      | _, QConnected _ -> 1
       | ULe _, _ -> -1
       | _, ULe _ -> 1
       | UEq _, _ -> -1
@@ -81,6 +95,7 @@ module Set = struct
   let pr_one = let open Pp in function
     | QEq (a, b) -> Sorts.Quality.raw_pr a ++ str " = " ++ Sorts.Quality.raw_pr b
     | QLeq (a, b) -> Sorts.Quality.raw_pr a ++ str " <= " ++ Sorts.Quality.raw_pr b
+    | QConnected (a, b) -> Sorts.Quality.raw_pr a ++ str " <=> " ++ Sorts.Quality.raw_pr b
     | ULe (u, v) -> Sorts.debug_print u ++ str " <= " ++ Sorts.debug_print v
     | UEq (u, v) -> Sorts.debug_print u ++ str " = " ++ Sorts.debug_print v
     | ULub (u, v) -> Level.raw_pr u ++ str " /\\ " ++ Level.raw_pr v
@@ -122,11 +137,24 @@ let enforce_eq_qualities qs qs' cstrs =
       if Sorts.Quality.equal a b then c else Set.add (QEq (a, b)) c)
     cstrs qs qs'
 
-let compare_cumulative_instances  cv_pb variances u u' cstrs =
+let compare_cumulative_instances cv_pb (qvariances,uvariances) u u' cstrs =
   let make u = Sorts.sort_of_univ @@ Univ.Universe.make u in
   let qs, us = UVars.Instance.to_array u
   and qs', us' = UVars.Instance.to_array u' in
-  let cstrs = enforce_eq_qualities qs qs' cstrs in
+  let cstrs =
+    CArray.fold_left3
+      (fun cstrs v q q' ->
+         let open UVars.Variance in
+         match v with
+         | Irrelevant -> Set.add (QConnected (q,q')) cstrs
+         | Covariant ->
+           (match cv_pb with
+            | Conversion.CONV -> Set.add (QEq (q, q')) cstrs
+            | Conversion.CUMUL -> Set.add (QLeq (q, q')) cstrs)
+         | Invariant ->
+           Set.add (QEq (q, q')) cstrs)
+      cstrs qvariances qs qs'
+  in
   CArray.fold_left3
     (fun cstrs v u u' ->
        let open UVars.Variance in
@@ -138,4 +166,4 @@ let compare_cumulative_instances  cv_pb variances u u' cstrs =
           | Conversion.CUMUL -> Set.add (ULe (make u, make u')) cstrs)
        | Invariant ->
          Set.add (UEq (make u, make u')) cstrs)
-    cstrs variances us us'
+    cstrs uvariances us us'

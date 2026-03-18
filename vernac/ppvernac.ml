@@ -76,8 +76,14 @@ let pr_variance_lident (lid,v) =
 
 let pr_univdecl_qualities l extensible =
   (* "extensible" not really supported in syntax currently *)
+  (* XXX is that still true? *)
   if List.is_empty l then mt()
   else prlist_with_sep spc pr_lident l ++ strbrk " ; "
+
+let pr_cumul_univdecl_qualities l extensible =
+  (* "extensible" not really supported in syntax currently *)
+  if List.is_empty l then mt()
+  else prlist_with_sep spc pr_variance_lident l ++ strbrk " ; "
 
 let pr_univdecl_instance l extensible =
   prlist_with_sep spc pr_lident l ++
@@ -109,7 +115,7 @@ let pr_cumul_univ_decl l =
   | None -> mt ()
   | Some l ->
     str"@{" ++
-    pr_univdecl_qualities l.univdecl_qualities l.univdecl_extensible_qualities ++
+    pr_cumul_univdecl_qualities l.univdecl_qualities l.univdecl_extensible_qualities ++
     pr_cumul_univdecl_instance l.univdecl_instance l.univdecl_extensible_instance ++
     pr_univdecl_constraints l.univdecl_constraints l.univdecl_extensible_constraints ++
     str "}"

@@ -44,8 +44,9 @@ type instance_expr = quality_expr list * univ_level_expr list
 type univ_constraint_expr = sort_name_expr * Univ.constraint_type * sort_name_expr
 
 type universe_decl_expr = (lident list, lident list, univ_constraint_expr list) UState.gen_universe_decl
+type lident_with_variance = lident * UVars.Variance.t option
 type cumul_univ_decl_expr =
-  (lident list, (lident * UVars.Variance.t option) list, univ_constraint_expr list) UState.gen_universe_decl
+  (lident_with_variance list, lident_with_variance list, univ_constraint_expr list) UState.gen_universe_decl
 
 type ident_decl = lident * universe_decl_expr option
 type cumul_ident_decl = lident * cumul_univ_decl_expr option
