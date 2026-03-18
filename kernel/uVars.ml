@@ -202,6 +202,25 @@ struct
     | exception Exit -> None
 end
 
+module QUnifConstraint = struct
+  type kind = Eq | Le | Connected
+  type t = Quality.t * kind * Quality.t
+
+  let is_trivial (a, k, b) = match (k : kind) with
+    | Eq | Le -> Quality.equal a b
+    | Connected -> Quality.equal a b
+
+  let compare (a, k, b) (a', k', b') =
+    let c = compare k k' in
+    if c <> 0 then c
+    else
+      let c = Quality.compare a a' in
+      if c <> 0 then c
+      else Quality.compare b b'
+end
+
+module QUnifConstraints = CSet.Make(QUnifConstraint)
+
 let eq_sizes (a,b) (a',b') = Int.equal a a' && Int.equal b b'
 
 type 'a quconstraint_function = 'a -> 'a -> Sorts.QUConstraints.t -> Sorts.QUConstraints.t

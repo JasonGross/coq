@@ -1207,7 +1207,7 @@ let check_quconstraints evd (qcsts,ucsts) =
 let check_quality_constraints evd qcst =
   let fold c accu = UnivProblem.Set.add (UnivProblem.of_qunif c) accu in
   let qcst = UVars.QUnifConstraints.fold fold qcst UnivProblem.Set.empty in
-  UState.check_constraints evd.universes qcst
+  UState.check_universe_constraints evd.universes qcst
 
 let fix_undefined_variables evd =
   { evd with universes = UState.fix_undefined_variables evd.universes }

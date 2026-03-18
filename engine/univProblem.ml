@@ -23,7 +23,7 @@ type t =
 let is_trivial = function
   | QLeq (QConstant QProp, QConstant QType) -> true
   | QLeq (a,b) | QEq (a, b) -> Sorts.Quality.equal a b
-  | QConnected (a, b) -> UVars.QUnifConstraint.is_trivial (a, Connected, b)
+  | QConnected (a, b) -> UVars.QUnifConstraint.is_trivial (a, UVars.QUnifConstraint.Connected, b)
   | ULe (u, v) | UEq (u, v) -> Sorts.equal u v
   | ULub (u, v) | UWeak (u, v) -> Level.equal u v
 
@@ -34,8 +34,9 @@ let force = function
 let check_eq_level g u v = UGraph.check_eq_level g u v
 
 let of_qunif (a,k,b) =
+  let open UVars.QUnifConstraint in
   match k with
-  | UVars.QUnifConstraint.Eq -> QEq (a, b)
+  | Eq -> QEq (a, b)
   | Le -> QLeq (a, b)
   | Connected -> QConnected (a, b)
 

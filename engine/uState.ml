@@ -147,7 +147,7 @@ let connect_quality ~fail q1 q2 m = match q1, q2 with
     | None -> fail()
     end
   | QVar qv1, QVar qv2 ->
-    if is_above_prop m qv1 && is_above_prop m qv2 then m
+    if is_above_prop qv1 m && is_above_prop qv2 m then m
     else unify_quality ~fail CONV q1 q2 m
   | _ -> unify_quality ~fail CONV q1 q2 m
 
@@ -544,6 +544,13 @@ let unify_quality univs c s1 s2 l =
         c (Sorts.quality s1) (Sorts.quality s2) l.local_sorts;
   }
 
+let connect_quality s1 s2 l =
+  let fail () = sort_inconsistency Le s1 s2 in
+  { l with
+    local_sorts = QState.connect_quality ~fail
+        (Sorts.quality s1) (Sorts.quality s2) l.local_sorts;
+  }
+
 let process_universe_constraints uctx cstrs =
   let open UnivSubst in
   let open UnivProblem in
@@ -804,7 +811,7 @@ let check_universe_constraint uctx (c:UnivProblem.t) =
   | QConnected (a,b) ->
     let a = nf_quality uctx a in
     let b = nf_quality uctx b in
-    UVars.QUnifConstraint.is_trivial (a,Connected,b) ||
+    UVars.QUnifConstraint.is_trivial (a,UVars.QUnifConstraint.Connected,b) ||
     begin match a, b with
     | (QConstant QType | QConstant QProp), QVar q
     | QVar q, (QConstant QType | QConstant QProp) -> QState.is_above_prop q uctx.sort_variables
