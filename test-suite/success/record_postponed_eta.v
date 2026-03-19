@@ -4,27 +4,17 @@ Record RTypeToSProp (A : SProp) : Type := {
   f1 : A
 }.
 
-(* Conversion when record is in Type and field in SProp fails correctly *)
+(* Conversion when record is in Type and field in SProp succeeds with eta *)
 Goal forall (A:SProp) (r2 : RTypeToSProp A), eq r2 {| f1 := r2.(f1 A) |}.
-Proof. intros A r2. Fail reflexivity. Abort.
-(* The command has indeed failed with message:
-    In environment
-    A : SProp
-    r2 : RTypeToSProp A
-    Unable to unify "{| f1 := f1 _ r2 |}" with "r2" *)
+Proof. intros A r2. reflexivity. Qed.
 
 Record RPropToSProp (A : SProp) : Prop := {
   f2 : A
 }.
 
-(* Conversion when record is in Prop and field in SProp fails correctly *)
+(* Conversion when record is in Prop and field in SProp succeeds with eta *)
 Goal forall (A:SProp) (r2 : RPropToSProp A), eq r2 {| f2 := r2.(f2 A) |}.
-Proof. intros A r2. Fail reflexivity. Abort.
-(* The command has indeed failed with message:
-    In environment
-    A : SProp
-    r2 : RPropToSProp A
-    Unable to unify "{| f2 := f2 _ r2 |}" with "r2". *)
+Proof. intros A r2. reflexivity. Qed.
 
 Set Universe Polymorphism.
 

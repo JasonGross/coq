@@ -48,8 +48,8 @@ Record rBox (A:SProp) : Prop := rmkbox { runbox : A }.
 (* Check that defining record without eta *)
 Check runbox.
 
-(* Check that it doesn't have eta *)
-Fail Check (fun (A : SProp) (x : rBox A) => eq_refl : x = @rmkbox _ (@runbox _ x)).
+(* Check that it has eta *)
+Check (fun (A : SProp) (x : rBox A) => eq_refl : x = @rmkbox _ (@runbox _ x)).
 
 Inductive sEmpty : SProp := .
 

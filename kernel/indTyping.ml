@@ -245,7 +245,7 @@ let check_record data =
               (* If there is no relevant projection, then we consider the sort of the record to decide if it has eta *)
               match info.ind_univ with
               | SProp -> Result.Ok AlwaysEta
-              | Set | Type _ | Prop -> Result.Ok NoEta (* Set, Type and Prop don't have eta *)
+              | Set | Type _ | Prop -> Result.Ok AlwaysEta
               | QSort _ ->  Result.Ok MaybeEta (* For sort variables it depends on the instantiation *)
     )
     (Result.Ok NoEta)
