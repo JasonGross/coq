@@ -23,7 +23,6 @@ open UVars
 type t =
   | QEq of Sorts.Quality.t * Sorts.Quality.t
   | QLeq of Sorts.Quality.t * Sorts.Quality.t
-  | QConnected of Sorts.Quality.t * Sorts.Quality.t
   | ULe of Sorts.t * Sorts.t
   | UEq of Sorts.t * Sorts.t
   | ULub of Level.t * Level.t
@@ -33,8 +32,6 @@ val is_trivial : t -> bool
 
 (** Wrapper around the UGraph function to handle Prop *)
 val check_eq_level : UGraph.t -> Level.t -> Level.t -> bool
-
-val of_qunif : UVars.QUnifConstraint.t -> t
 
 module Set : sig
   include Set.S with type elt = t
@@ -51,4 +48,4 @@ val enforce_eq_instances_univs : bool -> Instance.t constraint_function
 
 val enforce_eq_qualities : Sorts.Quality.t array constraint_function
 
-val compare_cumulative_instances : Conversion.conv_pb -> variances -> Instance.t constraint_function
+val compare_cumulative_instances : Conversion.conv_pb -> Variance.t array -> Instance.t constraint_function

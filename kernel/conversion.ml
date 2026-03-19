@@ -151,7 +151,7 @@ type conv_pb =
 type ('a, 'err) universe_compare = {
   compare_sorts : env -> conv_pb -> Sorts.t -> Sorts.t -> 'a -> ('a, 'err option) result;
   compare_instances: flex:bool -> UVars.Instance.t -> UVars.Instance.t -> 'a -> ('a, 'err option) result;
-  compare_cumul_instances : conv_pb -> UVars.variances ->
+  compare_cumul_instances : conv_pb -> UVars.Variance.t array ->
     UVars.Instance.t -> UVars.Instance.t -> 'a -> ('a, 'err option) result;
 }
 
@@ -227,9 +227,9 @@ let convert_constructors_gen cmp_instances cmp_cumul (mind, ind, cns) nargs u1 u
     else
       (** By invariant, both constructors have a common supertype,
           so they are convertible _at that type_. *)
-      let qvariance = Array.make (fst (UVars.Instance.length u1)) UVars.Variance.Irrelevant in
-      let uvariance = Array.make (snd (UVars.Instance.length u1)) UVars.Variance.Irrelevant in
-      cmp_cumul CONV (qvariance,uvariance) u1 u2 s
+      (* NB: no variance for qualities *)
+      let variance = Array.make (snd (UVars.Instance.length u1)) UVars.Variance.Irrelevant in
+      cmp_cumul CONV variance u1 u2 s
 
 let convert_constructors ctor nargs u1 u2 (s, check) =
   convert_constructors_gen (check.compare_instances ~flex:false) check.compare_cumul_instances
@@ -758,7 +758,7 @@ and eqwhnf cv_pb l2r infos (lft1, (hd1, v1) as appr1) (lft2, (hd2, v2) as appr2)
     | FArray (u1,t1,ty1), FArray (u2,t2,ty2) ->
       let len = Parray.length_int t1 in
       if not (Int.equal len (Parray.length_int t2)) then raise NotConvertible;
-      let cuniv = fail_check infos @@ convert_instances_cumul CONV UVars.prim_array_variance u1 u2 cuniv in
+      let cuniv = fail_check infos @@ convert_instances_cumul CONV [|UVars.Variance.Irrelevant|] u1 u2 cuniv in
       let el1 = el_stack lft1 v1 in
       let el2 = el_stack lft2 v2 in
       let cuniv = ccnv CONV l2r infos el1 el2 ty1 ty2 cuniv in

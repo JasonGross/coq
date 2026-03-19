@@ -44,37 +44,27 @@ struct
     | Covariant -> str "+"
     | Invariant -> str "="
 
-  type ('u,'set) enforcer = {
-    enforce_eq : 'u -> 'u -> 'set -> 'set;
-    enforce_leq : 'u -> 'u -> 'set -> 'set;
-    enforce_irrelevant : 'u -> 'u -> 'set -> 'set;
-  }
-
-  let leq_constraint enforce csts variance u u' =
+  let leq_constraint csts variance u u' =
     match variance with
-    | Irrelevant -> enforce.enforce_irrelevant u u' csts
-    | Covariant -> enforce.enforce_leq u u' csts
-    | Invariant -> enforce.enforce_eq u u' csts
+    | Irrelevant -> csts
+    | Covariant -> enforce_leq_level u u' csts
+    | Invariant -> enforce_eq_level u u' csts
 
-  let eq_constraint enforce csts variance u u' =
+  let eq_constraint csts variance u u' =
     match variance with
-    | Irrelevant -> enforce.enforce_irrelevant u u' csts
-    | Covariant | Invariant -> enforce.enforce_eq u u' csts
+    | Irrelevant -> csts
+    | Covariant | Invariant -> enforce_eq_level u u' csts
 
-  let leq_constraints enforce variance u u' csts =
+  let leq_constraints variance u u' csts =
     let len = Array.length u in
     assert (len = Array.length u' && len = Array.length variance);
-    Array.fold_left3 (leq_constraint enforce) csts variance u u'
+    Array.fold_left3 leq_constraint csts variance u u'
 
-  let eq_constraints enforce variance u u' csts =
+  let eq_constraints variance u u' csts =
     let len = Array.length u in
     assert (len = Array.length u' && len = Array.length variance);
-    Array.fold_left3 (eq_constraint enforce) csts variance u u'
+    Array.fold_left3 eq_constraint csts variance u u'
 end
-
-type variances = Variance.t array * Variance.t array
-
-let prim_array_variance : variances = [||], [|Variance.Irrelevant|]
 
 module Instance : sig
     type t
@@ -96,7 +86,7 @@ module Instance : sig
 
     val subst_fn : (Sorts.QVar.t -> Quality.t) * (Level.t -> Level.t) -> t -> t
 
-    val pr : (Sorts.QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:variances -> t -> Pp.t
+    val pr : (Sorts.QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:Variance.t array -> t -> Pp.t
     val levels : t -> Quality.Set.t * Level.Set.t
 
     type mask = Quality.pattern array * int option array
@@ -180,14 +170,12 @@ struct
     q, u
 
   let pr prq prl ?variance (q,u) =
-    let qvariance, uvariance = Option.cata (fun (x,y) -> Some x, Some y) (None,None) variance in
-    let pp_with_variance variance pr i u =
+    let ppu i u =
       let v = Option.map (fun v -> v.(i)) variance in
-      pr_opt_no_spc Variance.pr v ++ pr u
+      pr_opt_no_spc Variance.pr v ++ prl u
     in
-    (if Array.is_empty q then mt() else
-       prvecti_with_sep spc (pp_with_variance qvariance (Quality.pr prq)) q ++ strbrk " ; ")
-    ++ prvecti_with_sep spc (pp_with_variance uvariance prl) u
+    (if Array.is_empty q then mt() else prvect_with_sep spc (Quality.pr prq) q ++ strbrk " ; ")
+    ++ prvecti_with_sep spc ppu u
 
   let equal (xq,xu) (yq,yu) =
     CArray.equal Quality.equal xq yq
@@ -206,25 +194,6 @@ let eq_sizes (a,b) (a',b') = Int.equal a a' && Int.equal b b'
 
 type 'a quconstraint_function = 'a -> 'a -> Sorts.QUConstraints.t -> Sorts.QUConstraints.t
 
-let enforce_connected_quality a b csts =
-  if Quality.equal a b then csts
-  else
-    (* For irrelevant quality variance, enforce both directions *)
-    let csts = Sorts.enforce_leq_quality a b csts in
-    Sorts.enforce_leq_quality b a csts
-
-let univ_enforcer = {
-  Variance.enforce_irrelevant = (fun _ _ x -> x);
-  enforce_eq = enforce_eq_level;
-  enforce_leq = enforce_leq_level;
-}
-
-let quality_enforcer = {
-  Variance.enforce_irrelevant = enforce_connected_quality;
-  enforce_eq = Sorts.enforce_eq_quality;
-  enforce_leq = Sorts.enforce_leq_quality;
-}
-
 let enforce_eq_instances x y (qcs, ucs as orig) =
   let xq, xu = Instance.to_array x and yq, yu = Instance.to_array y in
   if Array.length xq != Array.length yq || Array.length xu != Array.length yu then
@@ -234,16 +203,17 @@ let enforce_eq_instances x y (qcs, ucs as orig) =
   let ucs' = CArray.fold_right2 enforce_eq_level xu yu ucs in
   if qcs' == qcs && ucs' == ucs then orig else qcs', ucs'
 
-let enforce_eq_variance_instances (qvariances, uvariances) x y (qcs,ucs as orig) =
+let enforce_eq_variance_instances variances x y (qcs,ucs as orig) =
   let xq, xu = Instance.to_array x and yq, yu = Instance.to_array y in
-  let qcs' = Variance.eq_constraints quality_enforcer qvariances xq yq qcs in
-  let ucs' = Variance.eq_constraints univ_enforcer uvariances xu yu ucs in
+  let qcs' = CArray.fold_right2 Sorts.enforce_eq_quality xq yq qcs in
+  let ucs' = Variance.eq_constraints variances xu yu ucs in
   if qcs' == qcs && ucs' == ucs then orig else qcs', ucs'
 
-let enforce_leq_variance_instances (qvariances,uvariances) x y (qcs,ucs as orig) =
+let enforce_leq_variance_instances variances x y (qcs,ucs as orig) =
   let xq, xu = Instance.to_array x and yq, yu = Instance.to_array y in
-  let qcs' = Variance.leq_constraints quality_enforcer qvariances xq yq qcs in
-  let ucs' = Variance.leq_constraints univ_enforcer uvariances xu yu ucs in
+  (* no variance for quality variables -> enforce_eq *)
+  let qcs' = CArray.fold_right2 Sorts.enforce_eq_quality xq yq qcs in
+  let ucs' = Variance.leq_constraints variances xu yu ucs in
   if qcs' == qcs && ucs' == ucs then orig else qcs', ucs'
 
 let subst_instance_level s l =

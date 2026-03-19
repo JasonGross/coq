@@ -16,7 +16,6 @@ val infer_inductive
   (** Environment containing the polymorphic universes and the inductives then the parameters. *)
   -> arities : Constr.t list
   -> ctors : Constr.t list list
-  -> (Sorts.QVar.t * UVars.Variance.t option) array
   -> (Univ.Level.t * UVars.Variance.t option) array
   (** Universes whose cumulativity we want to infer or check. *)
-  -> UVars.variances
+  -> UVars.Variance.t array

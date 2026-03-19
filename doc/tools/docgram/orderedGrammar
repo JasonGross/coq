@@ -317,7 +317,7 @@ univ_decl: [
 ]
 
 cumul_univ_decl: [
-| "@{" OPT [ LIST0 ( OPT [ "+" | "=" | "*" ] ident ) [ "|" | ";" ] ] LIST0 ( OPT [ "+" | "=" | "*" ] ident ) OPT "+" OPT [ "|" LIST0 univ_constraint SEP "," OPT "+" ] "}"
+| "@{" OPT [ LIST0 ident [ "|" | ";" ] ] LIST0 ( OPT [ "+" | "=" | "*" ] ident ) OPT "+" OPT [ "|" LIST0 univ_constraint SEP "," OPT "+" ] "}"
 ]
 
 univ_constraint: [
