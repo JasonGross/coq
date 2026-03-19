@@ -723,7 +723,7 @@ let () =
 
 let () =
   define "with_strategy"
-    (strategy_level @-> list reference @-> thunk unit @-> tac unit)
+    (strategy_level @-> list reference @-> thunk valexpr @-> tac valexpr)
     Tac2tactics.with_strategy
 
 (** Tactics around Evarconv unification (in [Ltac2/Unification.v]). *)
