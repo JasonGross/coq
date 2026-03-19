@@ -33,7 +33,7 @@ type ('a, 'err) universe_state = 'a * ('a, 'err) universe_compare
 
 type ('a, 'err) generic_conversion_function = ('a, 'err) universe_state -> constr -> constr -> ('a, 'err option) result
 
-val get_cumulativity_constraints : conv_pb -> UVars.variances ->
+val get_cumulativity_constraints : conv_pb -> UVars.Variance.t array ->
   UVars.Instance.t -> UVars.Instance.t -> Sorts.QUConstraints.t
 
 val inductive_cumulativity_arguments : (Declarations.mutual_inductive_body * int) -> int

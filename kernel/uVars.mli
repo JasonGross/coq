@@ -34,14 +34,6 @@ end
 
 type variances = Variance.t array * Variance.t array
 
-module QUnifConstraint : sig
-  type kind = Eq | Le | Connected
-  type t = Sorts.Quality.t * kind * Sorts.Quality.t
-  val is_trivial : t -> bool
-end
-
-module QUnifConstraints : CSet.ExtS with type elt = QUnifConstraint.t
-
 val prim_array_variance : variances
 
 (** {6 Universe instances} *)
@@ -248,9 +240,9 @@ val make_abstract_instance : AbstractContext.t -> Instance.t
 
 (** {6 Pretty-printing of universes. } *)
 
-val pr_universe_context : (QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:variances ->
+val pr_universe_context : (QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:Variance.t array ->
   UContext.t -> Pp.t
-val pr_abstract_universe_context : (QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:variances ->
+val pr_abstract_universe_context : (QVar.t -> Pp.t) -> (Level.t -> Pp.t) -> ?variance:Variance.t array ->
   AbstractContext.t -> Pp.t
 
 (** {6 Hash-consing } *)

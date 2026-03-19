@@ -743,7 +743,7 @@ let compare_cumulative_instances cv_pb variances u u' sigma =
   let is_soft = function UWeak _ -> true | _ -> false in
   let soft, cstrs = Set.partition is_soft cstrs in
   let cstrs = Set.force cstrs in
-  match Evd.add_universe_constraints sigma cstrs with
+  match Evd.add_constraints sigma cstrs with
   | sigma ->
     Inl (Evd.add_universe_constraints sigma soft)
   | exception UGraph.UniverseInconsistency p -> Inr p
