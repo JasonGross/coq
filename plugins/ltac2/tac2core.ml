@@ -1340,15 +1340,17 @@ let () =
   |> Option.map fst
   |> Option.map (Array.map (fun (p,_) -> Projection.make p false))
 
-(** Ind schemes *)
+(** Schemes *)
 
 let () =
-  define "ind_scheme_lookup" (scheme_kind @-> inductive @-> ret (option reference))
-  @@ fun kind ind ->
-  DeclareScheme.lookup_scheme_opt kind ind
+  define "scheme_lookup" (scheme_kind @-> reference @-> ret (option reference))
+  @@ fun kind ref ->
+  match ref with
+  | GlobRef.IndRef ind -> DeclareScheme.lookup_scheme_opt kind ind
+  | _ -> None
 
 let define_scheme_kind name =
-  define ("ind_scheme_kind_" ^ name) (ret scheme_kind) name
+  define ("scheme_kind_" ^ name) (ret scheme_kind) name
 
 let () = define_scheme_kind "rect_dep"
 let () = define_scheme_kind "rec_dep"
