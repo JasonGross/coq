@@ -281,7 +281,7 @@ and traverse_object access (curr, data, ax2ty) body obj =
         | GlobRef.ConstRef kn ->
           let cb = lookup_constant kn in
           let typ = cb.Declarations.const_type in
-          traverse access obj Context.Rel.empty
+          traverse access (label_of obj) Context.Rel.empty
                    (contents,data,ax2ty) typ
         | _ -> (contents,data,ax2ty)
       in
