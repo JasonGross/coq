@@ -1,0 +1,150 @@
+package Main
+
+type color interface{ iscolor() }
+type Red struct{}
+func (Red) iscolor() {}
+type Green struct{}
+func (Green) iscolor() {}
+type Blue struct{}
+func (Blue) iscolor() {}
+
+
+
+func mynegb(b any) any {
+  return func() any {
+           switch b.(type) {
+           case True:
+             return False{}
+           case False:
+             return True{}
+           }
+           return nil
+         }()
+}
+
+
+func myadd(n any, m any) any {
+  return func() any {
+           switch _v0 := n.(type) {
+           case O:
+             return m
+           case S:
+             p := _v0.Field0
+             return S{Field0: myadd(p, m)}
+           }
+           return nil
+         }()
+}
+
+
+package Main
+
+type nat interface{ isnat() }
+type O struct{}
+func (O) isnat() {}
+type S struct{ Field0 any }
+func (S) isnat() {}
+
+
+type mypoint struct {
+  Field0 any
+  Field1 any
+}
+
+
+
+func apply_fn(f any) any {
+  return f
+}
+
+
+package Main
+
+type myopt interface{ ismyopt() }
+type MyNone struct{}
+func (MyNone) ismyopt() {}
+type MySome struct{ Field0 any }
+func (MySome) ismyopt() {}
+
+
+func from_opt(d any, o any) any {
+  return func() any {
+           switch _v0 := o.(type) {
+           case MyNone:
+             return d
+           case MySome:
+             x := _v0.Field0
+             return x
+           }
+           return nil
+         }()
+}
+
+
+func test_let(n any) any {
+  return func() any {
+             x := S{Field0: n}
+             return S{Field0: x}
+           }()
+}
+
+
+package Main
+
+type bool0 interface{ isbool0() }
+type True struct{}
+func (True) isbool0() {}
+type False struct{}
+func (False) isbool0() {}
+
+
+type nat interface{ isnat() }
+type O struct{}
+func (O) isnat() {}
+type S struct{ Field0 any }
+func (S) isnat() {}
+
+
+var (
+  myeven func(any) any
+  myodd func(any) any
+)
+
+func init() {
+  myeven = func(n any) any {
+    return func() any {
+             switch _v0 := n.(type) {
+             case O:
+               return True{}
+             case S:
+               p := _v0.Field0
+               return myodd(p)
+             }
+             return nil
+           }()
+  }
+  myodd = func(n any) any {
+    return func() any {
+             switch _v1 := n.(type) {
+             case O:
+               return False{}
+             case S:
+               p := _v1.Field0
+               return myeven(p)
+             }
+             return nil
+           }()
+  }
+}
+
+
+func myid(x any) any {
+  return x
+}
+
+
+func compose(g any, f any, x any) any {
+  return g((f(x)))
+}
+
+

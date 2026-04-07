@@ -73,9 +73,29 @@ let fresh_var () =
   incr var_counter;
   "_v" ^ string_of_int n
 
+(* Go-style function application: f(a1, a2, a3)
+   All arguments are passed in a single call since top-level functions
+   are emitted with all parameters. For complex heads (lambdas, etc.)
+   we wrap in parens first: (expr)(a1, a2). *)
+let go_apply head par args =
+  match args with
+  | [] -> head
+  | _ ->
+    let applied =
+      head ++ str "(" ++
+      prlist_with_sep (fun () -> str ", ") identity args ++
+      str ")"
+    in
+    if par then str "(" ++ applied ++ str ")" else applied
+
+let go_apply2 head par args =
+  let par' = not (List.is_empty args) || par in
+  let head' = if par' then str "(" ++ head ++ str ")" else head in
+  go_apply head' par args
+
 let rec pp_expr table par env args =
-  let apply st = pp_apply st par args
-  and apply2 st = pp_apply2 st par args in
+  let apply st = go_apply st par args
+  and apply2 st = go_apply2 st par args in
   function
     | MLrel n ->
         let id = get_db_name n env in
@@ -104,9 +124,9 @@ let rec pp_expr table par env args =
         and pp_a2 = pp_expr table false env' [] a2 in
         (* Go doesn't allow := in expression position, so wrap in IIFE *)
         apply2
-          (str "func() any {" ++ spc () ++
-           hov 2 (pp_id ++ str " := " ++ pp_a1) ++ spc () ++
-           hov 2 (str "return " ++ pp_a2) ++ spc () ++
+          (str "func() any {" ++ fnl () ++
+           str "  " ++ hov 2 (pp_id ++ str " := " ++ pp_a1) ++ fnl () ++
+           str "  " ++ hov 2 (str "return " ++ pp_a2) ++ fnl () ++
            str "}()")
     | MLglob r ->
         apply (pp_global table Term r)
@@ -156,12 +176,21 @@ let rec pp_expr table par env args =
         in
         apply2 (hov 2 inner)
     | MLcase (typ,t,pv) ->
-        let v_name = fresh_var () in
+        let needs_var = Array.exists (fun (ids,_,_) -> not (List.is_empty ids)) pv in
+        let v_name = if needs_var then fresh_var () else "_" in
+        let switch_head =
+          if needs_var then
+            str ("  switch " ^ v_name ^ " := ") ++
+            pp_expr table false env [] t ++
+            str ".(type) {"
+          else
+            str "  switch " ++
+            pp_expr table false env [] t ++
+            str ".(type) {"
+        in
         apply2
           (v 0 (str "func() any {" ++ fnl () ++
-                str ("  switch " ^ v_name ^ " := ") ++
-                pp_expr table false env [] t ++
-                str ".(type) {" ++ fnl () ++
+                switch_head ++ fnl () ++
                 pp_pat table env v_name pv ++
                 str "  }" ++ fnl () ++
                 str "  return nil" ++ fnl () ++
@@ -176,7 +205,7 @@ let rec pp_expr table par env args =
          | "" -> str "dummy__"
          | s -> str "dummy__" ++ spc () ++ pp_block_comment (str s))
     | MLmagic a ->
-        pp_apply (str "magic__") par (pp_expr table true env [] a :: args)
+        go_apply (str "magic__") par (pp_expr table true env [] a :: args)
     | MLaxiom s ->
         apply (str "panic(\"AXIOM TO BE REALIZED: " ++ str s ++ str "\")")
     | MLuint i ->
@@ -264,7 +293,7 @@ and pp_fix table par env i (ids,bl) args =
           str "    return " ++ pp_expr table false env' [] t' ++ fnl () ++
           str "  }" ++ fnl ()
         ) bl ++
-        str "  return " ++ pp_apply (Id.print ids.(i)) false args ++ fnl () ++
+        str "  return " ++ go_apply (Id.print ids.(i)) false args ++ fnl () ++
         str "}()"))
 
 (*s Pretty-printing of inductive types *)
@@ -293,21 +322,16 @@ let pp_standard_ind table p cv =
     str "func (" ++ cname ++ str ") " ++ str marker ++ str "() {}" ++ fnl ()
   ) cv
 
-let pp_record_ind table fields p =
+let pp_record_ind table _fields p =
   let tname = pp_global table Type p.ip_typename_ref in
   match p.ip_types.(0) with
   | [] -> str "type " ++ tname ++ str " struct{}" ++ fnl ()
   | types ->
-    let pp_field i typ =
-      let fname = match List.nth_opt fields i with
-        | Some (Some r) -> pp_global table Term r
-        | _ -> str ("Field" ^ string_of_int i)
-      in
-      str "  " ++ fname ++ str " any"
-    in
+    let fields = List.mapi (fun i _ ->
+      str ("  Field" ^ string_of_int i) ++ str " any"
+    ) types in
     str "type " ++ tname ++ str " struct {" ++ fnl () ++
-    prlist_with_sep (fun () -> fnl ()) identity
-      (List.mapi pp_field types) ++ fnl () ++
+    prlist_with_sep (fun () -> fnl ()) identity fields ++ fnl () ++
     str "}" ++ fnl ()
 
 let pp_singleton table packet =
@@ -353,7 +377,9 @@ let rec pp_ind table first i ind =
 
 (*s Pretty-printing of declarations. *)
 
-let rec pp_decl table = function
+let rec pp_decl table d =
+  var_counter := 0;
+  match d with
   | Dind i when i.ind_kind == Singleton ->
       pp_singleton table i.ind_packets.(0) ++ fnl ()
   | Dind i -> hov 0 (pp_ind table true 0 i)

@@ -11,11 +11,17 @@
 | 5 | Wire into `g_extraction.mlg` (grammar + printer) | Done |
 | 6 | Wire into `common.ml` (add `Go` case to `pp_global_with_key`) | Done |
 | 7 | Build and fix compilation errors | Done |
+| 8 | Test Go extraction with various Rocq programs | Done |
+| 9 | Verify extracted Go code compiles and runs correctly | Done |
+| 10 | Add test to test-suite/output/ | Done |
+| 11 | Verify existing extraction tests still pass | Done |
 
 ## Files Created
 
 - `plugins/extraction/go.mli` — interface exporting `go_descr`
-- `plugins/extraction/go.ml` — full Go backend (~480 lines)
+- `plugins/extraction/go.ml` — full Go backend (~500 lines)
+- `test-suite/output/extraction_go.v` — test file for Go extraction
+- `test-suite/output/extraction_go.out` — expected output for Go extraction test
 
 ## Files Modified
 
@@ -31,18 +37,19 @@
 - **Types**: `any` for type variables/unknowns, `func(a) b` for arrows, named types for globals
 - **Inductive types**:
   - Standard sum types → interface + concrete structs with marker methods
-  - Records → structs with named fields
+  - Records → structs with FieldN fields
   - Singletons → type aliases
   - Coinductive → thunk-wrapping structs
   - Logical → comment stubs
-- **Expressions**: lambda, application, let-in (IIFE), global refs, constructors, tuples, case/match (type switch), fixpoints, exceptions (panic), dummy, magic, uint64, float64, strings, parray stub
-- **Pattern matching**: type switch with `Pusual`, `Pcons`, `Ptuple`, `Pwild`, `Prel`
+- **Expressions**: lambda, application (Go-style `f(a, b)`), let-in (IIFE with proper newlines), global refs, constructors, tuples, case/match (type switch), fixpoints, exceptions (panic), dummy, magic, uint64, float64, strings, parray stub
+- **Pattern matching**: type switch; omits variable binding when no branch uses fields
 - **Recursion**: single (local IIFE), mutual (var block + init)
 - **Preamble**: `package` declaration, conditional `import "unsafe"`, `dummy__`, `magic__`
 - **Module flattening**: non-functor modules flattened, functors dropped with comment
 
-## Notes
+## Testing
 
-- Build succeeds cleanly with `dune build plugins/extraction` (no warnings)
-- Pre-existing unrelated error in full `dune build` (rocq-core empty package)
-- No dune changes needed (auto-discovery picks up go.ml)
+- Extracted Go code compiles and runs correctly with `go run`
+- Verified: nat addition/multiplication, bool operations, list map, mutual recursion
+- Test suite test passes: `test-suite/output/extraction_go.v`
+- All existing extraction tests still pass (Extraction_ffi, Extraction_infix, Extraction_matchs_2413, extraction_projection, bug_20711, bug_17369, bug_19806)
