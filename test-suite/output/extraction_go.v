@@ -48,3 +48,19 @@ Extraction myid.
 (* Test 10: Composition *)
 Definition compose (A B C : Type) (g : B -> C) (f : A -> B) (x : A) := g (f x).
 Extraction compose.
+
+(* Test 11: Wildcard / unused variable in pattern *)
+Recursive Extraction Nat.eqb.
+
+(* Test 12: Local fixpoint with multiple args *)
+Definition local_add (n : nat) : nat :=
+  (fix go (m : nat) (acc : nat) : nat :=
+    match m with
+    | O => acc
+    | S p => go p (S acc)
+    end) n O.
+Extraction local_add.
+
+(* Test 13: Empty/logical inductive *)
+Inductive myempty := .
+Extraction myempty.

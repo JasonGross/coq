@@ -225,11 +225,19 @@ and pp_pat table env v_name pv =
        fnl ())
     pv
 
+and pp_field_binding id field_expr =
+  (* In Go, _ cannot use := (short variable declaration), must use = *)
+  let id_str = Id.to_string id in
+  if String.equal id_str "_" then
+    str "    _ = " ++ field_expr ++ fnl ()
+  else
+    str "    " ++ Id.print id ++ str " := " ++ field_expr ++ fnl ()
+
 and pp_one_pat table env v_name ids p t =
   match p with
   | Pusual r ->
       let fields = List.mapi (fun i id ->
-        str "    " ++ Id.print id ++ str (" := " ^ v_name ^ ".Field" ^ string_of_int i) ++ fnl ()
+        pp_field_binding id (str (v_name ^ ".Field" ^ string_of_int i))
       ) ids in
       str "  case " ++ pp_global table Cons r ++ str ":" ++ fnl () ++
       prlist identity fields ++
@@ -261,16 +269,12 @@ and pp_one_pat table env v_name ids p t =
 and pp_bind_pattern_fields table env v_name ids pats start_idx =
   let _ = List.fold_left (fun idx pat ->
     match pat with
-    | Prel _ | Pusual _ ->
-        (* Bind from the ids list *)
-        idx + 1
+    | Prel _ | Pusual _ -> idx + 1
     | Pwild -> idx + 1
     | _ -> idx + 1
   ) start_idx pats in
-  (* Simple field binding for constructor patterns *)
   prlist_with_sep (fun () -> mt ()) (fun (i, id) ->
-    str "    " ++ Id.print id ++
-    str (" := " ^ v_name ^ ".Field" ^ string_of_int i) ++ fnl ()
+    pp_field_binding id (str (v_name ^ ".Field" ^ string_of_int i))
   ) (List.mapi (fun i id -> (i, id)) ids)
 
 (*s Fixpoint expressions *)
@@ -279,9 +283,17 @@ and pp_fix table par env i (ids,bl) args =
   pp_par par
     (v 0
        (str "func() any {" ++ fnl () ++
-        prvecti (fun j id ->
-          str "  var " ++ Id.print id ++ str " func(any) any" ++ fnl ()
-        ) ids ++
+        (* First pass: declare variables with correct function types *)
+        prvecti (fun j def ->
+          let fl,_ = collect_lams def in
+          let nargs = List.length fl in
+          let pp_arg_types =
+            prlist_with_sep (fun () -> str ", ")
+              (fun _ -> str "any") (List.init nargs (fun i -> i))
+          in
+          str "  var " ++ Id.print ids.(j) ++ str " func(" ++ pp_arg_types ++ str ") any" ++ fnl ()
+        ) bl ++
+        (* Second pass: assign function bodies *)
         prvecti (fun j def ->
           let fl,t' = collect_lams def in
           let fl,env' = push_vars (List.map id_of_mlid fl) env in

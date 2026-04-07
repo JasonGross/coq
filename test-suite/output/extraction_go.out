@@ -148,3 +148,74 @@ func compose(g any, f any, x any) any {
 }
 
 
+package Main
+
+type bool0 interface{ isbool0() }
+type True struct{}
+func (True) isbool0() {}
+type False struct{}
+func (False) isbool0() {}
+
+
+type nat interface{ isnat() }
+type O struct{}
+func (O) isnat() {}
+type S struct{ Field0 any }
+func (S) isnat() {}
+
+
+func eqb(n any, m any) any {
+  return func() any {
+           switch _v0 := n.(type) {
+           case O:
+             return func() any {
+                      switch _v1 := m.(type) {
+                      case O:
+                        return True{}
+                      case S:
+                        _ = _v1.Field0
+                        return False{}
+                      }
+                      return nil
+                    }()
+           case S:
+             n' := _v0.Field0
+             return func() any {
+                      switch _v2 := m.(type) {
+                      case O:
+                        return False{}
+                      case S:
+                        m' := _v2.Field0
+                        return eqb(n', m')
+                      }
+                      return nil
+                    }()
+           }
+           return nil
+         }()
+}
+
+
+func local_add(n any) any {
+  return func() any {
+           var go0 func(any, any) any
+           go0 = func(m any, acc any) any {
+             return func() any {
+                      switch _v0 := m.(type) {
+                      case O:
+                        return acc
+                      case S:
+                        p := _v0.Field0
+                        return go0(p, S{Field0: acc})
+                      }
+                      return nil
+                    }()
+           }
+           return go0(n, O{})
+         }()
+}
+
+
+/* myempty : logical inductive
+   with constructors :  */
+
