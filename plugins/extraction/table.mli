@@ -154,7 +154,7 @@ val file_comment : unit -> string
 
 (*s Target language. *)
 
-type lang = Ocaml | Haskell | Scheme | JSON
+type lang = Ocaml | Haskell | Scheme | JSON | Go
 val lang : unit -> lang
 
 (*s Table for custom inlining *)
