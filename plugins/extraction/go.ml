@@ -45,10 +45,10 @@ let pp_block_comment s = str "/* " ++ hov 0 s ++ str " */"
 
 (* Go identifiers cannot contain '\'' (prime/tick) which Coq uses
    for variable names like i', a', etc.  Replace them with a valid suffix. *)
-let go_id id =
-  let s = Id.to_string id in
-  let s' = String.map (fun c -> if c == '\'' then '0' else c) s in
-  if String.equal s s' then Id.print id else str s'
+let go_id_str id =
+  String.map (fun c -> if c == '\'' then '0' else c) (Id.to_string id)
+
+let go_id id = let s = go_id_str id in str s
 
 (*s Pretty-printing of global references. *)
 
@@ -143,7 +143,7 @@ let rec pp_expr table par env args =
         let body_str = Pp.string_of_ppcmds
           (pp_expr table false env' [] a') in
         let st = List.fold_right (fun id inner ->
-          "func(" ^ Id.to_string id ^ " any) any { return " ^ inner ^ " }"
+          "func(" ^ go_id_str id ^ " any) any { return " ^ inner ^ " }"
         ) fl body_str in
         apply2 (str st)
     | MLletin (id,a1,a2) ->
@@ -179,13 +179,19 @@ let rec pp_expr table par env args =
              ) extra_ids full_call_str in
              let result = str curried in
              if par then str "(" ++ result ++ str ")" else result
-         | Some arity when supplied > arity && arity > 0 ->
+         | Some arity when supplied > arity ->
              (* More args than parameters: pass [arity] args directly,
                 chain the rest as type assertions (the function returns
                 curried closures typed as [any]). *)
              let direct_args = List.firstn arity args in
              let extra_args = List.skipn arity args in
-             let head = go_apply (pp_global table Term r) false direct_args in
+             let head =
+               if arity = 0 then
+                 (* Zero-arg function: must call it to get the [any] value *)
+                 pp_global table Term r ++ str "()"
+               else
+                 go_apply (pp_global table Term r) false direct_args
+             in
              let result = List.fold_left (fun acc arg ->
                acc ++ str ".(func(any) any)(" ++ arg ++ str ")"
              ) head extra_args in
@@ -296,7 +302,7 @@ and pp_pat table env v_name pv =
     pv
 
 and pp_field_binding id field_expr =
-  let id_str = Id.to_string id in
+  let id_str = go_id_str id in
   if String.equal id_str "_" then
     str "    _ = " ++ field_expr ++ fnl ()
   else
@@ -359,7 +365,7 @@ and pp_fix table par env i (ids,bl) args =
           let body_str = Pp.string_of_ppcmds
             (pp_expr table false env' [] t') in
           let curried = List.fold_right (fun id inner ->
-            "func(" ^ Id.to_string id ^ " any) any { return " ^ inner ^ " }"
+            "func(" ^ go_id_str id ^ " any) any { return " ^ inner ^ " }"
           ) fl body_str in
           str "  " ++ go_id ids.(j) ++ str (" = " ^ curried) ++ fnl ()
         ) bl ++
@@ -367,7 +373,7 @@ and pp_fix table par env i (ids,bl) args =
         (let head = List.fold_left (fun acc arg ->
            acc ^ ".(func(any) any)(" ^
            Pp.string_of_ppcmds arg ^ ")"
-         ) (Id.to_string ids.(i)) args in
+         ) (go_id_str ids.(i)) args in
          str ("  return " ^ head) ++ fnl ()) ++
         str "}()"))
 
