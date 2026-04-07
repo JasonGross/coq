@@ -8,9 +8,9 @@ Program extraction
 We present here the Rocq extraction commands, used to build certified
 and relatively efficient functional programs, extracting them from
 either Rocq functions or Rocq proofs of specifications. The
-functional languages available as output are currently OCaml, Haskell
-and Scheme. In the following, "ML" will be used (abusively) to refer
-to any of the three.
+functional languages available as output are currently OCaml, Haskell,
+Scheme and Go. In the following, "ML" will be used (abusively) to refer
+to any of these.
 
 .. versionchanged:: 8.11
 
@@ -126,12 +126,38 @@ Setting the target language
       | Haskell
       | Scheme
       | JSON
+      | Go
 
    The ability to fix target language is the first and most important
    of the extraction options. Default is ``OCaml``.
 
    The JSON output is mostly for development or debugging:
    it contains the raw ML term produced as an intermediary target.
+
+   .. note::
+
+      Go extraction is experimental. Since Go lacks parametric polymorphism
+      at the level needed to represent Rocq's type system, all extracted values
+      use the ``any`` type. Inductive types are represented as Go interfaces
+      with one struct per constructor. Pattern matching is compiled via type
+      switches. Mutual recursion uses Go's ``init()`` function pattern with
+      package-level ``var`` declarations.
+
+      For modular extraction (via :cmd:`Separate Extraction` or
+      :cmd:`Recursive Extraction Library`), each Rocq module becomes a
+      separate Go package in its own subdirectory, with a generated ``go.mod``
+      file. All exported identifiers are capitalized per Go convention.
+      Cross-package references use qualified names (e.g. ``base.Myadd``).
+
+      The Go module path prefix can be configured:
+
+      .. opt:: Extraction Go Module @string
+
+         Sets the Go module path prefix used in ``go.mod`` and import
+         statements during modular extraction. Default is ``"extracted"``.
+         For example, setting this to ``"github.com/user/project/extracted"``
+         will produce imports like
+         ``"github.com/user/project/extracted/mypackage"``.
 
 
 Inlining and optimizations

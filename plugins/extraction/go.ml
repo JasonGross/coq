@@ -55,7 +55,7 @@ let rec pp_type table par = function
   | Tmeta _ | Tvar' _ -> assert false
   | Tvar _ -> str "any"
   | Tglob (r,[]) -> pp_global table Type r
-  | Tglob (r,_) -> pp_global table Type r (* type args dropped — no generics *)
+  | Tglob (r,_) -> pp_global table Type r (* type args dropped -- no generics *)
   | Tarr (t1,t2) ->
       pp_par par
         (str "func(" ++ pp_type table false t1 ++ str ") " ++
@@ -89,9 +89,11 @@ let go_apply head par args =
     if par then str "(" ++ applied ++ str ")" else applied
 
 let go_apply2 head par args =
-  let par' = not (List.is_empty args) || par in
-  let head' = if par' then str "(" ++ head ++ str ")" else head in
-  go_apply head' par args
+  let head' = if not (List.is_empty args) || par
+    then str "(" ++ head ++ str ")"
+    else head
+  in
+  go_apply head' false args
 
 let rec pp_expr table par env args =
   let apply st = go_apply st par args
@@ -102,7 +104,7 @@ let rec pp_expr table par env args =
         let id = if Id.equal id dummy_name then Id.of_string "__" else id in
         apply (Id.print id)
     | MLapp (f,args') ->
-        let stl = List.map (pp_expr table true env []) args' in
+        let stl = List.map (pp_expr table false env []) args' in
         pp_expr table par env (stl @ args) f
     | MLlam _ as a ->
         let fl,a' = collect_lams a in
@@ -205,7 +207,7 @@ let rec pp_expr table par env args =
          | "" -> str "dummy__"
          | s -> str "dummy__" ++ spc () ++ pp_block_comment (str s))
     | MLmagic a ->
-        go_apply (str "magic__") par (pp_expr table true env [] a :: args)
+        go_apply (str "magic__") par (pp_expr table false env [] a :: args)
     | MLaxiom s ->
         apply (str "panic(\"AXIOM TO BE REALIZED: " ++ str s ++ str "\")")
     | MLuint i ->
@@ -247,7 +249,7 @@ and pp_one_pat table env v_name ids p t =
       pp_bind_pattern_fields table env v_name ids pats 0 ++
       str "    return " ++ pp_expr table false env [] t
   | Ptuple pats ->
-      (* Tuple patterns — bind fields from anonymous struct *)
+      (* Tuple patterns -- bind fields from anonymous struct *)
       let bindings = List.mapi (fun i _ ->
         match List.nth_opt ids i with
         | Some id ->
@@ -266,13 +268,7 @@ and pp_one_pat table env v_name ids p t =
       str "    " ++ Id.print (get_db_name n env) ++ str (" := " ^ v_name) ++ fnl () ++
       str "    return " ++ pp_expr table false env [] t
 
-and pp_bind_pattern_fields table env v_name ids pats start_idx =
-  let _ = List.fold_left (fun idx pat ->
-    match pat with
-    | Prel _ | Pusual _ -> idx + 1
-    | Pwild -> idx + 1
-    | _ -> idx + 1
-  ) start_idx pats in
+and pp_bind_pattern_fields _table _env v_name ids _pats _start_idx =
   prlist_with_sep (fun () -> mt ()) (fun (i, id) ->
     pp_field_binding id (str (v_name ^ ".Field" ^ string_of_int i))
   ) (List.mapi (fun i id -> (i, id)) ids)
@@ -528,9 +524,8 @@ let preamble table mod_name comment used_modules usf =
   ++
   str "package " ++ str pkg_name ++ fnl2 ()
   ++
-  (* Import block: combine unsafe and cross-package imports *)
-  (let has_unsafe = usf.magic in
-   let pkg_imports =
+  (* Import block for cross-package imports *)
+  (let pkg_imports =
      if modular && not (DirPath.Set.is_empty used_modules) then
        let prefix = go_module_prefix () in
        List.map (fun dp ->
@@ -540,9 +535,8 @@ let preamble table mod_name comment used_modules usf =
        ) (DirPath.Set.elements used_modules)
      else []
    in
-   if has_unsafe || pkg_imports <> [] then
+   if pkg_imports <> [] then
      str "import (" ++ fnl () ++
-     (if has_unsafe then str "  \"unsafe\"" ++ fnl () else mt ()) ++
      prlist (fun s -> str s ++ fnl ()) pkg_imports ++
      str ")" ++ fnl2 ()
    else mt ())
@@ -553,7 +547,7 @@ let preamble table mod_name comment used_modules usf =
   ++
   (if usf.magic then
      str "func magic__(x any) any {" ++ fnl () ++
-     str "  return *(*any)(unsafe.Pointer(&x))" ++ fnl () ++
+     str "  return x" ++ fnl () ++
      str "}" ++ fnl2 ()
    else mt ())
 
@@ -570,8 +564,8 @@ let file_naming state mp =
 let write_go_mod dir module_prefix =
   let path = Filename.concat dir "go.mod" in
   let oc = open_out path in
-  Printf.fprintf oc "module %s\n\ngo 1.21\n" module_prefix;
-  close_out oc
+  Fun.protect ~finally:(fun () -> close_out oc) (fun () ->
+    Printf.fprintf oc "module %s\n\ngo 1.21\n" module_prefix)
 
 (*s The [go_descr] record. *)
 

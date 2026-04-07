@@ -144,7 +144,7 @@ func myid(x any) any {
 
 
 func compose(g any, f any, x any) any {
-  return g((f(x)))
+  return g(f(x))
 }
 
 

@@ -10,6 +10,11 @@ export PATH=$COQBIN:$PATH
 
 cd misc/go-modular-extraction/
 
+cleanup() {
+  rm -rf out *.vo *.vos *.vok *.glob .*.aux
+}
+trap cleanup EXIT
+
 # Clean previous output
 rm -rf out
 mkdir -p out
@@ -65,8 +70,5 @@ if command -v go >/dev/null 2>&1; then
 else
   echo "go not found, skipping Go compilation check"
 fi
-
-# Clean up
-rm -rf out *.vo *.vos *.vok *.glob .*.aux
 
 exit 0

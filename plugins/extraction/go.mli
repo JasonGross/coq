@@ -10,4 +10,6 @@
 
 val go_descr : Common.State.t Miniml.language_descr
 
+(** [write_go_mod dir module_prefix] generates a go.mod file in [dir]
+    with the given [module_prefix] as the module path. *)
 val write_go_mod : string -> string -> unit
