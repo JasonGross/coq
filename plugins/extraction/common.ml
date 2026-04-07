@@ -674,6 +674,22 @@ let pp_haskell_gen table k mp rls = match rls with
     let str = if is_upper str && not (upperkind k) then ("_"^str) else str in
     if ModPath.equal (base_mp mp) (State.get_top_visible_mp table) then str else s^"."^str
 
+(* For Go modular extraction: qualify cross-package references *)
+
+let pp_go_gen table k mp rls = match rls with
+  | [] -> assert false
+  | s::rls' ->
+    let name = pseudo_qualify rls' in
+    (* Capitalize for Go export visibility *)
+    let name = String.capitalize_ascii name in
+    if ModPath.equal (base_mp mp) (State.get_top_visible_mp table) then
+      (* Same package — no qualifier needed *)
+      name
+    else
+      (* Different package — qualify with package name *)
+      let pkg = String.lowercase_ascii s in
+      pkg ^ "." ^ name
+
 (* Main name printing function for a reference *)
 
 let pp_global_with_key table k key r =
@@ -685,7 +701,10 @@ let pp_global_with_key table k key r =
     (* simplest situation: definition of r (or use in the same context) *)
     (* we update the visible environment *)
     let () = State.add_visible table (k, s) l in
-    unquote s
+    if lang () == Go && State.get_modular table then
+      String.capitalize_ascii (unquote s)
+    else
+      unquote s
   else
     let rls = List.rev ls in (* for what come next it's easier this way *)
     match lang () with
@@ -693,7 +712,9 @@ let pp_global_with_key table k key r =
       | JSON -> dottify (List.map unquote rls)
       | Haskell -> if State.get_modular table then pp_haskell_gen table k mp rls else s
       | Ocaml -> pp_ocaml_gen table k mp rls (Some l)
-      | Go -> s (* flat package, no module qualification *)
+      | Go ->
+        if State.get_modular table then pp_go_gen table k mp rls
+        else s
 
 let pp_global table k r =
   pp_global_with_key table k (repr_of_r r) r
@@ -703,7 +724,10 @@ let pp_global table k r =
 let pp_global_name table k r =
   let ls = ref_renaming table (k,r) in
   assert (List.length ls > 1);
-  List.hd ls
+  let s = List.hd ls in
+  if lang () == Go && State.get_modular table then
+    String.capitalize_ascii s
+  else s
 
 (* The next function is used only in Ocaml extraction...*)
 

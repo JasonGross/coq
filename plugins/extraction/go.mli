@@ -9,3 +9,5 @@
 (************************************************************************)
 
 val go_descr : Common.State.t Miniml.language_descr
+
+val write_go_mod : string -> string -> unit

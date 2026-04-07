@@ -670,6 +670,14 @@ let { Goptions.get = file_comment } =
     ~value:""
     ()
 
+(*s Extraction Go Module prefix *)
+
+let { Goptions.get = go_module_prefix } =
+  declare_string_option_and_ref
+    ~key:["Extraction"; "Go"; "Module"]
+    ~value:"extracted"
+    ()
+
 (*s Extraction Lang *)
 
 type lang = Ocaml | Haskell | Scheme | JSON | Go

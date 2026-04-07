@@ -152,6 +152,10 @@ val conservative_types : unit -> bool
 
 val file_comment : unit -> string
 
+(*s Go module prefix for modular extraction *)
+
+val go_module_prefix : unit -> string
+
 (*s Target language. *)
 
 type lang = Ocaml | Haskell | Scheme | JSON | Go

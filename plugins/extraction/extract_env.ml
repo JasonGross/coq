@@ -556,6 +556,8 @@ let module_filename table mp =
   let d = descr () in
   let fimpl_base = d.file_naming table mp ^ d.file_suffix in
   let fimpl = Filename.concat (output_directory ()) fimpl_base in
+  (* Ensure parent directory exists (needed for Go subdirectory layout) *)
+  let () = System.mkdir (Filename.dirname fimpl) in
   Some fimpl, Option.map ((^) f) d.sig_suffix, id
 
 (*s Extraction of one decl to stdout. *)
@@ -732,6 +734,8 @@ let separate_extraction ~opaque_access lr =
     | (MPdot _ | MPbound _), _ -> assert false
   in
   let () = List.iter print struc in
+  if lang () == Go then
+    Go.write_go_mod (output_directory ()) (go_module_prefix ());
   ()
 
 (*s Simple extraction in the Rocq toplevel. The vernacular command
@@ -784,6 +788,8 @@ let extraction_library ~opaque_access is_rec CAst.{loc;v=m} =
     | _ -> assert false
   in
   let () = List.iter print struc in
+  if lang () == Go then
+    Go.write_go_mod (output_directory ()) (go_module_prefix ());
   ()
 
 (* For the test-suite :

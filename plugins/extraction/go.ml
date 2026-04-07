@@ -318,7 +318,11 @@ let pp_logical_ind packet =
 (* Standard sum type: interface + structs *)
 let pp_standard_ind table p cv =
   let tname = pp_global table Type p.ip_typename_ref in
-  let marker = "is" ^ Common.pp_global_name table Type p.ip_typename_ref in
+  let marker =
+    let base = Common.pp_global_name table Type p.ip_typename_ref in
+    if State.get_modular table then "Is" ^ base
+    else "is" ^ base
+  in
   (* Interface type *)
   str "type " ++ tname ++ str " interface{ " ++ str marker ++ str "() }" ++ fnl () ++
   (* One struct per constructor *)
@@ -510,15 +514,37 @@ let pp_struct table =
 
 (*s Preamble *)
 
-let preamble table mod_name comment _used_modules usf =
+let preamble table mod_name comment used_modules usf =
+  let modular = State.get_modular table in
+  let pkg_name =
+    if modular then
+      String.lowercase_ascii (Id.to_string mod_name)
+    else
+      Id.to_string mod_name
+  in
   (match comment with
     | None -> mt ()
     | Some com -> pp_block_comment com ++ fnl2 ())
   ++
-  str "package " ++ Id.print mod_name ++ fnl2 ()
+  str "package " ++ str pkg_name ++ fnl2 ()
   ++
-  (if usf.magic then
-     str "import \"unsafe\"" ++ fnl2 ()
+  (* Import block: combine unsafe and cross-package imports *)
+  (let has_unsafe = usf.magic in
+   let pkg_imports =
+     if modular && not (DirPath.Set.is_empty used_modules) then
+       let prefix = go_module_prefix () in
+       List.map (fun dp ->
+         let pkg = String.lowercase_ascii
+           (string_of_modfile (State.get_table table) dp) in
+         "  \"" ^ prefix ^ "/" ^ pkg ^ "\""
+       ) (DirPath.Set.elements used_modules)
+     else []
+   in
+   if has_unsafe || pkg_imports <> [] then
+     str "import (" ++ fnl () ++
+     (if has_unsafe then str "  \"unsafe\"" ++ fnl () else mt ()) ++
+     prlist (fun s -> str s ++ fnl ()) pkg_imports ++
+     str ")" ++ fnl2 ()
    else mt ())
   ++
   (if usf.mldummy then
@@ -531,7 +557,21 @@ let preamble table mod_name comment _used_modules usf =
      str "}" ++ fnl2 ()
    else mt ())
 
-let file_naming state mp = file_of_modfile (State.get_table state) mp
+let file_naming state mp =
+  let base = file_of_modfile (State.get_table state) mp in
+  if State.get_modular state then
+    let pkg = String.lowercase_ascii base in
+    Filename.concat pkg pkg  (* → "nat_utils/nat_utils" → "nat_utils/nat_utils.go" *)
+  else
+    base
+
+(*s go.mod generation for modular extraction *)
+
+let write_go_mod dir module_prefix =
+  let path = Filename.concat dir "go.mod" in
+  let oc = open_out path in
+  Printf.fprintf oc "module %s\n\ngo 1.21\n" module_prefix;
+  close_out oc
 
 (*s The [go_descr] record. *)
 
