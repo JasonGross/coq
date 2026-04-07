@@ -46,10 +46,12 @@ type S struct{ Field0 any }
 func (S) isnat() {}
 
 
-type mypoint struct {
+type mypoint interface{ ismypoint() }
+type Mk_mypoint struct {
   Field0 any
   Field1 any
 }
+func (Mk_mypoint) ismypoint() {}
 
 
 
@@ -83,7 +85,7 @@ func from_opt(d any, o any) any {
 
 func test_let(n any) any {
   return func() any {
-             x := S{Field0: n}
+             var x any = S{Field0: n}
              return S{Field0: x}
            }()
 }
@@ -199,19 +201,17 @@ func eqb(n any, m any) any {
 func local_add(n any) any {
   return func() any {
            var go0 any
-           go0 = func(m any, acc any) any {
-             return func() any {
-                      switch _v0 := m.(type) {
-                      case O:
-                        return acc
-                      case S:
-                        p := _v0.Field0
-                        return go0.(func(any, any) any)(p, S{Field0: acc})
-                      }
-                      return nil
-                    }()
-           }
-           return go0.(func(any, any) any)(n, O{})
+           go0 = func(m any) any { return func(acc any) any { return func() any {
+  switch _v0 := m.(type) {
+  case O:
+    return acc
+  case S:
+    p := _v0.Field0
+    return go0.(func(any) any)(p).(func(any) any)(S{Field0: acc})
+  }
+  return nil
+}() } }
+           return go0.(func(any) any)(n).(func(any) any)(O{})
          }()
 }
 

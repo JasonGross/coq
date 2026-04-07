@@ -56,6 +56,17 @@ let pp_global table k r =
   if is_inline_custom r then str (find_custom r)
   else str (Common.pp_global table k r)
 
+(* Arity table: maps global references to their number of Go parameters.
+   Used to detect partial application and generate wrapper closures. *)
+let arity_table : (GlobRef.t, int) Hashtbl.t = Hashtbl.create 97
+
+let record_arity (r : GlobRef.t) def =
+  let fl, _ = collect_lams def in
+  Hashtbl.replace arity_table r (List.length fl)
+
+let get_arity (r : Miniml.global) =
+  Hashtbl.find_opt arity_table r.glob
+
 (*s Pretty-printing of types. Go uses [any] for type variables and unknowns. *)
 
 let rec pp_type table par = function
@@ -110,14 +121,12 @@ let rec pp_expr table par env args =
         let id = get_db_name n env in
         let id = if Id.equal id dummy_name then Id.of_string "__" else id in
         if not (List.is_empty args) then
-          (* Local variables have type [any]; to call them as functions we need
-             a type assertion to the appropriate func(...) any signature. *)
-          let nargs = List.length args in
-          let any_params = String.concat ", "
-            (List.init nargs (fun _ -> "any")) in
-          let cast =
-            go_id id ++ str (".(func(" ^ any_params ^ ") any)") in
-          go_apply cast par args
+          (* Local variables have type [any]; function values stored in locals
+             are curried (single-arg), so we chain single-arg type assertions. *)
+          let head = List.fold_left (fun acc arg ->
+            acc ++ str ".(func(any) any)(" ++ arg ++ str ")"
+          ) (go_id id) args in
+          if par then str "(" ++ head ++ str ")" else head
         else
           go_id id
     | MLapp (f,args') ->
@@ -127,27 +136,51 @@ let rec pp_expr table par env args =
         let fl,a' = collect_lams a in
         let fl,env' = push_vars (List.map id_of_mlid fl) env in
         let fl = List.rev fl in
-        (* Use str for the func(...) prefix to prevent line breaks before { *)
-        let params_str = String.concat ", "
-          (List.map (fun id -> Id.to_string id ^ " any") fl) in
-        let st =
-          str ("func(" ^ params_str ^ ") any { return ") ++
-          pp_expr table false env' [] a' ++ str " }"
-        in
-        apply2 st
+        (* Emit curried (single-arg) lambdas so that local variable calls
+           can use chained .(func(any) any) type assertions.
+           Render each layer to a string to prevent Pp line breaks between
+           [return] and the body (Go's automatic semicolon insertion). *)
+        let body_str = Pp.string_of_ppcmds
+          (pp_expr table false env' [] a') in
+        let st = List.fold_right (fun id inner ->
+          "func(" ^ Id.to_string id ^ " any) any { return " ^ inner ^ " }"
+        ) fl body_str in
+        apply2 (str st)
     | MLletin (id,a1,a2) ->
         let i,env' = push_vars [id_of_mlid id] env in
         let pp_id = go_id (List.hd i)
         and pp_a1 = pp_expr table false env [] a1
         and pp_a2 = pp_expr table false env' [] a2 in
-        (* Go doesn't allow := in expression position, so wrap in IIFE *)
+        (* Go doesn't allow := in expression position, so wrap in IIFE.
+           Declare with explicit [any] type so type switches work on the var. *)
         apply2
           (str "func() any {" ++ fnl () ++
-           str "  " ++ hov 2 (pp_id ++ str " := " ++ pp_a1) ++ fnl () ++
+           str "  " ++ hov 2 (str "var " ++ pp_id ++ str " any = " ++ pp_a1) ++ fnl () ++
            str "  " ++ hov 2 (str "return " ++ pp_a2) ++ fnl () ++
            str "}()")
     | MLglob r ->
-        apply (pp_global table Term r)
+        let supplied = List.length args in
+        (match get_arity r with
+         | Some arity when supplied < arity && arity > 0 ->
+             (* Partial application or function-as-value: wrap remaining args
+                in curried closures for chained .(func(any) any) calls. *)
+             let remaining = arity - supplied in
+             let extra_ids = List.init remaining
+               (fun i -> "_pa" ^ string_of_int i) in
+             let extra_args = List.map str extra_ids in
+             let all_args = args @ extra_args in
+             let full_call_str = Pp.string_of_ppcmds (
+               pp_global table Term r ++ str "(" ++
+               prlist_with_sep (fun () -> str ", ") identity all_args ++
+               str ")") in
+             (* Build curried closures from inside out *)
+             let curried = List.fold_right (fun id inner ->
+               "func(" ^ id ^ " any) any { return " ^ inner ^ " }"
+             ) extra_ids full_call_str in
+             let result = str curried in
+             if par then str "(" ++ result ++ str ")" else result
+         | _ ->
+             apply (pp_global table Term r))
     | MLcons (_,r,a) as c ->
         assert (List.is_empty args);
         begin match a with
@@ -223,7 +256,15 @@ let rec pp_expr table par env args =
          | "" -> str "dummy__"
          | s -> str "dummy__" ++ spc () ++ pp_block_comment (str s))
     | MLmagic a ->
-        go_apply (str "magic__") par (pp_expr table false env [] a :: args)
+        if List.is_empty args then
+          go_apply (str "magic__") par [pp_expr table false env [] a]
+        else
+          (* magic__(a) returns any; chain single-arg type assertions *)
+          let head = str "magic__(" ++ pp_expr table false env [] a ++ str ")" in
+          let result = List.fold_left (fun acc arg ->
+            acc ++ str ".(func(any) any)(" ++ arg ++ str ")"
+          ) head args in
+          if par then str "(" ++ result ++ str ")" else result
     | MLaxiom s ->
         apply (str "panic(\"AXIOM TO BE REALIZED: " ++ str s ++ str "\")")
     | MLuint i ->
@@ -244,7 +285,6 @@ and pp_pat table env v_name pv =
     pv
 
 and pp_field_binding id field_expr =
-  (* In Go, _ cannot use := (short variable declaration), must use = *)
   let id_str = Id.to_string id in
   if String.equal id_str "_" then
     str "    _ = " ++ field_expr ++ fnl ()
@@ -296,27 +336,28 @@ and pp_fix table par env i (ids,bl) args =
     (v 0
        (str "func() any {" ++ fnl () ++
         (* First pass: declare variables as [any] so they can be called
-           via type assertion, matching the convention for all locals *)
+           via chained .(func(any) any) type assertions *)
         prvecti (fun _j _def ->
           str "  var " ++ go_id ids.(_j) ++ str " any" ++ fnl ()
         ) bl ++
-        (* Second pass: assign function bodies *)
+        (* Second pass: assign curried function bodies *)
         prvecti (fun j def ->
           let fl,t' = collect_lams def in
           let fl,env' = push_vars (List.map id_of_mlid fl) env in
-          let pp_params =
-            prlist_with_sep (fun () -> str ", ")
-              (fun id -> go_id id ++ str " any") (List.rev fl)
-          in
-          str "  " ++ go_id ids.(j) ++ str " = func(" ++ pp_params ++ str ") any {" ++ fnl () ++
-          str "    return " ++ pp_expr table false env' [] t' ++ fnl () ++
-          str "  }" ++ fnl ()
+          let fl = List.rev fl in
+          let body_str = Pp.string_of_ppcmds
+            (pp_expr table false env' [] t') in
+          let curried = List.fold_right (fun id inner ->
+            "func(" ^ Id.to_string id ^ " any) any { return " ^ inner ^ " }"
+          ) fl body_str in
+          str "  " ++ go_id ids.(j) ++ str (" = " ^ curried) ++ fnl ()
         ) bl ++
-        (* Call the i-th fixpoint function with type assertion *)
-        (let nargs = List.length args in
-         let any_params = String.concat ", " (List.init nargs (fun _ -> "any")) in
-         let cast = go_id ids.(i) ++ str (".(func(" ^ any_params ^ ") any)") in
-         str "  return " ++ go_apply cast false args ++ fnl ()) ++
+        (* Call the i-th fixpoint function with chained type assertions *)
+        (let head = List.fold_left (fun acc arg ->
+           acc ^ ".(func(any) any)(" ^
+           Pp.string_of_ppcmds arg ^ ")"
+         ) (Id.to_string ids.(i)) args in
+         str ("  return " ^ head) ++ fnl ()) ++
         str "}()"))
 
 (*s Pretty-printing of inductive types *)
@@ -351,15 +392,26 @@ let pp_standard_ind table p cv =
 
 let pp_record_ind table _fields p =
   let tname = pp_global table Type p.ip_typename_ref in
-  match p.ip_types.(0) with
-  | [] -> str "type " ++ tname ++ str " struct{}" ++ fnl ()
+  let cname = pp_global table Cons p.ip_consnames_ref.(0) in
+  let marker =
+    let base = Common.pp_global_name table Type p.ip_typename_ref in
+    if State.get_modular table then "Is" ^ base
+    else "is" ^ base
+  in
+  (* Interface so the record can be used in type switches *)
+  str "type " ++ tname ++ str " interface{ " ++ str marker ++ str "() }" ++ fnl () ++
+  (match p.ip_types.(0) with
+  | [] ->
+    str "type " ++ cname ++ str " struct{}" ++ fnl () ++
+    str "func (" ++ cname ++ str ") " ++ str marker ++ str "() {}" ++ fnl ()
   | types ->
     let fields = List.mapi (fun i _ ->
       str ("  Field" ^ string_of_int i) ++ str " any"
     ) types in
-    str "type " ++ tname ++ str " struct {" ++ fnl () ++
+    str "type " ++ cname ++ str " struct {" ++ fnl () ++
     prlist_with_sep (fun () -> fnl ()) identity fields ++ fnl () ++
-    str "}" ++ fnl ()
+    str "}" ++ fnl () ++
+    str "func (" ++ cname ++ str ") " ++ str marker ++ str "() {}" ++ fnl ())
 
 let pp_singleton table packet =
   let name = pp_global table Type packet.ip_typename_ref in
@@ -426,6 +478,10 @@ let rec pp_decl table d =
       let names = Array.map
         (fun r -> if is_inline_custom r then mt () else pp_global table Term r) rv
       in
+      (* Record arities for partial application detection *)
+      Array.iteri (fun i r ->
+        if not (is_inline_custom r) then record_arity r.glob defs.(i)
+      ) rv;
       (* Check if mutual recursion (more than one non-void binding) *)
       let non_void = Array.to_list (Array.mapi (fun i r ->
         let void = is_inline_custom r ||
@@ -445,7 +501,12 @@ let rec pp_decl table d =
           in
           if void then mt ()
           else
-            str "  " ++ names.(i) ++ str " func(any) any" ++ fnl ()
+            let fl, _ = collect_lams defs.(i) in
+            let nparams = List.length fl in
+            let any_params = String.concat ", "
+              (List.init nparams (fun _ -> "any")) in
+            str "  " ++ names.(i) ++
+            str (" func(" ^ any_params ^ ") any") ++ fnl ()
         ) rv ++
         str ")" ++ fnl2 () ++
         str "func init() {" ++ fnl () ++
@@ -485,12 +546,14 @@ let rec pp_decl table d =
           rv
   | Dterm (r, a, t) ->
       if is_inline_custom r then mt ()
-      else
+      else begin
+        record_arity r.glob a;
         let e = pp_global table Term r in
         if is_custom r then
           hov 0 (str "var " ++ e ++ str " = " ++ str (find_custom r) ++ fnl2 ())
         else
           pp_function table e a ++ fnl2 ()
+      end
 
 and pp_function table name def =
   let fl,t' = collect_lams def in
