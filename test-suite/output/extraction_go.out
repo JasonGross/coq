@@ -144,7 +144,7 @@ func myid(x any) any {
 
 
 func compose(g any, f any, x any) any {
-  return g(f(x))
+  return g.(func(any) any)(f.(func(any) any)(x))
 }
 
 
@@ -179,14 +179,14 @@ func eqb(n any, m any) any {
                       return nil
                     }()
            case S:
-             n' := _v0.Field0
+             n0 := _v0.Field0
              return func() any {
                       switch _v2 := m.(type) {
                       case O:
                         return False{}
                       case S:
-                        m' := _v2.Field0
-                        return eqb(n', m')
+                        m0 := _v2.Field0
+                        return eqb(n0, m0)
                       }
                       return nil
                     }()
@@ -198,7 +198,7 @@ func eqb(n any, m any) any {
 
 func local_add(n any) any {
   return func() any {
-           var go0 func(any, any) any
+           var go0 any
            go0 = func(m any, acc any) any {
              return func() any {
                       switch _v0 := m.(type) {
@@ -206,12 +206,12 @@ func local_add(n any) any {
                         return acc
                       case S:
                         p := _v0.Field0
-                        return go0(p, S{Field0: acc})
+                        return go0.(func(any, any) any)(p, S{Field0: acc})
                       }
                       return nil
                     }()
            }
-           return go0(n, O{})
+           return go0.(func(any, any) any)(n, O{})
          }()
 }
 

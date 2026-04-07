@@ -98,8 +98,10 @@ let begins_with_CoqXX s =
   with Not_found -> false
 
 let unquote s =
-  if lang () != Scheme then s
-  else String.map (fun c -> if c == '\'' then '~' else c) s
+  match lang () with
+  | Scheme -> String.map (fun c -> if c == '\'' then '~' else c) s
+  | Go -> String.map (fun c -> if c == '\'' then '0' else c) s
+  | _ -> s
 
 let rec qualify delim = function
   | [] -> assert false
@@ -714,7 +716,7 @@ let pp_global_with_key table k key r =
       | Ocaml -> pp_ocaml_gen table k mp rls (Some l)
       | Go ->
         if State.get_modular table then pp_go_gen table k mp rls
-        else s
+        else unquote s
 
 let pp_global table k r =
   pp_global_with_key table k (repr_of_r r) r

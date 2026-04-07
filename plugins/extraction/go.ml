@@ -43,6 +43,13 @@ let keywords =
 let pp_comment s = str "// " ++ s ++ fnl ()
 let pp_block_comment s = str "/* " ++ hov 0 s ++ str " */"
 
+(* Go identifiers cannot contain '\'' (prime/tick) which Coq uses
+   for variable names like i', a', etc.  Replace them with a valid suffix. *)
+let go_id id =
+  let s = Id.to_string id in
+  let s' = String.map (fun c -> if c == '\'' then '0' else c) s in
+  if String.equal s s' then Id.print id else str s'
+
 (*s Pretty-printing of global references. *)
 
 let pp_global table k r =
@@ -102,7 +109,17 @@ let rec pp_expr table par env args =
     | MLrel n ->
         let id = get_db_name n env in
         let id = if Id.equal id dummy_name then Id.of_string "__" else id in
-        apply (Id.print id)
+        if not (List.is_empty args) then
+          (* Local variables have type [any]; to call them as functions we need
+             a type assertion to the appropriate func(...) any signature. *)
+          let nargs = List.length args in
+          let any_params = String.concat ", "
+            (List.init nargs (fun _ -> "any")) in
+          let cast =
+            go_id id ++ str (".(func(" ^ any_params ^ ") any)") in
+          go_apply cast par args
+        else
+          go_id id
     | MLapp (f,args') ->
         let stl = List.map (pp_expr table false env []) args' in
         pp_expr table par env (stl @ args) f
@@ -110,18 +127,17 @@ let rec pp_expr table par env args =
         let fl,a' = collect_lams a in
         let fl,env' = push_vars (List.map id_of_mlid fl) env in
         let fl = List.rev fl in
-        let pp_params =
-          prlist_with_sep (fun () -> str ", ")
-            (fun id -> Id.print id ++ str " any") fl
-        in
+        (* Use str for the func(...) prefix to prevent line breaks before { *)
+        let params_str = String.concat ", "
+          (List.map (fun id -> Id.to_string id ^ " any") fl) in
         let st =
-          str "func(" ++ pp_params ++ str ") any" ++ spc () ++
-          str "{ return " ++ pp_expr table false env' [] a' ++ str " }"
+          str ("func(" ^ params_str ^ ") any { return ") ++
+          pp_expr table false env' [] a' ++ str " }"
         in
         apply2 st
     | MLletin (id,a1,a2) ->
         let i,env' = push_vars [id_of_mlid id] env in
-        let pp_id = Id.print (List.hd i)
+        let pp_id = go_id (List.hd i)
         and pp_a1 = pp_expr table false env [] a1
         and pp_a2 = pp_expr table false env' [] a2 in
         (* Go doesn't allow := in expression position, so wrap in IIFE *)
@@ -233,7 +249,7 @@ and pp_field_binding id field_expr =
   if String.equal id_str "_" then
     str "    _ = " ++ field_expr ++ fnl ()
   else
-    str "    " ++ Id.print id ++ str " := " ++ field_expr ++ fnl ()
+    str "    " ++ go_id id ++ str " := " ++ field_expr ++ fnl ()
 
 and pp_one_pat table env v_name ids p t =
   match p with
@@ -253,7 +269,7 @@ and pp_one_pat table env v_name ids p t =
       let bindings = List.mapi (fun i _ ->
         match List.nth_opt ids i with
         | Some id ->
-          str "    " ++ Id.print id ++
+          str "    " ++ go_id id ++
           str (" := " ^ v_name ^ ".F" ^ string_of_int i) ++ fnl ()
         | None -> mt ()
       ) pats in
@@ -265,7 +281,7 @@ and pp_one_pat table env v_name ids p t =
       str "    return " ++ pp_expr table false env [] t
   | Prel n ->
       str "  default:" ++ fnl () ++
-      str "    " ++ Id.print (get_db_name n env) ++ str (" := " ^ v_name) ++ fnl () ++
+      str "    " ++ go_id (get_db_name n env) ++ str (" := " ^ v_name) ++ fnl () ++
       str "    return " ++ pp_expr table false env [] t
 
 and pp_bind_pattern_fields _table _env v_name ids _pats _start_idx =
@@ -279,15 +295,10 @@ and pp_fix table par env i (ids,bl) args =
   pp_par par
     (v 0
        (str "func() any {" ++ fnl () ++
-        (* First pass: declare variables with correct function types *)
-        prvecti (fun j def ->
-          let fl,_ = collect_lams def in
-          let nargs = List.length fl in
-          let pp_arg_types =
-            prlist_with_sep (fun () -> str ", ")
-              (fun _ -> str "any") (List.init nargs (fun i -> i))
-          in
-          str "  var " ++ Id.print ids.(j) ++ str " func(" ++ pp_arg_types ++ str ") any" ++ fnl ()
+        (* First pass: declare variables as [any] so they can be called
+           via type assertion, matching the convention for all locals *)
+        prvecti (fun _j _def ->
+          str "  var " ++ go_id ids.(_j) ++ str " any" ++ fnl ()
         ) bl ++
         (* Second pass: assign function bodies *)
         prvecti (fun j def ->
@@ -295,13 +306,17 @@ and pp_fix table par env i (ids,bl) args =
           let fl,env' = push_vars (List.map id_of_mlid fl) env in
           let pp_params =
             prlist_with_sep (fun () -> str ", ")
-              (fun id -> Id.print id ++ str " any") (List.rev fl)
+              (fun id -> go_id id ++ str " any") (List.rev fl)
           in
-          str "  " ++ Id.print ids.(j) ++ str " = func(" ++ pp_params ++ str ") any {" ++ fnl () ++
+          str "  " ++ go_id ids.(j) ++ str " = func(" ++ pp_params ++ str ") any {" ++ fnl () ++
           str "    return " ++ pp_expr table false env' [] t' ++ fnl () ++
           str "  }" ++ fnl ()
         ) bl ++
-        str "  return " ++ go_apply (Id.print ids.(i)) false args ++ fnl () ++
+        (* Call the i-th fixpoint function with type assertion *)
+        (let nargs = List.length args in
+         let any_params = String.concat ", " (List.init nargs (fun _ -> "any")) in
+         let cast = go_id ids.(i) ++ str (".(func(" ^ any_params ^ ") any)") in
+         str "  return " ++ go_apply cast false args ++ fnl ()) ++
         str "}()"))
 
 (*s Pretty-printing of inductive types *)
@@ -447,7 +462,7 @@ let rec pp_decl table d =
             let fl,env' = push_vars (List.map id_of_mlid fl) (empty_env table ()) in
             let pp_params =
               prlist_with_sep (fun () -> str ", ")
-                (fun id -> Id.print id ++ str " any") (List.rev fl)
+                (fun id -> go_id id ++ str " any") (List.rev fl)
             in
             str "  " ++ names.(i) ++ str " = func(" ++ pp_params ++ str ") any {" ++ fnl () ++
             str "    return " ++ pp_expr table false env' [] t' ++ fnl () ++
@@ -482,7 +497,7 @@ and pp_function table name def =
   let fl,env' = push_vars (List.map id_of_mlid fl) (empty_env table ()) in
   let pp_params =
     prlist_with_sep (fun () -> str ", ")
-      (fun id -> Id.print id ++ str " any") (List.rev fl)
+      (fun id -> go_id id ++ str " any") (List.rev fl)
   in
   str "func " ++ name ++ str "(" ++ pp_params ++ str ") any {" ++ fnl () ++
   str "  return " ++ hov 2 (pp_expr table false env' [] t') ++ fnl () ++
