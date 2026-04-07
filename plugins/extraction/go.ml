@@ -179,6 +179,17 @@ let rec pp_expr table par env args =
              ) extra_ids full_call_str in
              let result = str curried in
              if par then str "(" ++ result ++ str ")" else result
+         | Some arity when supplied > arity && arity > 0 ->
+             (* More args than parameters: pass [arity] args directly,
+                chain the rest as type assertions (the function returns
+                curried closures typed as [any]). *)
+             let direct_args = List.firstn arity args in
+             let extra_args = List.skipn arity args in
+             let head = go_apply (pp_global table Term r) false direct_args in
+             let result = List.fold_left (fun acc arg ->
+               acc ++ str ".(func(any) any)(" ++ arg ++ str ")"
+             ) head extra_args in
+             if par then str "(" ++ result ++ str ")" else result
          | _ ->
              apply (pp_global table Term r))
     | MLcons (_,r,a) as c ->
