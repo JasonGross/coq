@@ -155,6 +155,7 @@ val file_comment : unit -> string
 (*s Go module prefix for modular extraction *)
 
 val go_module_prefix : unit -> string
+val go_safe_pkg_name : string -> string
 
 (*s Target language. *)
 

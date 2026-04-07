@@ -687,7 +687,7 @@ let pp_go_gen table k mp rls = match rls with
       name
     else
       (* Different package — qualify with package name *)
-      let pkg = String.lowercase_ascii s in
+      let pkg = Table.go_safe_pkg_name s in
       pkg ^ "." ^ name
 
 (* Main name printing function for a reference *)

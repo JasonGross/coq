@@ -678,6 +678,22 @@ let { Goptions.get = go_module_prefix } =
     ~value:"extracted"
     ()
 
+(* Names reserved for Go package names in modular extraction.
+   Includes Go keywords plus standard library packages that the
+   extraction itself may import. *)
+let go_reserved_pkg_names =
+  [ "break"; "case"; "chan"; "const"; "continue"; "default"; "defer";
+    "else"; "fallthrough"; "for"; "func"; "go"; "goto"; "if"; "import";
+    "interface"; "map"; "package"; "range"; "return"; "select"; "struct";
+    "switch"; "type"; "var";
+    "true"; "false"; "nil";
+    "unsafe";
+    "init"; "main" ]
+
+let go_safe_pkg_name s =
+  let pkg = String.lowercase_ascii s in
+  if List.mem pkg go_reserved_pkg_names then pkg ^ "_" else pkg
+
 (*s Extraction Lang *)
 
 type lang = Ocaml | Haskell | Scheme | JSON | Go

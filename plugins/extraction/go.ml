@@ -518,7 +518,7 @@ let preamble table mod_name comment used_modules usf =
   let modular = State.get_modular table in
   let pkg_name =
     if modular then
-      String.lowercase_ascii (Id.to_string mod_name)
+      go_safe_pkg_name (Id.to_string mod_name)
     else
       Id.to_string mod_name
   in
@@ -534,7 +534,7 @@ let preamble table mod_name comment used_modules usf =
      if modular && not (DirPath.Set.is_empty used_modules) then
        let prefix = go_module_prefix () in
        List.map (fun dp ->
-         let pkg = String.lowercase_ascii
+         let pkg = go_safe_pkg_name
            (string_of_modfile (State.get_table table) dp) in
          "  \"" ^ prefix ^ "/" ^ pkg ^ "\""
        ) (DirPath.Set.elements used_modules)
@@ -560,7 +560,7 @@ let preamble table mod_name comment used_modules usf =
 let file_naming state mp =
   let base = file_of_modfile (State.get_table state) mp in
   if State.get_modular state then
-    let pkg = String.lowercase_ascii base in
+    let pkg = go_safe_pkg_name base in
     Filename.concat pkg pkg  (* → "nat_utils/nat_utils" → "nat_utils/nat_utils.go" *)
   else
     base
