@@ -147,6 +147,35 @@ This package provides the RocqIDE, a graphical user interface for the
 development of interactive proofs."))
 
 (package
+ (name rocq-prover)
+ (allow_empty)
+ (depends
+  (rocq-runtime (= :version))
+  (rocq-core (= :version)))
+ (synopsis "The Rocq Prover")
+ (description "The Rocq Prover is an interactive theorem prover, or proof assistant. It provides
+a formal language to write mathematical definitions, executable
+algorithms and theorems together with an environment for
+semi-interactive development of machine-checked proofs.
+
+Typical applications include the certification of properties of
+programming languages (e.g. the CompCert compiler certification
+project, or the Bedrock verified low-level programming library), the
+formalization of mathematics (e.g. the full formalization of the
+Feit-Thompson theorem or homotopy type theory) and teaching.
+
+This package is a virtual package gathering the rocq-runtime and rocq-core packages."))
+
+(package
+ (name coq)
+ (allow_empty)
+ (depends
+  (rocq-prover (= :version))
+  (coq-core (= :version))
+  (coqide-server (= :version)))
+ (synopsis "Compatibility metapackage for Coq after the Rocq renaming"))
+
+(package
  (name rocq-test-suite)
  (depends
   (rocq-core (= :version))

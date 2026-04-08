@@ -11,6 +11,10 @@
  (old_public_name coq-core.kernel)
  (new_public_name rocq-runtime.kernel))
 
+(deprecated_library_name
+ (old_public_name coq.kernel)
+ (new_public_name rocq-runtime.kernel))
+
 (executable
   (name genOpcodeFiles)
   (modules genOpcodeFiles))
