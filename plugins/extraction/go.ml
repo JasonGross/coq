@@ -54,7 +54,27 @@ let go_id id = let s = go_id_str id in str s
 
 let pp_global table k r =
   if is_inline_custom r then str (find_custom r)
-  else str (Common.pp_global table k r)
+  else
+    let name = Common.pp_global table k r in
+    let name = match k, r.glob with
+      | Cons, GlobRef.ConstructRef ((mind, i), _) ->
+          let ind_ref = { r with glob = GlobRef.IndRef (mind, i) } in
+          let ind_name = Common.pp_global_name table Type ind_ref in
+          let cons_bare = Common.pp_global_name table Cons r in
+          if String.equal cons_bare ind_name then
+            (* Constructor would shadow its inductive type's Go name;
+               disambiguate by prefixing with "Mk". *)
+            (* The qualified [name] may have a package prefix like "pkg.Foo";
+               insert "Mk" before the unqualified component. *)
+            (try
+               let dot = String.rindex name '.' in
+               String.sub name 0 (dot + 1) ^ "Mk" ^
+               String.sub name (dot + 1) (String.length name - dot - 1)
+             with Not_found -> "Mk" ^ name)
+          else name
+      | _ -> name
+    in
+    str name
 
 (* Arity table: maps global references to their number of Go parameters.
    Used to detect partial application and generate wrapper closures. *)
