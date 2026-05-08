@@ -196,6 +196,12 @@ let rec pp_expr table par env args =
                acc ++ str ".(func(any) any)(" ++ arg ++ str ")"
              ) head extra_args in
              if par then str "(" ++ result ++ str ")" else result
+         | Some 0 ->
+             (* Zero-arg function referenced as a value (supplied = 0):
+                emit the call to obtain the [any] value rather than the
+                bare function pointer. *)
+             let head = pp_global table Term r ++ str "()" in
+             if par then str "(" ++ head ++ str ")" else head
          | _ ->
              apply (pp_global table Term r))
     | MLcons (_,r,a) as c ->
