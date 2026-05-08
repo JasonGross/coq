@@ -289,7 +289,7 @@ let rec pp_expr table par env args =
           ) head args in
           if par then str "(" ++ result ++ str ")" else result
     | MLaxiom s ->
-        apply (str "panic(\"AXIOM TO BE REALIZED: " ++ str s ++ str "\")")
+        apply (str "func() any { panic(\"AXIOM TO BE REALIZED: " ++ str s ++ str "\") }()")
     | MLuint i ->
         apply (str "uint64(" ++ str (Uint63.to_string i) ++ str ")")
     | MLfloat f ->
@@ -585,8 +585,14 @@ and pp_function table name def =
     prlist_with_sep (fun () -> str ", ")
       (fun id -> go_id id ++ str " any") (List.rev fl)
   in
+  let body = match t' with
+    | MLaxiom s ->
+        str "  panic(\"AXIOM TO BE REALIZED: " ++ str s ++ str "\")"
+    | _ ->
+        str "  return " ++ hov 2 (pp_expr table false env' [] t')
+  in
   str "func " ++ name ++ str "(" ++ pp_params ++ str ") any {" ++ fnl () ++
-  str "  return " ++ hov 2 (pp_expr table false env' [] t') ++ fnl () ++
+  body ++ fnl () ++
   str "}"
 
 (*s Module structure *)
