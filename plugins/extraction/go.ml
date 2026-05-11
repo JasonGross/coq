@@ -463,19 +463,14 @@ let pp_singleton table packet =
   pp_comment (str "singleton inductive, whose constructor was " ++
               Id.print packet.ip_consnames.(0))
 
-let pp_coinductive table p =
-  let tname = pp_global table Type p.ip_typename_ref in
-  (* Thunk-wrapping struct *)
-  str "type " ++ tname ++ str " struct{ Force func() " ++ tname ++ str "_body }" ++ fnl () ++
-  (* Body struct with fields from first constructor *)
-  (if Array.length p.ip_types = 0 then mt ()
-   else
-     let fields = List.mapi (fun i _ ->
-       str ("  Field" ^ string_of_int i) ++ str " any"
-     ) p.ip_types.(0) in
-     str "type " ++ tname ++ str "_body struct {" ++ fnl () ++
-     prlist_with_sep (fun () -> fnl ()) identity fields ++ fnl () ++
-     str "}" ++ fnl ())
+(* Single-constructor [CoInductive] declarations extract like a record:
+   one interface (the type itself) plus one struct (named after the
+   constructor) that implements it. The previous emission declared a
+   thunk-wrapping [type T struct{ Force func() T_body }] plus a
+   nominally-named [T_body] struct, but construction sites still used
+   the constructor name (e.g. [Coq_go{Field0: ...}]) which produced an
+   undefined-symbol error in Go. *)
+let pp_coinductive table p = pp_record_ind table [] p
 
 let rec pp_ind table first i ind =
   if i >= Array.length ind.ind_packets then
