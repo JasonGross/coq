@@ -166,17 +166,30 @@ let rec pp_expr table par env args =
           "func(" ^ go_id_str id ^ " any) any { return " ^ inner ^ " }"
         ) fl body_str in
         apply2 (str st)
-    | MLletin (id,a1,a2) ->
-        let i,env' = push_vars [id_of_mlid id] env in
-        let pp_id = go_id (List.hd i)
-        and pp_a1 = pp_expr table false env [] a1
-        and pp_a2 = pp_expr table false env' [] a2 in
+    | MLletin _ as letchain ->
+        (* Flatten chains of [let x := e in let y := e' in ...] into one
+           IIFE with multiple [var] declarations, instead of nesting one
+           IIFE per binding. The nested form (~30 closures deep in
+           practice) drives Go's escape analysis past linear scaling
+           and can OOM the compiler. *)
+        let rec collect env acc = function
+          | MLletin (id, a1, a2) ->
+              let i, env' = push_vars [id_of_mlid id] env in
+              let pp_id = go_id (List.hd i) in
+              let pp_a1 = pp_expr table false env [] a1 in
+              collect env' ((pp_id, pp_a1) :: acc) a2
+          | body -> List.rev acc, env, body
+        in
+        let bindings, env', body = collect env [] letchain in
+        let pp_body = pp_expr table false env' [] body in
         (* Go doesn't allow := in expression position, so wrap in IIFE.
            Declare with explicit [any] type so type switches work on the var. *)
         apply2
           (str "func() any {" ++ fnl () ++
-           str "  " ++ hov 2 (str "var " ++ pp_id ++ str " any = " ++ pp_a1) ++ fnl () ++
-           str "  " ++ hov 2 (str "return " ++ pp_a2) ++ fnl () ++
+           prlist (fun (id, a1) ->
+             str "  " ++ hov 2 (str "var " ++ id ++ str " any = " ++ a1) ++ fnl ()
+           ) bindings ++
+           str "  " ++ hov 2 (str "return " ++ pp_body) ++ fnl () ++
            str "}()")
     | MLglob r ->
         let supplied = List.length args in
