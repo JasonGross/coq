@@ -282,13 +282,25 @@ let rec pp_expr table par env args =
             pp_expr table false env [] t ++
             str ".(type) {"
         in
-        apply2
-          (v 0 (str "func() any {" ++ fnl () ++
-                switch_head ++ fnl () ++
-                pp_pat table env v_name pv ++
-                str "  }" ++ fnl () ++
-                str "  return nil" ++ fnl () ++
-                str "}()"))
+        (* Render the IIFE to a string before handing it back to the
+           outer printer. Without this, when the surrounding context is
+           past Format's [max_indent] (e.g. a deeply-nested switch arm),
+           opening the [v 0] box for [func() any { ... }()] triggers
+           Format's "tabulate from the left margin" behaviour: the
+           preceding [return ] sits on one line and the [func() any {]
+           starts a fresh line, which Go's automatic semicolon insertion
+           turns into [return;] followed by a dead expression-statement.
+           Rendering to a string keeps the IIFE atomic from the outer
+           formatter's perspective. *)
+        let iife_str = Pp.string_of_ppcmds (
+          v 0 (str "func() any {" ++ fnl () ++
+               switch_head ++ fnl () ++
+               pp_pat table env v_name pv ++
+               str "  }" ++ fnl () ++
+               str "  return nil" ++ fnl () ++
+               str "}()"))
+        in
+        apply2 (str iife_str)
     | MLfix (i,ids,defs) ->
         let ids',env' = push_vars (List.rev (Array.to_list ids)) env in
         pp_fix table par env' i (Array.of_list (List.rev ids'),defs) args
