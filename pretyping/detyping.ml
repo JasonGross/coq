@@ -208,6 +208,9 @@ type _ delay =
 (** Should we keep details of universes during detyping ? *)
 let print_universes = ref false
 
+(** Like print_universes but anonymizes universe level variables to _. *)
+let print_sorts = ref false
+
 (** Should we print hidden sort quality variables? *)
 let { Goptions.get = print_sort_quality } =
   Goptions.declare_bool_option_and_ref
@@ -384,13 +387,14 @@ let detype_quality sigma q =
 let detype_universe sigma u =
   UNamed (List.map (on_fst (detype_level_name sigma)) (Univ.Universe.repr u))
 
+let anon_univ = UAnonymous {rigid=UState.univ_flexible}
+
 let detype_sort sigma = function
   | SProp -> glob_SProp_sort
   | Prop -> glob_Prop_sort
   | Set -> glob_Set_sort
   | Type u ->
-      (if !print_universes
-       then None, detype_universe sigma u
+      (if !print_universes then None, detype_universe sigma u
        else glob_Type_sort)
   | QSort (q, u) ->
     if !print_universes then
@@ -400,7 +404,10 @@ let detype_sort sigma = function
       in
       q, detype_universe sigma u
     else if Evd.is_rigid_qvar sigma q then
-      Some (detype_qvar sigma q), UAnonymous {rigid=UState.univ_flexible}
+      Some (detype_qvar sigma q), anon_univ
+    else if !print_sorts then
+      let q = if print_sort_quality () then Some (detype_qvar sigma q) else None in
+      q, anon_univ
     else glob_Type_sort
 
 let detype_relevance_info sigma na =
@@ -848,15 +855,22 @@ type binder_kind = BProd | BLambda | BLetIn
 (* Main detyping function                                             *)
 
 let detype_instance sigma l =
-  if not !print_universes then None
+  if not !print_universes && not !print_sorts then None
   else
     let l = EInstance.kind sigma l in
     if UVars.Instance.is_empty l then None
-    else
+    else if !print_universes then
       let qs, us = UVars.Instance.to_array l in
       let qs = List.map (detype_quality sigma) (Array.to_list qs) in
       let us = List.map (detype_level sigma) (Array.to_list us) in
       Some (qs, us)
+    else
+      let qs, us = UVars.Instance.to_array l in
+      if Array.is_empty qs then None
+      else
+        let qs = List.map (detype_quality sigma) (Array.to_list qs) in
+        let us = List.map (fun _ -> anon_univ) (Array.to_list us) in
+        Some (qs, us)
 
 let delay (type a) (d : a delay) (f : a delay -> _ -> _ -> _ -> _ -> _ -> a glob_constr_r) flags env avoid sigma t : a glob_constr_g =
   match d with

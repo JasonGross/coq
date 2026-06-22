@@ -2026,6 +2026,14 @@ let () =
       optwrite = (fun b -> Constrextern.print_universes:=b) }
 
 let () =
+  declare_bool_option
+    { optstage = Summary.Stage.Interp;
+      optdepr  = None;
+      optkey   = ["Printing";"Sorts"];
+      optread  = (fun () -> !Detyping.print_sorts);
+      optwrite = (fun b -> Detyping.print_sorts:=b) }
+
+let () =
   (* no summary: handled as part of the debug state *)
   declare_option ~no_summary:true ~kind:BoolKind
     { optstage = Summary.Stage.Interp;
