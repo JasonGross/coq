@@ -2373,9 +2373,9 @@ let vernac_print =
       let cstr, _ = UnivGen.fresh_global_instance env gr in
       (gr, cstr)
     ) rs in
-    let nassums =
+    let (theory, nassums) =
       Assumptions.assumptions opaque_access st ~add_opaque:o ~add_transparent:t grs in
-    Printer.pr_assumptionset env sigma nassums
+    Printer.pr_assumptionset env sigma theory nassums
   | PrintStrategy r -> no_state @@ fun () -> print_strategy r
   | PrintRegistered -> no_state print_registered
   | PrintRegisteredSchemes -> no_state print_registered_schemes

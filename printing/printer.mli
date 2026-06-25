@@ -226,7 +226,15 @@ module ContextObjectSet : CSet.ExtS with type elt = context_object
 module ContextObjectMap : CMap.ExtS
   with type key = context_object and module Set := ContextObjectSet
 
-val pr_assumptionset : env -> evar_map -> types ContextObjectMap.t -> Pp.t
+val print_all_assumptions : unit -> bool
+
+type theory_assumptions = {
+  has_impredicative_set : bool;
+  has_rewrite_rules : bool;
+  has_type_in_type : bool;
+}
+
+val pr_assumptionset : env -> evar_map -> theory_assumptions -> types ContextObjectMap.t -> Pp.t
 
 val pr_goal_by_id : proof:Proof.t -> Id.t -> Pp.t
 val pr_goal_emacs : proof:Proof.t option -> int -> int -> Pp.t
