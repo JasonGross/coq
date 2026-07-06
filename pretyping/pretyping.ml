@@ -1370,7 +1370,11 @@ struct
     let fsign = Context.Rel.map (whd_betaiota !!env sigma) fsign in
     let hypnaming = VarSet.variables (Global.env ()) in
     let fsign,env_f = push_rel_context ~hypnaming sigma fsign env in
-    let obj indt rci p v f =
+    (* [sigma] is passed explicitly: the closure is applied after the
+       branch [f] has been pretyped, so using the outer [sigma] would
+       miss the evars created while pretyping [f] (contract_case
+       normalizes the branches through [sigma]). *)
+    let obj sigma indt rci p v f =
       if not record then
         let f = it_mkLambda_or_LetIn f fsign in
         let ci = make_case_info !!env (ind_of_ind_type indt) LetStyle in
@@ -1401,7 +1405,7 @@ struct
             let sigma, v =
               let ind,_ = dest_ind_family indf in
                 let sigma, rci = Typing.check_allowed_sort !!env sigma ind cj.uj_val p in
-                sigma, obj indty rci p cj.uj_val fj.uj_val
+                sigma, obj sigma indty rci p cj.uj_val fj.uj_val
             in
             sigma, { uj_val = v; uj_type = (substl (realargs@[cj.uj_val]) ccl) }
 
@@ -1420,7 +1424,7 @@ struct
             let sigma, v =
               let ind,_ = dest_ind_family indf in
                 let sigma, rci = Typing.check_allowed_sort !!env sigma ind cj.uj_val p in
-                sigma, obj indty rci p cj.uj_val fj.uj_val
+                sigma, obj sigma indty rci p cj.uj_val fj.uj_val
             in sigma, { uj_val = v; uj_type = ccl })
 
   let pretype_cases self (sty, po, tml, eqns)  =
