@@ -845,7 +845,7 @@ let () =
       let binder_annot = Context.make_annot (Name id) t_rel in
       return ((binder_annot, t), ans)
   | _ ->
-    throw Tac2ffi.err_notfocussed
+    throw err_notfocussed
 
 (** preterm -> constr *)
 
