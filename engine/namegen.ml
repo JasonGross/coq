@@ -261,6 +261,37 @@ let mangle_id id =
     else Id.of_string (prfx ^ "0")
   else id
 
+(* Optional recording of the names chosen by the generators below, used by
+   the "generated-hyp-name" warning to tell generated hypothesis names from
+   user-given ones. A name that a tactic also used explicitly during the
+   same run (see [record_explicit_id]) does not count as generated. *)
+
+type recording = { mutable generated : Id.Set.t; mutable explicit : Id.Set.t }
+
+let recording : recording option ref = ref None
+
+let record_generated_id id =
+  let () = match !recording with
+    | None -> ()
+    | Some r -> r.generated <- Id.Set.add id r.generated
+  in
+  id
+
+let record_explicit_id id = match !recording with
+  | None -> ()
+  | Some r -> r.explicit <- Id.Set.add id r.explicit
+
+let with_recorded_generated_ids f =
+  let saved = !recording in
+  let r = { generated = Id.Set.empty; explicit = Id.Set.empty } in
+  recording := Some r;
+  match f () with
+  | v -> recording := saved; (v, Id.Set.diff r.generated r.explicit)
+  | exception e ->
+    let e = Exninfo.capture e in
+    recording := saved;
+    Exninfo.iraise e
+
 (* Looks for next "good" name by lifting subscript *)
 
 let next_ident_away_from_post_mangling id bad =
@@ -269,7 +300,7 @@ let next_ident_away_from_post_mangling id bad =
 
 let next_ident_away_from id bad =
   let id = mangle_id id in
-  next_ident_away_from_post_mangling id bad
+  record_generated_id (next_ident_away_from_post_mangling id bad)
 
 (* Restart subscript from x0 if name starts with xN, or x00 if name
    starts with x0N, etc *)
@@ -316,11 +347,11 @@ let gen_ident (type a) ?(mangle = true) ?(filter = (fun _ -> false)) (gen : a t)
       let (id, state) = Fresh.fresh id state in
       if filter id then gen state id else id
     in
-    let id = gen state id in
+    let id = record_generated_id (gen state id) in
     (id, Fresh.add id state)
   | IdSet ->
     let rec gen id = if Id.Set.mem id state || filter id then gen (increment_subscript id) else id in
-    let id = gen id in
+    let id = record_generated_id (gen id) in
     (id, Id.Set.add id state)
 
 let next_name_away gen na avoid =
@@ -429,9 +460,10 @@ let next_global_ident_away senv id avoid =
 
 let next_ident_away id avoid =
   let id = mangle_id id in
-  if Id.Set.mem id avoid then
-    next_ident_away_from_post_mangling (restart_subscript id) (fun id -> Id.Set.mem id avoid)
-  else id
+  record_generated_id
+    (if Id.Set.mem id avoid then
+       next_ident_away_from_post_mangling (restart_subscript id) (fun id -> Id.Set.mem id avoid)
+     else id)
 
 let next_name_away_with_default default na avoid =
   let id = match na with Name id -> id | Anonymous -> Id.of_string default in

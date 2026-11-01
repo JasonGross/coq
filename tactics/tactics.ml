@@ -326,12 +326,20 @@ let find_name mayrepl decl naming gl = match naming with
       let env = Proofview.Goal.env gl in
       let sigma = Proofview.Goal.sigma gl in
       new_fresh_id idl (default_id env sigma decl) gl
-  | NamingBasedOn (id,idl) -> new_fresh_id idl id gl
+  | NamingBasedOn (id,idl) ->
+     let id' = new_fresh_id idl id gl in
+     (* The name the user asked for counts as user-given *)
+     if Id.equal id id' then Namegen.record_explicit_id id;
+     id'
   | NamingMustBe {CAst.loc;v=id} ->
      (* When name is given, we allow to hide a global name. *)
      let ids_of_hyps = Tacmach.pf_ids_set_of_hyps gl in
      if not mayrepl && Id.Set.mem id ids_of_hyps then
       TacticErrors.already_used ?loc id;
+     (* A name written by the user (hence located) is not a generated
+        one; tactics such as induction also pass their own generated names
+        as [NamingMustBe], without location *)
+     if Option.has_some loc then Namegen.record_explicit_id id;
      id
 
 (**************************************************************)
@@ -985,6 +993,7 @@ let intro_forthcoming_then_gen avoid move_flag ~dep bound n tac = match move_fla
 
 let intro_replacing id =
   Proofview.Goal.enter begin fun gl ->
+  Namegen.record_explicit_id id;
   let env, sigma = Proofview.Goal.(env gl, sigma gl) in
   let hyps = Proofview.Goal.hyps gl in
   let next_hyp = get_next_hyp_position env sigma id hyps in
@@ -1006,6 +1015,7 @@ let intro_replacing id =
 let intros_possibly_replacing ids =
   let suboptimal = true in
   Proofview.Goal.enter begin fun gl ->
+    List.iter Namegen.record_explicit_id ids;
     let env, sigma = Proofview.Goal.(env gl, sigma gl) in
     let hyps = Proofview.Goal.hyps gl in
     let posl = List.map (fun id -> (id, get_next_hyp_position env sigma id hyps)) ids in
@@ -1021,6 +1031,7 @@ let intros_possibly_replacing ids =
 (* This version assumes that replacement is actually possible *)
 let intros_replacing ids =
   Proofview.Goal.enter begin fun gl ->
+    List.iter Namegen.record_explicit_id ids;
     let hyps = Proofview.Goal.hyps gl in
     let env, sigma = Proofview.Goal.(env gl, sigma gl) in
     let posl = List.map (fun id -> (id, get_next_hyp_position env sigma id hyps)) ids in

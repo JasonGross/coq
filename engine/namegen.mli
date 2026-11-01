@@ -66,6 +66,16 @@ val it_mkLambda_or_LetIn_name : env -> evar_map -> constr -> rel_context -> cons
 
 val mangle_id : Id.t -> Id.t
 
+(** [with_recorded_generated_ids f] runs [f ()] and also returns the set of
+    identifiers chosen by the fresh-name generators of this module during
+    the run, minus those passed to [record_explicit_id] during the run
+    (used by the "generated-hyp-name" warning). *)
+val with_recorded_generated_ids : (unit -> 'a) -> 'a * Id.Set.t
+
+(** Declare that a tactic used this identifier because the user, or the
+    original hypothesis, named it so. *)
+val record_explicit_id : Id.t -> unit
+
 (** Avoid clashing with a name satisfying some predicate *)
 val next_ident_away_from : Id.t -> (Id.t -> bool) -> Id.t
 

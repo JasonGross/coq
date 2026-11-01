@@ -70,6 +70,7 @@ let use_end_tac ~with_end_tac end_tac =
   end
 
 let solve_core ~pstate n ~info ?(with_end_tac=CAst.make false) t =
+  GenHypNames.record_sentence ~pstate ~run:(fun () ->
   let pstate, status = Declare.Proof.map_fold_endline ~f:(fun etac p ->
       let with_end_tac = use_end_tac ~with_end_tac etac in
       let info = Option.append info (print_info_trace ()) in
@@ -80,7 +81,7 @@ let solve_core ~pstate n ~info ?(with_end_tac=CAst.make false) t =
       p,status) pstate in
   let pstate = Declare.Internal.register_side_effects pstate in
   if not status then Feedback.feedback Feedback.AddedAxiom;
-  pstate
+  pstate)
 
 let solve ~pstate n ~info ?with_end_tac t =
   let t = interp_tac t in
